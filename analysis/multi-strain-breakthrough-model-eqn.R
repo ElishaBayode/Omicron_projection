@@ -52,6 +52,26 @@ get_total_incidence = function(output, parameters) {
 }
 # ----
 
+# this function pulls out vaccinated and waned so we can easily compare to reported vaccination levels 
+get_vax = function(output) {
+  vax = output %>% mutate(vaxtot = V+ Erv + Emv+ 
+                            Irv+ Imv+ Rv+ W +Erw+Emw+ Irw+ Imw+ Rw,
+                          vaxrecent = V+ Erv + Emv+ 
+                            Irv+ Imv+ Rv, waned = W +Erw+Emw+ Irw+ Imw+ Rw) %>% 
+    select(time, vaxtot, vaxrecent, waned) 
+  return(vax) 
+}
+
+# pulls out the growth rates in incidence in a time window in a simulation, 
+# intended for setting up the model to have observed growth rates 
+get_growth_rate = function(output, startoffset = 7, duration = 20) {
+  tots = output %>% mutate( res = Er +Erv + Erw, 
+                            mut = Em + Emv + Emw) %>% select(time, res, mut) %>% 
+    filter(time > min(time) + startoffset & time < min(time)+startoffset+duration)
+  return(list( resrate =  lm( log(tots$res) ~ tots$time)$coefficients[2], 
+               mutrate = lm(log(tots$mut)~ tots$time)$coefficients[2]))
+}
+
 # this function takes in some intuitive parameters and attempts to create a starting
 # point for the ODE that sort of reflects them. 
 make_init = function( N=5.07e6, vaxlevel = 0.8,
@@ -127,6 +147,8 @@ incid = incid %>% select(time, inc_res, inc_mut, inc_tot)
 incid_long <- melt(incid,  id.vars = 'time', variable.name = 'series')
 ggplot(incid_long, aes(time,value)) + geom_line(aes(colour = series))
 
+vax = get_vax(output) 
+ggplot(vax, aes(x=time, y=vaxtot/N)) + geom_line()
 
 
 #plot
