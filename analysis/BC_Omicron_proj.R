@@ -140,7 +140,7 @@ gg <- plot_projection(modelproj, dat, date_column = "date") +
 labs(color = " ",title="BC")
 
 ggsave(file="figs/BC_proj.png", gg, width = 10, height = 8)
-
+saveRDS(gg, file.path("figs/BC-fig.rds"))
 #saveRDS(g, file.path("figs/Show_freqBC.rds"))
 
 

@@ -136,5 +136,5 @@ gg <- plot_projection(modelproj, dat, date_column = "date") +
                                              legend.text = element_text(size=15),
                                              axis.title=element_text(size=15,face="bold")) +
   labs(color = " ",title="ON")
-
+saveRDS(gg, file.path("figs/ON-fig.rds"))
 ggsave(file="figs/ON_proj.png", gg, width = 10, height = 8)
