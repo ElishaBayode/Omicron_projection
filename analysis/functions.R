@@ -7,7 +7,8 @@ sveirs <- function(time, state, parameters) {
   with(as.list(c(state, parameters)), {
     wf=0.2 # NOTE - this was to test the impact of recovered people being more immune than 
     # vaccinated people. i think it probably makes sense - after all they *just* recovered .
-    c <- 1# effectiveness of NPIs, set as 1, change later to c(t)
+    #c <- 1# effectiveness of NPIs, set as 1, change later to c(t)
+    c <- 1 - stngcy/(2+ exp(-0.5*(time-eff_t)))   #intervention 
     N <- S+Er+Em+Ir+Im+R+V+Erv+Emv+Irv+Imv+Rv+W+Erw+Emw+Irw+Imw+Rw #total population 
     lambda_r <- c*beta_r*(Ir + Irv + Irw) #force of infection resident strain
     lambda_m <- c*beta_m*(Im + Imv + Imw) #force of infection mutant strain
@@ -71,4 +72,9 @@ get_doubling_time = function(growth_rate){
   resdoubling = log(2)/growth_rate$resrate
   mutdoubling = log(2)/growth_rate$mutrate
   return(list(resdoubling,mutdoubling))
+}
+
+get_selection_coef = function(growth_rate){ 
+  sele_coef = growth_rate$mut - growth_rate$res  
+  return(sele_coef)
 }

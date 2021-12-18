@@ -64,10 +64,10 @@ parameters <-         c(sigma=1/3, # incubation period (3 days) (to fixed)
                         w2= 1/(3*365), # waning rate from Rv to V (fixed)
                         w3= 1/(3*365),# waning rate Rw to W (fixed)
                         ve=1, # I think this should be 1. it is not really efficacy  ( fixed)
-                        beta_r=0.7, #transmission rate (to estimate) (0.35)
-                        beta_m=0.7*1.7, #transmission rate (to estimate)(*1.9)
+                        beta_r=0.69, #transmission rate (to estimate) (0.35)
+                        beta_m=0.69*1.7, #transmission rate (to estimate)(*1.9)
                         epsilon_r = (1-0.8), # % this should be 1-ve 
-                        epsilon_m = (1-0.6), # % escape capacity #(fixed)
+                        epsilon_m = (1-0.67), # % escape capacity #(fixed)
                         b= 0.006 # booster rate  (fixed)
 )
 
@@ -80,7 +80,7 @@ output_ON <- output_ON %>% mutate(total_pop =S+Er+Em+Ir+Im+R+V+Erv+Emv+Irv+Imv+R
 
 #helper fuctions 
 
-intro_date <- ymd("2021-12-20")
+intro_date <- ymd("2021-12-16")
 incid = get_total_incidence(output=output_ON,parameters) #set output to Province output 
 incid = incid %>% select(time, inc_res, inc_mut, inc_tot)
 incid = incid %>% mutate(date=seq.Date(ymd(intro_date),ymd(intro_date)-1+length(times), 1))
@@ -90,7 +90,7 @@ incid = incid %>% mutate(rcases = MASS::rnegbin(length(incid$inc_tot), incid$inc
 incid_long <- melt(incid,  id.vars = 'time', variable.name = 'series')
 ggplot(incid_long, aes(time,value)) + geom_line(aes(colour = series))
 
-
+#add function to calculate selection
 growth_rate_ON <- get_growth_rate(output_ON)
 doubling_time_ON <- get_doubling_time( growth_rate_ON)
 #mutate(rcases = MASS::rnegbin(length(cases), cases, 
@@ -125,7 +125,6 @@ gg <- plot_projection(modelproj, dat, date_column = "date") +
   geom_line(data=incid, aes(x=date, y=inc_mut, col ="Omicron"), size=1.4) +
   geom_line(data=incid, aes(x=date, y=inc_tot, col ="Total"),  size=1.4) +
   geom_point(data=incid, aes(x=date, y=rcases), color="grey15", size=1.4, alpha=0.3) +
-  
   #geom_ribbon(data = btout, aes(x=date, ymax = y_rep_0.95, ymin=y_rep_0.05), 
   #            alpha=0.3, fill="red")+
   coord_cartesian(ylim = c(0, 18000), expand = FALSE) + 

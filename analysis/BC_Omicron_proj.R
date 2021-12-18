@@ -10,7 +10,7 @@ source("analysis/functions.R")
 # point for the ODE that sort of reflects them. 
 make_init = function( N=5.07e6, vaxlevel = 0.8,
                       port_wane = 0.1, 
-                      past_infection = 0.1, incres = 400, incmut = 10, 
+                      past_infection = 0.1, incres = 450, incmut = 10, 
                       pars=as.list(parameters)) {
   ff=2/3 # fudge factor . hard to get incidence right since it depends on other pars too (2/3)
   Vtot = vaxlevel*N*(1-port_wane) # allocate to V, Ev, Iv
@@ -54,7 +54,8 @@ make_init = function( N=5.07e6, vaxlevel = 0.8,
 N=5.07e6
 times <- seq(0,60,1)
 ascFrac <- 0.6
-
+intro_date <- ymd("2021-12-07")
+eff_date <- ymd("2022-01-01")
 # ---- pars ---- 
 parameters <-         c(sigma=1/3, # incubation period (3 days) (to fixed)
                         gamma=1/(6), #recovery rate (fixed)
@@ -64,14 +65,19 @@ parameters <-         c(sigma=1/3, # incubation period (3 days) (to fixed)
                         w2= 1/(3*365), # waning rate from Rv to V (fixed)
                         w3= 1/(3*365),# waning rate Rw to W (fixed)
                         ve=1, # I think this should be 1. it is not really efficacy  ( fixed)
-                        beta_r=0.5, #transmission rate (to estimate) (0.35)
-                        beta_m=0.5*1.7, #transmission rate (to estimate)(*1.9)
+                        beta_r=0.72, #transmission rate (to estimate) (0.35)
+                        beta_m=0.72*2.2, #transmission rate (to estimate)(*1.9)
                         epsilon_r = (1-0.8), # % this should be 1-ve 
                         epsilon_m = (1-0.6), # % escape capacity #(fixed)
-                        b= 0.006 # booster rate  (fixed)
+                        b= 0.006, # booster rate  (fixed)
+                        stngcy= 2*0.78, #(2*%(reduction)) strength of intervention (reduction in beta's)
+                        eff_t = as.numeric(eff_date - intro_date) # time to 50% intervention effectiveness
+                         
 )
 
-
+#sig = 1:500
+#f_sig = 1 - 0.8*2/(2+ exp(-0.5*(sig-30)))
+#plot(sig,f_sig) 
 
 #odesolver output
 output_BC <- as.data.frame(ode(y = make_init(), times = times, func = sveirs , parms = parameters))
@@ -80,7 +86,7 @@ output_BC <- output_BC %>% mutate(total_pop =S+Er+Em+Ir+Im+R+V+Erv+Emv+Irv+Imv+R
 
 #helper fuctions 
 
-intro_date <- ymd("2021-12-20")
+intro_date <- ymd("2021-12-07")
 
 incid = get_total_incidence(output=output_BC,parameters) #set output to Province output 
 incid = incid %>% select(time, inc_res, inc_mut, inc_tot)
@@ -94,7 +100,7 @@ ggplot(incid_long, aes(time,value)) + geom_line(aes(colour = series))
 
 growth_rate_BC <- get_growth_rate(output_BC)
 doubling_time_BC <- get_doubling_time( growth_rate_BC)
-
+get_selection_coef(growth_rate_BC)
 #mutate(rcases = MASS::rnegbin(length(cases), cases, 
 #               theta=mean(fit$post$phi)))
 saveRDS(incid, file.path("data/BC-incid.rds"))
@@ -127,17 +133,19 @@ gg <- plot_projection(modelproj, dat, date_column = "date") +
   geom_line(data=incid, aes(x=date, y=inc_mut, col ="Omicron"), size=1.4) +
   geom_line(data=incid, aes(x=date, y=inc_tot, col ="Total"),  size=1.4) +
   geom_point(data=incid, aes(x=date, y=rcases), color="grey15", size=1.4, alpha=0.3,) +
-  
+  #geom_line(data=incid, aes(x=date, y=inc_res),  size=1.4) +
   #geom_ribbon(data = btout, aes(x=date, ymax = y_rep_0.95, ymin=y_rep_0.05), 
   #            alpha=0.3, fill="red")+
-  coord_cartesian(ylim = c(0, 5000), expand = FALSE) + 
+  coord_cartesian(ylim = c(0, 3000), expand = FALSE) + 
   scale_x_date(date_breaks = "months", date_labels = "%b") +theme_light() +
   scale_color_manual(values = cols) +  theme(axis.text=element_text(size=15),
                                              plot.title = element_text(size=15, face="bold"),
                                              legend.position = "bottom", legend.title = element_text(size=15),
                                              legend.text = element_text(size=15),
                                              axis.title=element_text(size=15,face="bold")) +
-labs(color = " ",title="BC")
+labs(color = "78% reduction in transmission",title="BC") +  geom_vline(xintercept=ymd(eff_date), linetype="dotdash", 
+                                            color = "gray35", size=0.8) 
+
 
 ggsave(file="figs/BC_proj.png", gg, width = 10, height = 8)
 saveRDS(gg, file.path("figs/BC-fig.rds"))
@@ -147,4 +155,7 @@ saveRDS(gg, file.path("figs/BC-fig.rds"))
 
 gg#proj_plot <- fan_plot(fit = fit, pred = modelproj, obs = dat)
 
+sig = 1:500
+f_sig = 1 - 0.8*2/(2+ exp(-0.5*(sig-30)))
+plot(sig,f_sig)  
 

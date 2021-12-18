@@ -1,4 +1,5 @@
-
+library(erer)
+library(gridExtra)
 AB_Omicron = as.data.frame(readRDS(file.path("data/AB-incid.rds")))
 BC_Omicron  = as.data.frame(readRDS(file.path("data/BC-incid.rds")))
 MB_Omicron  = as.data.frame(readRDS(file.path("data/MB-incid.rds")))
@@ -21,9 +22,21 @@ cols <- c("Omicron" = "#009E73", "Total"="#D55E00")
 #to continue ###### 
 
 
+newABshowSimple = readRDS(file.path("figs/AB-fig.rds"))
+newBCshowSimple = readRDS(file.path("figs/BC-fig.rds"))
+newMBshowSimple = readRDS(file.path("figs/MB-fig.rds"))
+newONshowSimple = readRDS(file.path("figs/ON-fig.rds"))
+newQCshowSimple = readRDS(file.path("figs/QC-fig.rds"))
+newSKshowSimple = readRDS(file.path("figs/SK-fig.rds"))
 
 
+combine_Omicron_freq <- grid.arrange(newONshowSimple, newQCshowSimple, newMBshowSimple, nrow = 3, ncol = 1)
+ggsave(file="figs/Omicron_freqPAGE1.pdf", combine_Omicron_freq, width = 8, height = 12)
+ggsave(file="figs/Omicron_freqPAGE1.png", combine_Omicron_freq, width = 8, height = 12)
 
+combine_Omicron_freq <- grid.arrange(newSKshowSimple, newABshowSimple, newBCshowSimple, nrow = 3, ncol = 1)
+ggsave(file="figs/Omicron_freqPAGE2.pdf", combine_Omicron_freq, width = 8, height = 12)
+ggsave(file="figs/Omicron_freqPAGE2.png", combine_Omicron_freq, width = 8, height = 12)
 
 
 

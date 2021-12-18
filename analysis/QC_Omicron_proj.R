@@ -93,6 +93,8 @@ ggplot(incid_long, aes(time,value)) + geom_line(aes(colour = series))
 
 growth_rate_QC <- get_growth_rate(output_QC)
 doubling_time_QC <- get_doubling_time( growth_rate_QC)
+get_selection_coef(growth_rate_QC)
+
 #mutate(rcases = MASS::rnegbin(length(cases), cases, 
 #               theta=mean(fit$post$phi)))
 saveRDS(incid, file.path("data/QC-incid.rds"))
