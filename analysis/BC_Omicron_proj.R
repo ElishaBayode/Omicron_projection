@@ -58,7 +58,7 @@ intro_date <- ymd("2021-12-07")
 eff_date <- ymd("2022-01-01")
 # ---- pars ---- 
 parameters <-         c(sigma=1/3, # incubation period (3 days) (to fixed)
-                        gamma=1/(6), #recovery rate (fixed)
+                        gamma=1/(3.5), #recovery rate (fixed)
                         nu =0.007, #vax rate: 0.7% per day (fixed)
                         mu=1/(82*365), # 1/life expectancy (fixed)
                         w1= 1/(3*365),# waning rate from R to S (fixed)
@@ -70,7 +70,8 @@ parameters <-         c(sigma=1/3, # incubation period (3 days) (to fixed)
                         epsilon_r = (1-0.8), # % this should be 1-ve 
                         epsilon_m = (1-0.6), # % escape capacity #(fixed)
                         b= 0.006, # booster rate  (fixed)
-                        stngcy= 2*0.78, #(2*%(reduction)) strength of intervention (reduction in beta's)
+                        wf=0.2, # protection for newly recoverd #0.2
+                        stngcy= 2*0,#0.78, #(2*%(reduction)) strength of intervention (reduction in beta's)
                         eff_t = as.numeric(eff_date - intro_date) # time to 50% intervention effectiveness
                          
 )
@@ -94,6 +95,16 @@ incid = incid %>% mutate(date=seq.Date(ymd(intro_date),ymd(intro_date)-1+length(
 incid = incid %>% mutate(rcases = MASS::rnegbin(length(incid$inc_tot), incid$inc_tot, 
                                                 theta=mean(fit$post$phi)))
 
+
+#BC_Omicron_proj <- select(incid, c("date","inc_mut" , "rcases","inc_tot"))
+#names(BC_Omicron_proj) <- c("date", "Omicron", "rcases","total")
+#BC_Omicron_proj$Omicron <- round(BC_Omicron_proj$Omicron,2)
+#BC_Omicron_proj$total <- round(BC_Omicron_proj$total,2)
+#BC_Omicron_proj$rcases <- round(BC_Omicron_proj$rcases,2)
+#BC_Omicron_proj <- filter(BC_Omicron_proj, date >= ymd("2021-12-10") & date <= ymd("2022-01-10"))
+#write.csv(BC_Omicron_proj,'BC_Omicron_proj.csv')
+
+                          
 incid_long <- melt(incid,  id.vars = 'time', variable.name = 'series')
 ggplot(incid_long, aes(time,value)) + geom_line(aes(colour = series))
 
@@ -101,6 +112,12 @@ ggplot(incid_long, aes(time,value)) + geom_line(aes(colour = series))
 growth_rate_BC <- get_growth_rate(output_BC)
 doubling_time_BC <- get_doubling_time( growth_rate_BC)
 get_selection_coef(growth_rate_BC)
+check <- get_population_immunity(output_BC,N)
+plot(NA,NA, xlim=c(0,60), ylim=c(0,1))
+lines(check$vax_induced)
+lines(check$inf_induced)
+lines(check$inf_induced+check$vax_induced)
+
 #mutate(rcases = MASS::rnegbin(length(cases), cases, 
 #               theta=mean(fit$post$phi)))
 saveRDS(incid, file.path("data/BC-incid.rds"))
@@ -155,6 +172,7 @@ saveRDS(gg, file.path("figs/BC-fig.rds"))
 
 gg#proj_plot <- fan_plot(fit = fit, pred = modelproj, obs = dat)
 
+#check transm multiplier 
 sig = 1:500
 f_sig = 1 - 0.8*2/(2+ exp(-0.5*(sig-30)))
 plot(sig,f_sig)  

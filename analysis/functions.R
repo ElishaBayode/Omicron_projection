@@ -5,7 +5,7 @@ require(reshape2)
 
 sveirs <- function(time, state, parameters) {
   with(as.list(c(state, parameters)), {
-    wf=0.2 # NOTE - this was to test the impact of recovered people being more immune than 
+    #wf=0.2 # NOTE - this was to test the impact of recovered people being more immune than 
     # vaccinated people. i think it probably makes sense - after all they *just* recovered .
     #c <- 1# effectiveness of NPIs, set as 1, change later to c(t)
     c <- 1 - stngcy/(2+ exp(-0.5*(time-eff_t)))   #intervention 
@@ -66,6 +66,11 @@ get_growth_rate = function(output, startoffset = 7, duration = 20) {
                mutrate = lm(log(tots$mut) ~ tots$time)$coefficients[2]))
 }
 
+get_population_immunity = function(output,N) {
+  vax_induced = output %>% mutate(vax = V + W)
+  inf_induced = output %>% mutate(inf = R + Rv + Rw)
+  return(list(vax_induced=vax_induced$vax/N,inf_induced=inf_induced$inf/N))
+}
 
 
 get_doubling_time = function(growth_rate){ 
