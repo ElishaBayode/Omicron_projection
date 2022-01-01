@@ -1,7 +1,10 @@
-
-library("deSolve")
+require(deSolve)
 require(ggplot2)
 require(reshape2)
+library(lubridate)
+library(dplyr)
+library(data.table)
+set.seed(3242)
 
 sveirs <- function(time, state, parameters) {
   with(as.list(c(state, parameters)), {

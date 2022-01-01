@@ -10,7 +10,7 @@ source("analysis/functions.R")
 # point for the ODE that sort of reflects them. 
 make_init = function( N=8.485e6, vaxlevel = 0.76,
                       port_wane = 0.1, 
-                      past_infection = 0.13, incres = 2720, incmut = 30, 
+                      past_infection = 0.13, incres = 1820, incmut = 30, 
                       pars=as.list(parameters)) {
   ff=2/3 # fudge factor . hard to get incidence right since it depends on other pars too (2/3)
   Vtot = vaxlevel*N*(1-port_wane) # allocate to V, Ev, Iv
@@ -53,56 +53,217 @@ make_init = function( N=8.485e6, vaxlevel = 0.76,
 
 N=8.485e6
 times <- seq(0,60,1)
-ascFrac <- 0.6
+ascFrac <- 0.65
+intro_date <- ymd("2021-12-08")
+eff_date <- ymd("2022-01-01")
+
+
+
+
 
 # ---- pars ---- 
 parameters <-         c(sigma=1/3, # incubation period (3 days) (to fixed)
-                        gamma=1/(6), #recovery rate (fixed)
+                        gamma=1/(4), #recovery rate (fixed)
                         nu =0.007, #vax rate: 0.7% per day (fixed)
                         mu=1/(82*365), # 1/life expectancy (fixed)
                         w1= 1/(3*365),# waning rate from R to S (fixed)
                         w2= 1/(3*365), # waning rate from Rv to V (fixed)
                         w3= 1/(3*365),# waning rate Rw to W (fixed)
                         ve=1, # I think this should be 1. it is not really efficacy  ( fixed)
-                        beta_r=0.72, #transmission rate (to estimate) (0.35)
-                        beta_m=0.72*1.7, #transmission rate (to estimate)(*1.9)
+                      #  beta_r=0.78, #transmission rate (to estimate) (0.35)
+                        beta_m=0.98*2.2, #transmission rate (to estimate)(*1.9)
                         epsilon_r = (1-0.8), # % this should be 1-ve 
                         epsilon_m = (1-0.6), # % escape capacity #(fixed)
-                        b= 0.006 # booster rate  (fixed)
+                        b= 0.006, # booster rate  (fixed)
+                        wf=0.2,
+                        stngcy= 2*0,#0.78, #(2*%(reduction)) strength of intervention (reduction in beta's)
+                        eff_t = as.numeric(eff_date - intro_date) # time t
 )
 
 
 
 #odesolver output
-output_QC <- as.data.frame(ode(y = make_init(), times = times, func = sveirs , parms = parameters))
+
+parameters_int <-         c(sigma=1/3, # incubation period (3 days) (to fixed)
+                            gamma=1/(4), #recovery rate (fixed)
+                            nu =0.007, #vax rate: 0.7% per day (fixed)
+                            mu=1/(82*365), # 1/life expectancy (fixed)
+                            w1= 1/(3*365),# waning rate from R to S (fixed)
+                            w2= 1/(3*365), # waning rate from Rv to V (fixed)
+                            w3= 1/(3*365),# waning rate Rw to W (fixed)
+                            ve=1, # I think this should be 1. it is not really efficacy  ( fixed)
+                            #beta_r=0.72, #transmission rate (to estimate) (0.35)
+                            beta_m=0.98*2.2, #transmission rate (to estimate)(*1.9)
+                            epsilon_r = (1-0.8), # % this should be 1-ve 
+                            epsilon_m = (1-0.6), # % escape capacity #(fixed)
+                            b= 0.006, # booster rate  (fixed)
+                            wf=0.2, # protection for newly recoverd #0.2
+                            stngcy= 2*0.75, #(2*%(reduction)) strength of intervention (reduction in beta's)
+                            eff_t = as.numeric(eff_date - intro_date) # time to 50% intervention effectiveness
+                            
+)
+
+
+
+
+#sig = 1:500
+#f_sig = 1 - 0.8*2/(2+ exp(-0.5*(sig-30)))
+#plot(sig,f_sig) 
+
+#odesolver output
+m <- 0.98
+s <- 0.3
+location <- log(m^2 / sqrt(s^2 + m^2))
+shape <- sqrt(log(1 + (s^2 / m^2)))
+print(paste("location:", location))
+print(paste("shape:", shape))
+sim_size = 15
+beta_r <-  rlnorm(n=sim_size, location, shape)
+
+res <- vector(length(beta_r),mode="list")
+for (k in seq_along(beta_r)){ #range of values for beta
+  res[[k]] <- deSolve::ode(y=make_init(),times=times,func=sveirs,
+                           parms=c(beta_r=beta_r[k], parameters))
+}
+
+
+res_int <- vector(length(beta_r),mode="list")
+for (k in seq_along(beta_r)){ #range of values for beta
+  res_int[[k]] <- deSolve::ode(y=make_init(),times=times,func=sveirs,
+                               parms=c(beta_r=beta_r[k], parameters_int))
+}
+
+
+#names(res) <- beta_r
+dd <- dplyr::bind_rows(lapply(res,as.data.frame),.id="beta_r")
+dd <- select(dd, -beta_r)
+
+dd_int <- dplyr::bind_rows(lapply(res_int,as.data.frame),.id="beta_r")
+dd_int <- select(dd_int, -beta_r)
+#dd$beta_r <- as.numeric(dd$beta_r)
+
+
+ag <- aggregate(. ~ time, dd, function(x) c(mean = mean(x), sd = sd(x)))
+
+ag_int <- aggregate(. ~ time, dd_int, function(x) c(mean = mean(x), sd = sd(x)))
+
+output_QC <- data.frame(time=ag$time ,S=ag$S[,1],Er=ag$Er[,1],Em=ag$Em[,1],
+                        Ir=ag$Ir[,1],Im=ag$Im[,1],R=ag$R[,1],
+                        V=ag$V[,1],Erv=ag$Erv[,1],Emv=ag$Emv[,1],
+                        Irv=ag$Irv[,1],Imv=ag$Imv[,1],Rv=ag$Rv[,1],
+                        W=ag$W[,1],Erw=ag$Erw[,1],Emw=ag$Emw[,1],
+                        Irw=ag$Irw[,1],Imw=ag$Imw[,1],Rw=ag$Rw[,1])
+
+
+output_QC_sd <- data.frame(time=ag$time ,S=ag$S[,2],Er=ag$Er[,2],Em=ag$Em[,2],
+                           Ir=ag$Ir[,2],Im=ag$Im[,2],R=ag$R[,2],
+                           V=ag$V[,2],Erv=ag$Erv[,2],Emv=ag$Emv[,2],
+                           Irv=ag$Irv[,2],Imv=ag$Imv[,1],Rv=ag$Rv[,2],
+                           W=ag$W[,2],Erw=ag$Erw[,2],Emw=ag$Emw[,2],
+                           Irw=ag$Irw[,2],Imw=ag$Imw[,2],Rw=ag$Rw[,2])
+
+
+
+
+
+output_QC_int <- data.frame(time=ag_int$time ,S=ag_int$S[,1],Er=ag_int$Er[,1],Em=ag_int$Em[,1],
+                            Ir=ag_int$Ir[,1],Im=ag_int$Im[,1],R=ag_int$R[,1],
+                            V=ag_int$V[,1],Erv=ag_int$Erv[,1],Emv=ag_int$Emv[,1],
+                            Irv=ag_int$Irv[,1],Imv=ag_int$Imv[,1],Rv=ag_int$Rv[,1],
+                            W=ag_int$W[,1],Erw=ag_int$Erw[,1],Emw=ag_int$Emw[,1],
+                            Irw=ag_int$Irw[,1],Imw=ag_int$Imw[,1],Rw=ag_int$Rw[,1])
+
+
+output_QC_sd_int <- data.frame(time=ag_int$time ,S=ag_int$S[,2],Er=ag_int$Er[,2],Em=ag_int$Em[,2],
+                               Ir=ag_int$Ir[,2],Im=ag_int$Im[,2],R=ag_int$R[,2],
+                               V=ag_int$V[,2],Erv=ag_int$Erv[,2],Emv=ag_int$Emv[,2],
+                               Irv=ag_int$Irv[,2],Imv=ag_int$Imv[,1],Rv=ag_int$Rv[,2],
+                               W=ag_int$W[,2],Erw=ag_int$Erw[,2],Emw=ag_int$Emw[,2],
+                               Irw=ag_int$Irw[,2],Imw=ag_int$Imw[,2],Rw=ag_int$Rw[,2])
+
+
+
+
+
+
+#odesolver output
+#output_QC <- as.data.frame(ode(y = make_init(), times = times, func = sveirs , parms = parameters))
 output_QC <- output_QC %>% mutate(total_pop =S+Er+Em+Ir+Im+R+V+Erv+Emv+Irv+Imv+Rv+W+Erw+Emw+Irw+Imw+Rw)
 
 
-#helper fuctions 
+#helper fuctiQCs 
 
-intro_date <- ymd("2021-12-20")
-incid = get_total_incidence(output=output_QC,parameters) #set output to Province output 
+fit = readRDS("/Users/elishaare/Desktop/PHAC_forecasts_14DEC2021/COVID-PHAC-forecasts/data-generated/QC-fit.rds")
+dat = readRDS("/Users/elishaare/Desktop/PHAC_forecasts_28DEC2021/COVID-PHAC-forecasts/data-generated/QC-dat.rds")
+
+
+incid = get_total_incidence(output=output_QC,parameters=c(mean(beta_r),parameters)) #set output to Province output 
 incid = incid %>% select(time, inc_res, inc_mut, inc_tot)
 incid = incid %>% mutate(date=seq.Date(ymd(intro_date),ymd(intro_date)-1+length(times), 1))
 incid = incid %>% mutate(rcases = MASS::rnegbin(length(incid$inc_tot), incid$inc_tot, 
                                                 theta=mean(fit$post$phi)))
 
-incid_long <- melt(incid,  id.vars = 'time', variable.name = 'series')
+
+incid_sd_QC = get_total_incidence(output=output_QC_sd,parameters=c(mean(beta_r),parameters)) #set output to Province output 
+incid_sd_QC = incid %>% select(time, inc_res, inc_mut, inc_tot)
+incid_sd_QC = incid_sd_QC %>% mutate(err=qt(0.975,df=sim_size-1)*inc_tot/sqrt(sim_size))
+incid_sd_QC = incid_sd_QC %>% mutate(lower = inc_tot-err, upper = inc_tot+err)
+
+incid_int = get_total_incidence(output=output_QC_int,parameters=c(mean(beta_r),parameters_int)) #set output to Province output 
+incid_int = incid_int %>% select(time, inc_res, inc_mut, inc_tot)
+incid_int = incid_int %>% mutate(date=seq.Date(ymd(intro_date),ymd(intro_date)-1+length(times), 1))
+incid_int = incid_int %>% mutate(rcases = MASS::rnegbin(length(incid$inc_tot), incid$inc_tot, 
+                                                        theta=mean(fit$post$phi)))
+
+
+incid_sd_QC_int = get_total_incidence(output=output_QC_sd_int,parameters=c(mean(beta_r),parameters_int)) #set output to Province output 
+incid_sd_QC_int = incid_int %>% select(time, inc_res, inc_mut, inc_tot)
+incid_sd_QC_int = incid_sd_QC_int %>% mutate(err=qt(0.975,df=sim_size-1)*inc_tot/sqrt(sim_size))
+incid_sd_QC_int = incid_sd_QC_int %>% mutate(lower = inc_tot-err, upper = inc_tot+err)
+
+
+
+#QC_OmicrQC_proj <- select(incid, c("date","inc_mut" , "rcases","inc_tot"))
+#names(QC_OmicrQC_proj) <- c("date", "OmicrQC", "rcases","total")
+#QC_OmicrQC_proj$OmicrQC <- round(QC_OmicrQC_proj$OmicrQC,2)
+#QC_OmicrQC_proj$total <- round(QC_OmicrQC_proj$total,2)
+#QC_OmicrQC_proj$rcases <- round(QC_OmicrQC_proj$rcases,2)
+#QC_OmicrQC_proj <- filter(QC_OmicrQC_proj, date >= ymd("2021-12-10") & date <= ymd("2022-01-10"))
+#write.csv(QC_Omicron_proj,'ON_Omicron_proj.csv')
+
+
+#incid_long <- melt(incid,  id.vars = 'time', variable.name = 'series')
 ggplot(incid_long, aes(time,value)) + geom_line(aes(colour = series))
 
 
 growth_rate_QC <- get_growth_rate(output_QC)
 doubling_time_QC <- get_doubling_time( growth_rate_QC)
 get_selection_coef(growth_rate_QC)
+check <- get_population_immunity(output_QC,N)
+plot(NA,NA, xlim=c(0,60), ylim=c(0,1))
+lines(check$vax_induced)
+lines(check$inf_induced)
+lines(check$inf_induced+check$vax_induced)
 
 #mutate(rcases = MASS::rnegbin(length(cases), cases, 
 #               theta=mean(fit$post$phi)))
 saveRDS(incid, file.path("data/QC-incid.rds"))
 incid =readRDS(file.path("data/QC-incid.rds"))
 
+saveRDS(incid_sd_QC, file.path("data/QC-incid_er.rds"))
+incid_sd_QC =readRDS(file.path("data/QC-incid_er.rds"))
+
+
+saveRDS(incid_int, file.path("data/QC-incid_int.rds"))
+incid_int =readRDS(file.path("data/QC-incid_int.rds"))
+
+saveRDS(incid_sd_QC_int, file.path("data/QC-incid_er_int.rds"))
+incid_sd_QC_int =readRDS(file.path("data/QC-incid_er_int.rds"))
+
+
 #set path to recent PHAC forecasts data
-fit = readRDS("/Users/elishaare/Desktop/PHAC_forecasts_14DEC2021/COVID-PHAC-forecasts/data-generated/QC-fit.rds")
-dat = readRDS("/Users/elishaare/Desktop/PHAC_forecasts_14DEC2021/COVID-PHAC-forecasts/data-generated/QC-dat.rds")
+#fit = readRDS("/Users/elishaare/Desktop/PHAC_forecasts_14DEC2021/COVID-PHAC-forecasts/data-generated/QC-fit.rds")
+#dat = readRDS("/Users/elishaare/Desktop/PHAC_forecasts_14DEC2021/COVID-PHAC-forecasts/data-generated/QC-dat.rds")
 
 
 first_day <- min(dat$date)
@@ -113,7 +274,7 @@ lut <- dplyr::tibble(
 
 
 
-proj2 <- project_seir(fit, iter = seq_len(50), stan_model = stan_mod, forecast_days = 80)
+proj2 <- project_seir(fit, iter = seq_len(50), stan_model = stan_mod, forecast_days = 0)
 proj2$day <- proj2$day + min(dat$day) - 1
 
 modelproj = proj2 %>% tidy_seir()  
@@ -121,22 +282,36 @@ modelproj$date = modelproj$day + lut$date[1] - 1
 
 
 
-cols <- c("Omicron" = "#009E73", "Total"="#D55E00")
-gg <- plot_projection(modelproj, dat, date_column = "date") +
+cols <- c("Current" = "#D55E00", "75% reduction in transmission"="#009E73")
+
+#cols <- c( "Total"="#D55E00") #"Omicron" = "#009E73",
+gg_QC <- plot_projection(modelproj, dat, date_column = "date") +
   theme(axis.title.x = element_blank()) +
-  geom_line(data=incid, aes(x=date, y=inc_mut, col ="Omicron"), size=1.4) +
-  geom_line(data=incid, aes(x=date, y=inc_tot, col ="Total"),  size=1.4) +
-  geom_point(data=incid, aes(x=date, y=rcases), color="grey15", size=1.4, alpha=0.3,) +
+  # geom_line(data=incid, aes(x=date, y=inc_mut, col ="Omicron"), size=1.4) +
+  geom_ribbon(data=incid, aes(x=date, ymin = incid_sd_QC$lower, ymax = incid_sd_QC$upper),
+              inherit.aes = FALSE, fill = "grey", alpha = 0.5) +
+  
+  geom_line(data=incid_int, aes(x=date, y=inc_tot, col ="75% reduction in transmission"), 
+            size=1, alpha = 0.5) +
+  geom_ribbon(data=incid_int, aes(x=date, ymin = incid_sd_QC_int$lower, ymax = incid_sd_QC_int$upper),
+              inherit.aes = FALSE, fill = "blue", alpha = 0.1) +
+  geom_line(data=incid, aes(x=date, y=inc_tot, col ="Current"), 
+            size=1, alpha = 0.5) +
+  
+  
+  # geom_point(data=incid, aes(x=date, y=rcases), color="grey15", size=1.4, alpha=0.5) +
   
   #geom_ribbon(data = btout, aes(x=date, ymax = y_rep_0.95, ymin=y_rep_0.05), 
   #            alpha=0.3, fill="red")+
-  coord_cartesian(ylim = c(0, 13000), expand = FALSE) + 
+  coord_cartesian(ylim = c(0, 30000), expand = FALSE) + 
   scale_x_date(date_breaks = "months", date_labels = "%b") +theme_light() +
   scale_color_manual(values = cols) +  theme(axis.text=element_text(size=15),
                                              plot.title = element_text(size=15, face="bold"),
                                              legend.position = "bottom", legend.title = element_text(size=15),
                                              legend.text = element_text(size=15),
                                              axis.title=element_text(size=15,face="bold")) +
+  
   labs(color = " ",title="QC")
-saveRDS(gg, file.path("figs/QC-fig.rds"))
-ggsave(file="figs/QC_proj.png", gg, width = 10, height = 8)
+
+saveRDS(gg_QC, file.path("figs/QC-fig.rds"))
+ggsave(file="figs/QC_proj.png", gg_QC, width = 10, height = 8)
