@@ -327,4 +327,4 @@ gg#proj_plot <- fan_plot(fit = fit, pred = modelproj, obs = dat)
 sig = 1:500
 f_sig = 1 - 0.8*2/(2+ exp(-0.5*(sig-30)))
 plot(sig,f_sig)  
-
+dat_play <-filter(dat, date < ymd("2021-12-02")) %>% select(c("day", "value"))

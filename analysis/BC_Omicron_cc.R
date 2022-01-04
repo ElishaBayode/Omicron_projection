@@ -39,12 +39,18 @@ modelproj$date = modelproj$day + lut$date[1] - 1
 # NOTE  I moved make_init to the functions file
 
 
-N=5.07e6
+N_pop=5.07e6
 times <- seq(0,120,1)
 ascFrac <- 0.6
+vaxlevel_in = 0.8
+port_wane_in = 0.1 
+past_infection_in = 0.1
+incres_in = 500
+incmut_in = 10
+
 intro_date <- ymd("2021-12-02") # i think this is actually the start date for the simulation
 
-eff_date <- ymd("2021-12-22") # date when measures are half effective. I have changed the steepness of the measures function
+eff_date <- ymd("2021-12-29") # date when measures are half effective. I have changed the steepness of the measures function
 # so that it is steeper, and this is close to the date when measures take place (less of a range in time) 
 
 # ---- pars ---- 
@@ -81,7 +87,7 @@ parameters_int <-       c(sigma=1/3, # incubation period (3 days) (to fixed)
                         epsilon_m = (1-0.6), # % escape capacity #(fixed)
                         b= 0.006, # booster rate  (fixed)
                         wf=0.2, # protection for newly recoverd #0.2
-                        stngcy= 0.5,#0.78, #(*%(reduction)) strength of intervention (reduction in beta's)
+                        stngcy= 0.50,#0.78, #(*%(reduction)) strength of intervention (reduction in beta's)
                         eff_t = as.numeric(eff_date - intro_date) # time to 50% intervention effectiveness
 )
 
@@ -101,6 +107,9 @@ for (k in seq_along(beta_r)){ #range of values for beta
   res[[k]] <- deSolve::ode(y=make_init(),times=times,func=sveirs,
                            parms=c(beta_r=beta_r[k], parameters))
 }
+
+
+ 
 
 res_int <- vector(length(beta_r),mode="list")
 for (k in seq_along(beta_r)){ #range of values for beta
@@ -193,7 +202,7 @@ gg_BC <- plot_projection(modelproj, dat, date_column = "date") +
               inherit.aes = FALSE, fill = "blue", alpha = 0.1) +
   geom_line(data=incid, aes(x=date, y=inc_tot, col ="Current"), 
             size=1, alpha = 0.5) +
-  coord_cartesian(ylim = c(0, 15000), xlim=c(mindate, maxdate), expand = FALSE) + 
+  coord_cartesian(ylim = c(0, 150000), xlim=c(mindate, maxdate), expand = FALSE) + 
   scale_x_date(date_breaks = "months", date_labels = "%b") +theme_light() +
   scale_color_manual(values = cols) +  theme(axis.text=element_text(size=15),
                                              plot.title = element_text(size=15, face="bold"),
@@ -217,5 +226,6 @@ gg#proj_plot <- fan_plot(fit = fit, pred = modelproj, obs = dat)
 #check transm multiplier 
 sig = 1:500
 f_sig = 1 - 0.8*2/(2+ exp(-0.5*(sig-30)))
+#f_sig = 1 - 0.9/(1+ exp(-1.25*(sig-100))) 
 plot(sig,f_sig)  
 

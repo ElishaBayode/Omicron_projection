@@ -39,11 +39,12 @@ sveirs <- function(time, state, parameters) {
   })
 }
 
+
 # this function takes in some intuitive parameters and attempts to create a starting
 # point for the ODE that sort of reflects them. 
-make_init = function( N=5.07e6, vaxlevel = 0.8,
-                      port_wane = 0.1, 
-                      past_infection = 0.1, incres = 500, incmut = 10, 
+make_init = function( N=N_pop, vaxlevel = vaxlevel_in,
+                      port_wane = port_wane_in, 
+                      past_infection = past_infection_in, incres = incres_in, incmut = incmut_in, 
                       pars=as.list(parameters)) {
   ff=2/3 # fudge factor . hard to get incidence right since it depends on other pars too (2/3)
   Vtot = vaxlevel*N*(1-port_wane) # allocate to V, Ev, Iv
@@ -101,7 +102,7 @@ get_total_incidence = function(output, parameters) {
 get_vax = function(output) {
   vax = output %>% mutate(vaxtot = V+ Erv + Emv+ 
                             Irv+ Imv+ Rv+ W +Erw+Emw+ Irw+ Imw+ Rw,
-                          vaxrecent = V+ Erv + Emv+ 
+                            vaxrecent = V+ Erv + Emv + 
                             Irv+ Imv+ Rv, waned = W +Erw+Emw+ Irw+ Imw+ Rw) %>% 
     select(time, vaxtot, vaxrecent, waned) 
   return(vax) 
