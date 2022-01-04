@@ -102,15 +102,9 @@ get_total_incidence = function(output, parameters) {
 get_vax = function(output) {
   vax = output %>% mutate(vaxtot = V+ Erv + Emv+ 
                             Irv+ Imv+ Rv+ W +Erw+Emw+ Irw+ Imw+ Rw,
-<<<<<<< HEAD
                           vaxtwodose = V+ Erv + Emv+ 
                             Irv+ Imv+ Rv, boosted = W +Erw+Emw+ Irw+ Imw+ Rw) %>% 
     select(time, vaxtot, vaxtwodose, boosted) 
-=======
-                            vaxrecent = V+ Erv + Emv + 
-                            Irv+ Imv+ Rv, waned = W +Erw+Emw+ Irw+ Imw+ Rw) %>% 
-    select(time, vaxtot, vaxrecent, waned) 
->>>>>>> 9849e901a0b67119bbeb0007a49f89ca16d83bf5
   return(vax) 
 }
 

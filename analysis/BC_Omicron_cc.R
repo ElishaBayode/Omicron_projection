@@ -168,11 +168,11 @@ output_BC_sd_int <- data.frame(time=ag_int$time ,S=ag_int$S[,2],Er=ag_int$Er[,2]
                            W=ag_int$W[,2],Erw=ag_int$Erw[,2],Emw=ag_int$Emw[,2],
                            Irw=ag_int$Irw[,2],Imw=ag_int$Imw[,2],Rw=ag_int$Rw[,2])
 
-#vaxinfo = get_vax(output_BC)
+vaxinfo = get_vax(output_BC)
 #plot(vaxinfo$time, vaxinfo$waned/N)
 #plot(vaxinfo$time, vaxinfo$vaxtot/N)
-#vaxlong <- melt(vaxinfo,  id.vars = 'time', variable.name = 'series')
-#ggplot(vaxlong, aes(x=time, y=value/N, color=series))+geom_line()
+vaxlong <- melt(vaxinfo,  id.vars = 'time', variable.name = 'series')
+ggplot(vaxlong, aes(x=time, y=value/N, color=series))+geom_line()
 
 incid = get_total_incidence(output=output_BC,parameters=c(mean(beta_r),parameters)) #set output to Province output 
 incid = incid %>% select(time, inc_res, inc_mut, inc_tot)
@@ -219,7 +219,7 @@ gg_BC <- plot_projection(modelproj, dat, date_column = "date") +
               inherit.aes = FALSE, fill = "blue", alpha = 0.1) +
   geom_line(data=incid, aes(x=date, y=inc_tot, col ="Current"), 
             size=1, alpha = 0.5) +
-  coord_cartesian(ylim = c(0, 150000), xlim=c(mindate, maxdate), expand = FALSE) + 
+  coord_cartesian(ylim = c(0, 5000), xlim=c(mindate, maxdate), expand = FALSE) + 
   scale_x_date(date_breaks = "months", date_labels = "%b") +theme_light() +
   scale_color_manual(values = cols) +  theme(axis.text=element_text(size=15),
                                              plot.title = element_text(size=15, face="bold"),
