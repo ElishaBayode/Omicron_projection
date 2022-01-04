@@ -42,17 +42,14 @@ modelproj$date = modelproj$day + lut$date[1] - 1
 N_pop=5.07e6
 times <- seq(0,120,1)
 ascFrac <- 0.6
-<<<<<<< HEAD
 intro_date <- ymd("2021-11-28") # i think this is actually the start date for the simulation
-=======
 vaxlevel_in = 0.8
-port_wane_in = 0.1 
+port_wane_in = 0.01 
 past_infection_in = 0.1
 incres_in = 500
 incmut_in = 10
 
 intro_date <- ymd("2021-12-02") # i think this is actually the start date for the simulation
->>>>>>> 9849e901a0b67119bbeb0007a49f89ca16d83bf5
 
 eff_date <- ymd("2021-12-29") # date when measures are half effective. I have changed the steepness of the measures function
 # so that it is steeper, and this is close to the date when measures take place (less of a range in time) 
@@ -93,11 +90,7 @@ parameters_int <-       c(sigma=1/3, # incubation period (3 days) (to fixed)
                         b= 0.006, # booster rate  (fixed) orig 0.006 
                         beff = 0, # booster efficacy
                         wf=0.2, # protection for newly recoverd #0.2
-<<<<<<< HEAD
                         stngcy= 0,#0.78, #(*%(reduction)) strength of intervention (reduction in beta's)
-=======
-                        stngcy= 0.50,#0.78, #(*%(reduction)) strength of intervention (reduction in beta's)
->>>>>>> 9849e901a0b67119bbeb0007a49f89ca16d83bf5
                         eff_t = as.numeric(eff_date - intro_date) # time to 50% intervention effectiveness
 )
 # note 19% boosted as of Dec 31 (of whole pop) https://vancouversun.com/news/local-news/covid-19-update-for-jan-3-2022-heres-the-latest-on-coronavirus-in-b-c
