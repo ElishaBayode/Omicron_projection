@@ -11,7 +11,7 @@ sveirs <- function(time, state, parameters) {
     #wf=0.2 # NOTE - this was to test the impact of recovered people being more immune than 
     # vaccinated people. i think it probably makes sense - after all they *just* recovered .
     #c <- 1# effectiveness of NPIs, set as 1, change later to c(t)
-    c <- 1 - stngcy/(2+ exp(-0.5*(time-eff_t)))   #intervention 
+    c <- 1 - stngcy/(1+ exp(-1.25*(time-eff_t)))   #intervention 
     N <- S+Er+Em+Ir+Im+R+V+Erv+Emv+Irv+Imv+Rv+W+Erw+Emw+Irw+Imw+Rw #total population 
     lambda_r <- c*beta_r*(Ir + Irv + Irw) #force of infection resident strain
     lambda_m <- c*beta_m*(Im + Imv + Imw) #force of infection mutant strain
@@ -38,6 +38,52 @@ sveirs <- function(time, state, parameters) {
     return(list(c(dS,dEr,dEm,dIr,dIm,dR,dV,dErv,dEmv,dIrv,dImv,dRv,dW,dErw,dEmw,dIrw,dImw,dRw)))
   })
 }
+
+# this function takes in some intuitive parameters and attempts to create a starting
+# point for the ODE that sort of reflects them. 
+make_init = function( N=5.07e6, vaxlevel = 0.8,
+                      port_wane = 0.1, 
+                      past_infection = 0.1, incres = 500, incmut = 10, 
+                      pars=as.list(parameters)) {
+  ff=2/3 # fudge factor . hard to get incidence right since it depends on other pars too (2/3)
+  Vtot = vaxlevel*N*(1-port_wane) # allocate to V, Ev, Iv
+  Wtot = vaxlevel*N*port_wane # allocate to W, Ew, Iw 
+  # some have had covid. but they might also have been vaccinated. 
+  # set up Rs 
+  R0 = N*past_infection*(1-vaxlevel)  # past infections, but not vaccinated 
+  Rv0 = N*past_infection*(vaxlevel) * (1-port_wane) # recovered, vaxd and not waned 
+  Rw0 = N*past_infection*(vaxlevel) * port_wane # rec, vaxd, waned 
+  # set up Es : resident 
+  Ertot = ff*incres/pars$sigma # total Er 
+  Ervw = vaxlevel*pars$ve*Ertot # vaccinated 
+  Erw0 = Ervw * port_wane # waned
+  Erv0 = Ervw *(1-port_wane) # not waned.  these two add to Ervwboth
+  Er0 = (1-vaxlevel*pars$epsilon_r)*Ertot # unvaccinated 
+  # set up Es : mutant  
+  Emtot = ff*incmut/pars$sigma # total Er 
+  Emvw = vaxlevel*pars$ve*Emtot # vaccinated 
+  Emw0 = Emvw * port_wane # waned
+  Emv0 = Emvw *(1-port_wane) # not waned.  these two add to Ervwboth
+  Em0 = (1-vaxlevel*pars$epsilon_m)*Emtot # unvaccinated 
+  # set up Is. for now just make them 2x Es since they last twice as long 
+  Ir0=ff*2*Er0; Irv0 = ff*2*Erv0; Irw0 = ff*2*Erw0
+  Im0 = ff*2*Em0; Imv0=ff*2*Emv0; Imw0= ff*2*Emw0
+  
+  # set up V0, W0
+  # first line plus Rv0 adds to the V total but we have to leave room for the E, I
+  V0 = N*(1-past_infection)*vaxlevel*(1-port_wane) - 
+    (Erv0+Irv0+Emv0+Imv0)*(1-port_wane)
+  W0 = N*(1-past_infection)*vaxlevel*(port_wane) - 
+    ( Erw0+Irw0+Emw0+Imw0)*(port_wane) 
+  # set up S 
+  initmost = c(Er=Er0, Em =Em0, Ir=Ir0, Im=Im0, R=R0, 
+               V=V0, Erv=Erv0, Emv=Emv0, Irv = Irv0,  Imv=Imv0, Rv=Rv0, 
+               W=W0, Erw=Erw0, Emw=Emw0, Irw = Irw0,  Imw=Imw0, Rw=Rw0)
+  state = c(S=N-sum(initmost), initmost)
+  return(state)
+}
+# ----
+
 
 # this just pulls out some incidence values 
 get_total_incidence = function(output, parameters) {

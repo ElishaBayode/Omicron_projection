@@ -136,8 +136,8 @@ parameters <-         c(sigma=1/3, # incubation period (3 days) (to fixed)
                         ve=1, # I think this should be 1. it is not really efficacy  ( fixed)
                         beta_r=0.5, #transmission rate (to estimate) (0.35)
                         beta_m=0.5*1.7, #transmission rate (to estimate)(*1.9)
-                        epsilon_r = (1-0.8), # % this should be 1-ve 
-                        epsilon_m = (1-0.6), # % escape capacity #(fixed)
+                        epsilon_r = (1-0.8), # % this should be 1-ve # ve = 0.8
+                        epsilon_m = (1-0.6), # % escape capacity #(fixed) #  ve = 0.4 
                         b= 0.006 # booster rate  (fixed)
 )
 
