@@ -13,7 +13,7 @@ sveirs <- function(time, state, parameters) {
     #c <- 1# effectiveness of NPIs, set as 1, change later to c(t)
     c <- 1 - stngcy/(1+ exp(-1.25*(time-eff_t)))   #intervention 
     N <- S+Er+Em+Ir+Im+R+V+Erv+Emv+Irv+Imv+Rv+W+Erw+Emw+Irw+Imw+Rw #total population 
-    lambda_r <- c*beta_r*(Ir + Irv + Irw) #force of infection resident strain
+    lambda_r <- c*beta_r*(Ir + Irv + Irw)
     lambda_m <- c*beta_m*(Im + Imv + Imw) #force of infection mutant strain
     
     
@@ -28,13 +28,13 @@ sveirs <- function(time, state, parameters) {
     dEmv <- epsilon_m*lambda_m*V/N +wf* epsilon_m*lambda_m*Rv/N - (sigma+mu)*Emv 
     dIrv <- sigma*Erv - (gamma + mu)*Irv
     dImv <- sigma*Emv - (gamma + mu)*Imv
-    dRv <-  gamma*(Irv + Imv) -wf* (epsilon_r*lambda_r + epsilon_m*lambda_m)*Rv/N - (mu + w2)*Rv
-    dW <-   b*ve*V + w2*Rw - (epsilon_r*lambda_r + epsilon_m*lambda_m)*W/N -(mu+ w3)*W
-    dErw <- epsilon_r*lambda_r*W/N + wf*epsilon_r*lambda_r*Rw/N - (sigma+mu)*Erw 
-    dEmw <- epsilon_m*lambda_m*W/N + wf*epsilon_m*lambda_m*Rw/N - (sigma+mu)*Emw 
+    dRv <-  gamma*(Irv + Imv) -wf* (epsilon_r*lambda_r + epsilon_m*lambda_m)*Rv/N - (mu + w2 + b*ve)*Rv
+    dW <-   b*ve*V + w2*Rw - (1-beff)*(epsilon_r*lambda_r + epsilon_m*lambda_m)*W/N -(mu+ w3)*W
+    dErw <-(1-beff)*epsilon_r*lambda_r*W/N + (1-beff)*wf*epsilon_r*lambda_r*Rw/N - (sigma+mu)*Erw 
+    dEmw <- (1-beff)*epsilon_m*lambda_m*W/N + (1-beff)*wf*epsilon_m*lambda_m*Rw/N - (sigma+mu)*Emw 
     dIrw <- sigma*Erw - (gamma + mu)*Irw
     dImw <- sigma*Emw - (gamma + mu)*Imw
-    dRw <-  gamma*(Irw + Imw) - wf*(epsilon_r*lambda_r + epsilon_m*lambda_m)*Rw/N - (mu + w2)*Rw
+    dRw <-  b*ve*Rv + gamma*(Irw + Imw) - wf*(1-beff)*(epsilon_r*lambda_r + epsilon_m*lambda_m)*Rw/N - (mu + w2)*Rw
     return(list(c(dS,dEr,dEm,dIr,dIm,dR,dV,dErv,dEmv,dIrv,dImv,dRv,dW,dErw,dEmw,dIrw,dImw,dRw)))
   })
 }
@@ -102,9 +102,15 @@ get_total_incidence = function(output, parameters) {
 get_vax = function(output) {
   vax = output %>% mutate(vaxtot = V+ Erv + Emv+ 
                             Irv+ Imv+ Rv+ W +Erw+Emw+ Irw+ Imw+ Rw,
+<<<<<<< HEAD
+                          vaxtwodose = V+ Erv + Emv+ 
+                            Irv+ Imv+ Rv, boosted = W +Erw+Emw+ Irw+ Imw+ Rw) %>% 
+    select(time, vaxtot, vaxtwodose, boosted) 
+=======
                             vaxrecent = V+ Erv + Emv + 
                             Irv+ Imv+ Rv, waned = W +Erw+Emw+ Irw+ Imw+ Rw) %>% 
     select(time, vaxtot, vaxrecent, waned) 
+>>>>>>> 9849e901a0b67119bbeb0007a49f89ca16d83bf5
   return(vax) 
 }
 

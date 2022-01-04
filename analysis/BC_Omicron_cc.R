@@ -42,6 +42,9 @@ modelproj$date = modelproj$day + lut$date[1] - 1
 N_pop=5.07e6
 times <- seq(0,120,1)
 ascFrac <- 0.6
+<<<<<<< HEAD
+intro_date <- ymd("2021-11-28") # i think this is actually the start date for the simulation
+=======
 vaxlevel_in = 0.8
 port_wane_in = 0.1 
 past_infection_in = 0.1
@@ -49,6 +52,7 @@ incres_in = 500
 incmut_in = 10
 
 intro_date <- ymd("2021-12-02") # i think this is actually the start date for the simulation
+>>>>>>> 9849e901a0b67119bbeb0007a49f89ca16d83bf5
 
 eff_date <- ymd("2021-12-29") # date when measures are half effective. I have changed the steepness of the measures function
 # so that it is steeper, and this is close to the date when measures take place (less of a range in time) 
@@ -63,10 +67,11 @@ parameters <-         c(sigma=1/3, # incubation period (3 days) (to fixed)
                         w3= 1/(3*365),# waning rate Rw to W (fixed)
                         ve=1, # I think this should be 1. it is not really efficacy  ( fixed)
                         #beta_r=0.72, #transmission rate (to estimate) (0.35)
-                        beta_m=0.78*2.2, #transmission rate (to estimate)(*1.9)
+                        beta_m=0.65*1.9, #transmission rate (to estimate)(*1.9)
                         epsilon_r = (1-0.8), # % this should be 1-ve 
-                        epsilon_m = (1-0.6), # % escape capacity #(fixed)
-                        b= 0.006, # booster rate  (fixed)
+                        epsilon_m = (1-0.3), # % escape capacity #(fixed)
+                        b= 0.0055, # booster rate  (fixed)
+                        beff = 0.6,
                         wf=0.2, # protection for newly recoverd #0.2
                         stngcy= 0,#0.78, #(2*%(reduction)) strength of intervention (reduction in beta's)
                         eff_t = as.numeric(eff_date - intro_date) # time to 50% intervention effectiveness
@@ -82,18 +87,24 @@ parameters_int <-       c(sigma=1/3, # incubation period (3 days) (to fixed)
                         w3= 1/(3*365),# waning rate Rw to W (fixed)
                         ve=1, # I think this should be 1. it is not really efficacy  ( fixed)
                         #beta_r=0.72, #transmission rate (to estimate) (0.35)
-                        beta_m=0.78*2.2, #transmission rate (to estimate)(*1.9)
+                        beta_m=0.65*2.2, #transmission rate (to estimate)(*1.9)
                         epsilon_r = (1-0.8), # % this should be 1-ve 
                         epsilon_m = (1-0.6), # % escape capacity #(fixed)
-                        b= 0.006, # booster rate  (fixed)
+                        b= 0.006, # booster rate  (fixed) orig 0.006 
+                        beff = 0, # booster efficacy
                         wf=0.2, # protection for newly recoverd #0.2
+<<<<<<< HEAD
+                        stngcy= 0,#0.78, #(*%(reduction)) strength of intervention (reduction in beta's)
+=======
                         stngcy= 0.50,#0.78, #(*%(reduction)) strength of intervention (reduction in beta's)
+>>>>>>> 9849e901a0b67119bbeb0007a49f89ca16d83bf5
                         eff_t = as.numeric(eff_date - intro_date) # time to 50% intervention effectiveness
 )
-
+# note 19% boosted as of Dec 31 (of whole pop) https://vancouversun.com/news/local-news/covid-19-update-for-jan-3-2022-heres-the-latest-on-coronavirus-in-b-c
+# consistent with the rate b= 0.006 
 
 # ---- sample betar and get odesolver output ----
-m <- 0.78
+m <- 0.65 # 0.78 is Elisha's original beta mean for the resident strain, which fit the data in the orig pars 
 s <- 0.25
 location <- log(m^2 / sqrt(s^2 + m^2))
 shape <- sqrt(log(1 + (s^2 / m^2)))
@@ -157,6 +168,12 @@ output_BC_sd_int <- data.frame(time=ag_int$time ,S=ag_int$S[,2],Er=ag_int$Er[,2]
                            W=ag_int$W[,2],Erw=ag_int$Erw[,2],Emw=ag_int$Emw[,2],
                            Irw=ag_int$Irw[,2],Imw=ag_int$Imw[,2],Rw=ag_int$Rw[,2])
 
+#vaxinfo = get_vax(output_BC)
+#plot(vaxinfo$time, vaxinfo$waned/N)
+#plot(vaxinfo$time, vaxinfo$vaxtot/N)
+#vaxlong <- melt(vaxinfo,  id.vars = 'time', variable.name = 'series')
+#ggplot(vaxlong, aes(x=time, y=value/N, color=series))+geom_line()
+
 incid = get_total_incidence(output=output_BC,parameters=c(mean(beta_r),parameters)) #set output to Province output 
 incid = incid %>% select(time, inc_res, inc_mut, inc_tot)
 incid = incid %>% mutate(date=seq.Date(ymd(intro_date),ymd(intro_date)-1+length(times), 1))
@@ -179,15 +196,15 @@ incid_sd_BC_int = incid_int %>% select(time, inc_res, inc_mut, inc_tot)
 incid_sd_BC_int = incid_sd_BC_int %>% mutate(err=qt(0.975,df=sim_size-1)*inc_tot/sqrt(sim_size))
 incid_sd_BC_int = incid_sd_BC_int %>% mutate(lower = inc_tot-err, upper = inc_tot+err)
 
-ggplot(data = incid, aes(x=date, y=inc_tot))+geom_line(color="red") + 
-  geom_line(data = incid_int, aes(x=date, y=inc_tot), color="blue")
+# ggplot(data = incid, aes(x=date, y=inc_tot))+geom_line(color="red") + 
+#   geom_line(data = incid_int, aes(x=date, y=inc_tot), color="blue")
 
-incid_long <- melt(incid,  id.vars = 'time', variable.name = 'series')
+# incid_long <- melt(incid,  id.vars = 'time', variable.name = 'series')
 # ggplot(incid_long, aes(time,value)) + geom_line(aes(colour = series))
 
 
 # ---- make ggplot with covidseir fit and new model fit ---- 
-cols <- c("Current" = "#D55E00", "75% reduction in transmission"="#009E73")
+cols <- c("Current" = "#D55E00", "intervention pars"="#009E73")
 mindate = ymd("2021-10-01")
 maxdate = max(incid$date)
 gg_BC <- plot_projection(modelproj, dat, date_column = "date") +
