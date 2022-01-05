@@ -41,15 +41,15 @@ modelproj$date = modelproj$day + lut$date[1] - 1
 
 N_pop=5.07e6
 times <- seq(0,120,1)
-ascFrac <- 0.6
+ascFrac <- 0.5
 intro_date <- ymd("2021-11-28") # i think this is actually the start date for the simulation
 vaxlevel_in = 0.8
-port_wane_in = 0.01 
+port_wane_in = 0.04 
 past_infection_in = 0.1
-incres_in = 500
+incres_in = 600
 incmut_in = 10
 
-intro_date <- ymd("2021-12-02") # i think this is actually the start date for the simulation
+# intro_date <- ymd("2021-12-01") # i think this is actually the start date for the simulation
 
 eff_date <- ymd("2021-12-29") # date when measures are half effective. I have changed the steepness of the measures function
 # so that it is steeper, and this is close to the date when measures take place (less of a range in time) 
@@ -64,11 +64,11 @@ parameters <-         c(sigma=1/3, # incubation period (3 days) (to fixed)
                         w3= 1/(3*365),# waning rate Rw to W (fixed)
                         ve=1, # I think this should be 1. it is not really efficacy  ( fixed)
                         #beta_r=0.72, #transmission rate (to estimate) (0.35)
-                        beta_m=0.65*1.9, #transmission rate (to estimate)(*1.9)
+                        beta_m=0.75*1.9, #transmission rate (to estimate)(*1.9)
                         epsilon_r = (1-0.8), # % this should be 1-ve 
                         epsilon_m = (1-0.3), # % escape capacity #(fixed)
-                        b= 0.0055, # booster rate  (fixed)
-                        beff = 0.6,
+                        b= 0.007, # booster rate  (fixed)
+                        beff = 0.7,
                         wf=0.2, # protection for newly recoverd #0.2
                         stngcy= 0,#0.78, #(2*%(reduction)) strength of intervention (reduction in beta's)
                         eff_t = as.numeric(eff_date - intro_date) # time to 50% intervention effectiveness
@@ -84,7 +84,7 @@ parameters_int <-       c(sigma=1/3, # incubation period (3 days) (to fixed)
                         w3= 1/(3*365),# waning rate Rw to W (fixed)
                         ve=1, # I think this should be 1. it is not really efficacy  ( fixed)
                         #beta_r=0.72, #transmission rate (to estimate) (0.35)
-                        beta_m=0.65*2.2, #transmission rate (to estimate)(*1.9)
+                        beta_m=0.75*2.2, #transmission rate (to estimate)(*1.9)
                         epsilon_r = (1-0.8), # % this should be 1-ve 
                         epsilon_m = (1-0.6), # % escape capacity #(fixed)
                         b= 0.006, # booster rate  (fixed) orig 0.006 
@@ -97,7 +97,7 @@ parameters_int <-       c(sigma=1/3, # incubation period (3 days) (to fixed)
 # consistent with the rate b= 0.006 
 
 # ---- sample betar and get odesolver output ----
-m <- 0.65 # 0.78 is Elisha's original beta mean for the resident strain, which fit the data in the orig pars 
+m <- 0.75 # 0.78 is Elisha's original beta mean for the resident strain, which fit the data in the orig pars 
 s <- 0.25
 location <- log(m^2 / sqrt(s^2 + m^2))
 shape <- sqrt(log(1 + (s^2 / m^2)))
@@ -167,7 +167,7 @@ vaxinfo = get_vax(output_BC)
 vaxlong <- melt(vaxinfo,  id.vars = 'time', variable.name = 'series')
 ggplot(vaxlong, aes(x=time, y=value/N, color=series))+geom_line()
 
-incid = get_total_incidence(output=output_BC,parameters=c(mean(beta_r),parameters)) #set output to Province output 
+incid = get_total_incidence(output=output_BC,parameters=c(mean(beta_r),parameters), lag=4) #set output to Province output 
 incid = incid %>% select(time, inc_res, inc_mut, inc_tot)
 incid = incid %>% mutate(date=seq.Date(ymd(intro_date),ymd(intro_date)-1+length(times), 1))
 incid = incid %>% mutate(rcases = MASS::rnegbin(length(incid$inc_tot), incid$inc_tot, 
@@ -212,7 +212,7 @@ gg_BC <- plot_projection(modelproj, dat, date_column = "date") +
               inherit.aes = FALSE, fill = "blue", alpha = 0.1) +
   geom_line(data=incid, aes(x=date, y=inc_tot, col ="Current"), 
             size=1, alpha = 0.5) +
-  coord_cartesian(ylim = c(0, 5000), xlim=c(mindate, maxdate), expand = FALSE) + 
+  coord_cartesian(ylim = c(0, 150000), xlim=c(mindate, maxdate), expand = FALSE) + 
   scale_x_date(date_breaks = "months", date_labels = "%b") +theme_light() +
   scale_color_manual(values = cols) +  theme(axis.text=element_text(size=15),
                                              plot.title = element_text(size=15, face="bold"),
@@ -225,8 +225,14 @@ gg_BC
 
 
 
-ggsave(file="figs/BC_proj.png", gg_BC, width = 10, height = 8)
-saveRDS(gg_BC, file.path("figs/BC-fig.rds"))
+inclong = incid %>% select(date, inc_res, inc_mut, inc_tot) %>% 
+  melt(id.vars = 'date', variable.name = 'series')
+ggplot(data=inclong, aes(x=date, y = value, colour = series))+geom_line()+
+  ylim(c(0,5000)) + 
+  geom_point(data = filter(dat,date>mindate), aes(x=date, y=cases), inherit.aes = F)
+
+# ggsave(file="figs/BC_proj.png", gg_BC, width = 10, height = 8)
+# saveRDS(gg_BC, file.path("figs/BC-fig.rds"))
 #saveRDS(g, file.path("figs/Show_freqBC.rds"))
 
 

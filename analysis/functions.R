@@ -46,7 +46,7 @@ make_init = function( N=N_pop, vaxlevel = vaxlevel_in,
                       port_wane = port_wane_in, 
                       past_infection = past_infection_in, incres = incres_in, incmut = incmut_in, 
                       pars=as.list(parameters)) {
-  ff=2/3 # fudge factor . hard to get incidence right since it depends on other pars too (2/3)
+  ff=6/7 # fudge factor . hard to get incidence right since it depends on other pars too (2/3)
   Vtot = vaxlevel*N*(1-port_wane) # allocate to V, Ev, Iv
   Wtot = vaxlevel*N*port_wane # allocate to W, Ew, Iw 
   # some have had covid. but they might also have been vaccinated. 
@@ -85,15 +85,22 @@ make_init = function( N=N_pop, vaxlevel = vaxlevel_in,
 }
 # ----
 
+lag_func <- function(x, k = 1, pad = NA){
+  if(k == 0)
+    return(x)
+  nas <- rep(pad, min(length(x), abs(k)))
+  if(k < 0)
+    c(tail(x, k), nas) else c(nas, head(x, -k))
+}
 
 # this just pulls out some incidence values 
-get_total_incidence = function(output, parameters) {
+get_total_incidence = function(output, parameters, lag = 0) {
   with(as.list( parameters), {
-    incid =  output %>% mutate(inc_res = ascFrac*sigma*(Er+Erv+Erw), 
-                               inc_mut = ascFrac*sigma*(Em +Emv +Emw), 
-                               inc_tot = ascFrac*sigma*(Er+Erv+Erw+Em +Emv +Emw), 
-                               inc_vax = sigma*(Erv+Erw + Emv +Emw), 
-                               inc_nonvax = sigma*(Er+Em)) %>% 
+    incid =  output %>% mutate(inc_res = ascFrac*sigma*lag_func(Er+Erv+Erw, k=lag), 
+                               inc_mut = ascFrac*sigma*lag_func(Em +Emv +Emw, k=lag), 
+                               inc_tot = ascFrac*sigma*lag_func(Er+Erv+Erw+Em +Emv +Emw, k=lag), 
+                               inc_vax = ascFrac*sigma*lag_func(Erv+Erw + Emv +Emw, k=lag), 
+                               inc_nonvax = ascFrac*sigma*lag_func(Er+Em), k=lag) %>% 
       select(time, inc_res, inc_mut, inc_tot, inc_vax, inc_nonvax)
     return(incid)})
 }
