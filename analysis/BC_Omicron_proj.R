@@ -5,58 +5,40 @@ source("analysis/functions.R")
 #          Rv=0,W=0,Erw=1,Emw=1, Irw=0, Imw=0,Rw=0)
 
 
+
+fit = readRDS("/Users/elishaare/Desktop/PHAC_forecasts_14DEC2021/COVID-PHAC-forecasts/data-generated/BC-fit.rds")
+dat = readRDS("data/BC-dat.rds")
+
 # ----
-# this function takes in some intuitive parameters and attempts to create a starting
-# point for the ODE that sort of reflects them. 
-make_init = function( N=5.07e6, vaxlevel = 0.8,
-                      port_wane = 0.1, 
-                      past_infection = 0.1, incres = 500, incmut = 10, 
-                      pars=as.list(parameters)) {
-  ff=2/3 # fudge factor . hard to get incidence right since it depends on other pars too (2/3)
-  Vtot = vaxlevel*N*(1-port_wane) # allocate to V, Ev, Iv
-  Wtot = vaxlevel*N*port_wane # allocate to W, Ew, Iw 
-  # some have had covid. but they might also have been vaccinated. 
-  # set up Rs 
-  R0 = N*past_infection*(1-vaxlevel)  # past infections, but not vaccinated 
-  Rv0 = N*past_infection*(vaxlevel) * (1-port_wane) # recovered, vaxd and not waned 
-  Rw0 = N*past_infection*(vaxlevel) * port_wane # rec, vaxd, waned 
-  # set up Es : resident 
-  Ertot = ff*incres/pars$sigma # total Er 
-  Ervw = vaxlevel*pars$ve*Ertot # vaccinated 
-  Erw0 = Ervw * port_wane # waned
-  Erv0 = Ervw *(1-port_wane) # not waned.  these two add to Ervwboth
-  Er0 = (1-vaxlevel*pars$epsilon_r)*Ertot # unvaccinated 
-  # set up Es : mutant  
-  Emtot = ff*incmut/pars$sigma # total Er 
-  Emvw = vaxlevel*pars$ve*Emtot # vaccinated 
-  Emw0 = Emvw * port_wane # waned
-  Emv0 = Emvw *(1-port_wane) # not waned.  these two add to Ervwboth
-  Em0 = (1-vaxlevel*pars$epsilon_m)*Emtot # unvaccinated 
-  # set up Is. for now just make them 2x Es since they last twice as long 
-  Ir0=ff*2*Er0; Irv0 = ff*2*Erv0; Irw0 = ff*2*Erw0
-  Im0 = ff*2*Em0; Imv0=ff*2*Emv0; Imw0= ff*2*Emw0
- 
-  # set up V0, W0
-  # first line plus Rv0 adds to the V total but we have to leave room for the E, I
-  V0 = N*(1-past_infection)*vaxlevel*(1-port_wane) - 
-    (Erv0+Irv0+Emv0+Imv0)*(1-port_wane)
-  W0 = N*(1-past_infection)*vaxlevel*(port_wane) - 
-    ( Erw0+Irw0+Emw0+Imw0)*(port_wane) 
-  # set up S 
-  initmost = c(Er=Er0, Em =Em0, Ir=Ir0, Im=Im0, R=R0, 
-               V=V0, Erv=Erv0, Emv=Emv0, Irv = Irv0,  Imv=Imv0, Rv=Rv0, 
-               W=W0, Erw=Erw0, Emw=Emw0, Irw = Irw0,  Imw=Imw0, Rw=Rw0)
-  state = c(S=N-sum(initmost), initmost)
-  return(state)
-}
-# ----
+first_day <- min(dat$date)
+lut <- dplyr::tibble(
+  day = seq_len(300),
+  date = seq(first_day, first_day + length(day) - 1, by = "1 day")
+)
+
+
+
+proj2 <- project_seir(fit, iter = seq_len(50), stan_model = stan_mod, forecast_days = 0)
+proj2$day <- proj2$day + min(dat$day) - 1
+
+modelproj = proj2 %>% tidy_seir()  
+modelproj$date = modelproj$day + lut$date[1] - 1 
 
 
 N=5.07e6
-times <- seq(0,60,1)
-ascFrac <- 0.6
-intro_date <- ymd("2021-12-02")
-eff_date <- ymd("2022-01-01")
+N_pop=N
+times <- seq(0,70,1)
+ascFrac <- 0.5
+intro_date <- ymd("2021-11-28") # i think this is actually the start date for the simulation
+vaxlevel_in = 0.8
+port_wane_in = 0.04 
+past_infection_in = 0.1
+incres_in = 450
+incmut_in = 10
+
+eff_date <- ymd("2021-12-29")  
+#intro_date <- ymd("2021-12-02")
+#eff_date <- ymd("2022-01-01")
 # ---- pars ---- 
 parameters <-         c(sigma=1/3, # incubation period (3 days) (to fixed)
                         gamma=1/(4), #recovery rate (fixed)
@@ -67,52 +49,44 @@ parameters <-         c(sigma=1/3, # incubation period (3 days) (to fixed)
                         w3= 1/(3*365),# waning rate Rw to W (fixed)
                         ve=1, # I think this should be 1. it is not really efficacy  ( fixed)
                         #beta_r=0.72, #transmission rate (to estimate) (0.35)
-                        beta_m=0.78*2.2, #transmission rate (to estimate)(*1.9)
+                        beta_m=0.72*2.2, #transmission rate (to estimate)(*1.9)
                         epsilon_r = (1-0.8), # % this should be 1-ve 
                         epsilon_m = (1-0.6), # % escape capacity #(fixed)
-                        b= 0.006, # booster rate  (fixed)
+                        b= 0.007, # booster rate  (fixed)
+                        beff = 0.7,
                         wf=0.2, # protection for newly recoverd #0.2
-                        stngcy= 2*0,#0.78, #(2*%(reduction)) strength of intervention (reduction in beta's)
-                        eff_t = as.numeric(eff_date - intro_date) # time to 50% intervention effectiveness
-                         
-)
-
-
-
-
-parameters_int <-         c(sigma=1/3, # incubation period (3 days) (to fixed)
-                        gamma=1/(4), #recovery rate (fixed)
-                        nu =0.007, #vax rate: 0.7% per day (fixed)
-                        mu=1/(82*365), # 1/life expectancy (fixed)
-                        w1= 1/(3*365),# waning rate from R to S (fixed)
-                        w2= 1/(3*365), # waning rate from Rv to V (fixed)
-                        w3= 1/(3*365),# waning rate Rw to W (fixed)
-                        ve=1, # I think this should be 1. it is not really efficacy  ( fixed)
-                        #beta_r=0.72, #transmission rate (to estimate) (0.35)
-                        beta_m=0.78*2.2, #transmission rate (to estimate)(*1.9)
-                        epsilon_r = (1-0.8), # % this should be 1-ve 
-                        epsilon_m = (1-0.6), # % escape capacity #(fixed)
-                        b= 0.006, # booster rate  (fixed)
-                        wf=0.2, # protection for newly recoverd #0.2
-                        stngcy= 2*0.75,#0.78, #(2*%(reduction)) strength of intervention (reduction in beta's)
+                        stngcy= 0,#0.78, #(2*%(reduction)) strength of intervention (reduction in beta's)
                         eff_t = as.numeric(eff_date - intro_date) # time to 50% intervention effectiveness
                         
 )
 
 
 
+parameters_int <-       c(sigma=1/3, # incubation period (3 days) (to fixed)
+                          gamma=1/(4), #recovery rate (fixed)
+                          nu =0.007, #vax rate: 0.7% per day (fixed)
+                          mu=1/(82*365), # 1/life expectancy (fixed)
+                          w1= 1/(3*365),# waning rate from R to S (fixed)
+                          w2= 1/(3*365), # waning rate from Rv to V (fixed)
+                          w3= 1/(3*365),# waning rate Rw to W (fixed)
+                          ve=1, # I think this should be 1. it is not really efficacy  ( fixed)
+                          #beta_r=0.72, #transmission rate (to estimate) (0.35)
+                          beta_m=0.72*2.2, #transmission rate (to estimate)(*1.9)
+                          epsilon_r = (1-0.8), # % this should be 1-ve 
+                          epsilon_m = (1-0.6), # % escape capacity #(fixed)
+                          b= 0.006, # booster rate  (fixed) orig 0.006 
+                          beff = 0.7, # booster efficacy
+                          wf=0.2, # protection for newly recoverd #0.2
+                          stngcy= 0.5,#0.78, #(*%(reduction)) strength of intervention (reduction in beta's)
+                          eff_t = as.numeric(eff_date - intro_date) # time to 50% intervention effectiveness
+)
+# note 19% boosted as of Dec 31 (of whole pop) https://vancouversun.com/news/local-news/covid-19-update-for-jan-3-2022-heres-the-latest-on-coronavirus-in-b-c
+# consistent with the rate b= 0.006 
 
-
-
-
-
-
-#sig = 1:500
-#f_sig = 1 - 0.8*2/(2+ exp(-0.5*(sig-30)))
-#plot(sig,f_sig) 
-
+# ---- sample betar and get odesolver output ----
 #odesolver output
-m <- 0.78
+
+m <- 0.72
 s <- 0.25
 location <- log(m^2 / sqrt(s^2 + m^2))
 shape <- sqrt(log(1 + (s^2 / m^2)))
@@ -192,10 +166,7 @@ output_BC_sd_int <- data.frame(time=ag_int$time ,S=ag_int$S[,2],Er=ag_int$Er[,2]
 output_BC <- output_BC %>% mutate(total_pop =S+Er+Em+Ir+Im+R+V+Erv+Emv+Irv+Imv+Rv+W+Erw+Emw+Irw+Imw+Rw)
 
 
-#helper fuctions 
 
-fit = readRDS("/Users/elishaare/Desktop/PHAC_forecasts_14DEC2021/COVID-PHAC-forecasts/data-generated/BC-fit.rds")
-dat = readRDS("/Users/elishaare/Desktop/PHAC_forecasts_28DEC2021/COVID-PHAC-forecasts/data-generated/BC-dat.rds")
 
 
 incid = get_total_incidence(output=output_BC,parameters=c(mean(beta_r),parameters)) #set output to Province output 
@@ -262,28 +233,8 @@ saveRDS(incid_sd_BC_int, file.path("data/BC-incid_er_int.rds"))
 incid_sd_BC_int =readRDS(file.path("data/BC-incid_er_int.rds"))
 
 
-#set path to recent PHAC forecasts data
-#fit = readRDS("/Users/elishaare/Desktop/PHAC_forecasts_14DEC2021/COVID-PHAC-forecasts/data-generated/BC-fit.rds")
-#dat = readRDS("/Users/elishaare/Desktop/PHAC_forecasts_14DEC2021/COVID-PHAC-forecasts/data-generated/BC-dat.rds")
 
-
-first_day <- min(dat$date)
-lut <- dplyr::tibble(
-  day = seq_len(300),
-  date = seq(first_day, first_day + length(day) - 1, by = "1 day")
-)
-
-
-
-proj2 <- project_seir(fit, iter = seq_len(50), stan_model = stan_mod, forecast_days = 0)
-proj2$day <- proj2$day + min(dat$day) - 1
-
-modelproj = proj2 %>% tidy_seir()  
-modelproj$date = modelproj$day + lut$date[1] - 1 
-
-
-
-cols <- c("Current" = "#D55E00", "75% reduction in transmission"="#009E73")
+cols <- c("Current" = "#D55E00", "50% reduction in transmission"="#009E73")
 
 #cols <- c( "Total"="#D55E00") #"Omicron" = "#009E73",
 gg_BC <- plot_projection(modelproj, dat, date_column = "date") +
@@ -292,7 +243,7 @@ gg_BC <- plot_projection(modelproj, dat, date_column = "date") +
   geom_ribbon(data=incid, aes(x=date, ymin = incid_sd_BC$lower, ymax = incid_sd_BC$upper),
              inherit.aes = FALSE, fill = "grey", alpha = 0.5) +
   
-  geom_line(data=incid_int, aes(x=date, y=inc_tot, col ="75% reduction in transmission"), 
+  geom_line(data=incid_int, aes(x=date, y=inc_tot, col ="50% reduction in transmission"), 
             size=1, alpha = 0.5) +
   geom_ribbon(data=incid_int, aes(x=date, ymin = incid_sd_BC_int$lower, ymax = incid_sd_BC_int$upper),
               inherit.aes = FALSE, fill = "blue", alpha = 0.1) +
@@ -304,7 +255,7 @@ gg_BC <- plot_projection(modelproj, dat, date_column = "date") +
   
   #geom_ribbon(data = btout, aes(x=date, ymax = y_rep_0.95, ymin=y_rep_0.05), 
   #            alpha=0.3, fill="red")+
-  coord_cartesian(ylim = c(0, 8000), expand = FALSE) + 
+  coord_cartesian(ylim = c(0, 20000), expand = FALSE) + 
   scale_x_date(date_breaks = "months", date_labels = "%b") +theme_light() +
   scale_color_manual(values = cols) +  theme(axis.text=element_text(size=15),
                                              plot.title = element_text(size=15, face="bold"),
@@ -314,6 +265,7 @@ gg_BC <- plot_projection(modelproj, dat, date_column = "date") +
   
   labs(color = " ",title="BC")
 
+gg_BC
 
 ggsave(file="figs/BC_proj.png", gg_BC, width = 10, height = 8)
 saveRDS(gg_BC, file.path("figs/BC-fig.rds"))

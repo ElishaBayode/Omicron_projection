@@ -1,5 +1,6 @@
 library(erer)
 library(gridExtra)
+library(data.table)
 AB_Omicron = as.data.frame(readRDS(file.path("data/AB-incid.rds")))
 BC_Omicron  = as.data.frame(readRDS(file.path("data/BC-incid.rds")))
 MB_Omicron  = as.data.frame(readRDS(file.path("data/MB-incid.rds")))
@@ -32,7 +33,7 @@ showOmicron <- rbindlist(showOmicron, fill = TRUE)[,lapply(.SD, sum, na.rm = TRU
 #showOmicron$date <- SK_Omicron$date
 
 showOmicron_er <- rbindlist(showOmicron_er, fill = TRUE)[,lapply(.SD, sum, na.rm = TRUE) , time]
-showOmicron$date <- ON_Omicron$date
+showOmicron$date <- BC_Omicron$date
 
 
 
@@ -65,7 +66,7 @@ showOmicron_er_int <- list(AB=AB_Omicron_er_int,BC=BC_Omicron_er_int,MB=MB_Omicr
                        ON=ON_Omicron_er_int,QC=QC_Omicron_er_int,SK=SK_Omicron_er_int)  
 
 
-library(data.table)
+
 
 showOmicron_int <- rbindlist(showOmicron_int, fill = TRUE)[,lapply(.SD, sum, na.rm = TRUE) , time]
 showOmicron$date <- ON_Omicron$date

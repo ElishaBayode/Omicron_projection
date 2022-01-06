@@ -5,57 +5,39 @@ source("analysis/functions.R")
 #          Rv=0,W=0,Erw=1,Emw=1, Irw=0, Imw=0,Rw=0)
 
 
-# ----
-# this function takes in some intuitive parameters and attempts to create a starting
-# point for the ODE that sort of reflects them. 
-make_init = function( N=14.57e6, vaxlevel = 0.75,
-                      port_wane = 0.1, 
-                      past_infection = 0.15, incres = 1700, incmut = 40, 
-                      pars=as.list(parameters)) {
-  ff=2/3 # fudge factor . hard to get incidence right since it depends on other pars too (2/3)
-  Vtot = vaxlevel*N*(1-port_wane) # allocate to V, Ev, Iv
-  Wtot = vaxlevel*N*port_wane # allocate to W, Ew, Iw 
-  # some have had covid. but they might also have been vaccinated. 
-  # set up Rs 
-  R0 = N*past_infection*(1-vaxlevel)  # past infections, but not vaccinated 
-  Rv0 = N*past_infection*(vaxlevel) * (1-port_wane) # recovered, vaxd and not waned 
-  Rw0 = N*past_infection*(vaxlevel) * port_wane # rec, vaxd, waned 
-  # set up Es : resident 
-  Ertot = ff*incres/pars$sigma # total Er 
-  Ervw = vaxlevel*pars$ve*Ertot # vaccinated 
-  Erw0 = Ervw * port_wane # waned
-  Erv0 = Ervw *(1-port_wane) # not waned.  these two add to Ervwboth
-  Er0 = (1-vaxlevel*pars$epsilon_r)*Ertot # unvaccinated 
-  # set up Es : mutant  
-  Emtot = ff*incmut/pars$sigma # total Er 
-  Emvw = vaxlevel*pars$ve*Emtot # vaccinated 
-  Emw0 = Emvw * port_wane # waned
-  Emv0 = Emvw *(1-port_wane) # not waned.  these two add to Ervwboth
-  Em0 = (1-vaxlevel*pars$epsilon_m)*Emtot # unvaccinated 
-  # set up Is. for now just make them 2x Es since they last twice as long 
-  Ir0=ff*2*Er0; Irv0 = ff*2*Erv0; Irw0 = ff*2*Erw0
-  Im0 = ff*2*Em0; Imv0=ff*2*Emv0; Imw0= ff*2*Emw0
-  # set up V0, W0
-  # first line plus Rv0 adds to the V total but we have to leave room for the E, I
-  V0 = N*(1-past_infection)*vaxlevel*(1-port_wane) - 
-    (Erv0+Irv0+Emv0+Imv0)*(1-port_wane)
-  W0 = N*(1-past_infection)*vaxlevel*(port_wane) - 
-    ( Erw0+Irw0+Emw0+Imw0)*(port_wane) 
-  # set up S 
-  initmost = c(Er=Er0, Em =Em0, Ir=Ir0, Im=Im0, R=R0, 
-               V=V0, Erv=Erv0, Emv=Emv0, Irv = Irv0,  Imv=Imv0, Rv=Rv0, 
-               W=W0, Erw=Erw0, Emw=Emw0, Irw = Irw0,  Imw=Imw0, Rw=Rw0)
-  state = c(S=N-sum(initmost), initmost)
-  return(state)
-}
-# ----
+
+
+fit = readRDS("/Users/elishaare/Desktop/PHAC_forecasts_14DEC2021/COVID-PHAC-forecasts/data-generated/ON-fit.rds")
+dat = readRDS("data/ON-dat.rds")
+
+
+first_day <- min(dat$date)
+lut <- dplyr::tibble(
+  day = seq_len(300),
+  date = seq(first_day, first_day + length(day) - 1, by = "1 day")
+)
+
+
+
+proj2 <- project_seir(fit, iter = seq_len(50), stan_model = stan_mod, forecast_days = 0)
+proj2$day <- proj2$day + min(dat$day) - 1
+
+modelproj = proj2 %>% tidy_seir()  
+modelproj$date = modelproj$day + lut$date[1] - 1 
+
 
 
 N=14.57e6
-times <- seq(0,60,1)
-ascFrac <- 0.65
+vaxlevel_in = 0.75
+N_pop = N 
+port_wane_in = 0.1 
+past_infection_in = 0.15
+incres_in = 1700
+incmut_in = 40
+times <- seq(0,70,1)
+ascFrac <- 0.6
 intro_date <- ymd("2021-12-08")
-eff_date <- ymd("2022-01-01")
+eff_date <- ymd("2021-12-28")
 # ---- pars ---- 
 
 # ---- pars ---- 
@@ -73,6 +55,7 @@ parameters <-         c(sigma=1/3, # incubation period (3 days) (to fixed)
                         epsilon_m = (1-0.67), # % escape capacity #(fixed)
                         b= 0.006, # booster rate  (fixed)
                         wf=0.2,
+                        beff = 0.7,
                         stngcy= 2*0,#0.78, #(2*%(reduction)) strength of intervention (reduction in beta's)
                         eff_t = as.numeric(eff_date - intro_date) # time to
 )
@@ -92,8 +75,9 @@ parameters_int <-         c(sigma=1/3, # incubation period (3 days) (to fixed)
                             epsilon_r = (1-0.8), # % this should be 1-ve 
                             epsilon_m = (1-0.6), # % escape capacity #(fixed)
                             b= 0.006, # booster rate  (fixed)
+                            beff = 0.7,
                             wf=0.2, # protection for newly recoverd #0.2
-                            stngcy= 2*0.75,#0.78, #(2*%(reduction)) strength of intervention (reduction in beta's)
+                            stngcy= 0.5,#0.78, #(2*%(reduction)) strength of intervention (reduction in beta's)
                             eff_t = as.numeric(eff_date - intro_date) # time to 50% intervention effectiveness
                             
 )
@@ -188,8 +172,6 @@ output_ON <- output_ON %>% mutate(total_pop =S+Er+Em+Ir+Im+R+V+Erv+Emv+Irv+Imv+R
 
 #helper fuctions 
 
-fit = readRDS("/Users/elishaare/Desktop/PHAC_forecasts_14DEC2021/COVID-PHAC-forecasts/data-generated/ON-fit.rds")
-dat = readRDS("/Users/elishaare/Desktop/PHAC_forecasts_28DEC2021/COVID-PHAC-forecasts/data-generated/ON-dat.rds")
 
 
 incid = get_total_incidence(output=output_ON,parameters=c(mean(beta_r),parameters)) #set output to Province output 
@@ -227,8 +209,8 @@ incid_sd_ON_int = incid_sd_ON_int %>% mutate(lower = inc_tot-err, upper = inc_to
 #write.csv(ON_Omicron_proj,'ON_Omicron_proj.csv')
 
 
-incid_long <- melt(incid,  id.vars = 'time', variONle.name = 'series')
-ggplot(incid_long, aes(time,value)) + geom_line(aes(colour = series))
+#incid_long <- melt(incid,  id.vars = 'time', variONle.name = 'series')
+#ggplot(incid_long, aes(time,value)) + geom_line(aes(colour = series))
 
 
 growth_rate_ON <- get_growth_rate(output_ON)
@@ -256,28 +238,9 @@ saveRDS(incid_sd_ON_int, file.path("data/ON-incid_er_int.rds"))
 incid_sd_ON_int =readRDS(file.path("data/ON-incid_er_int.rds"))
 
 
-#set path to recent PHAC forecasts data
-#fit = readRDS("/Users/elishaare/Desktop/PHAC_forecasts_14DEC2021/COVID-PHAC-forecasts/data-generated/ON-fit.rds")
-#dat = readRDS("/Users/elishaare/Desktop/PHAC_forecasts_14DEC2021/COVID-PHAC-forecasts/data-generated/ON-dat.rds")
 
 
-first_day <- min(dat$date)
-lut <- dplyr::tibble(
-  day = seq_len(300),
-  date = seq(first_day, first_day + length(day) - 1, by = "1 day")
-)
-
-
-
-proj2 <- project_seir(fit, iter = seq_len(50), stan_model = stan_mod, forecast_days = 0)
-proj2$day <- proj2$day + min(dat$day) - 1
-
-modelproj = proj2 %>% tidy_seir()  
-modelproj$date = modelproj$day + lut$date[1] - 1 
-
-
-
-cols <- c("Current" = "#D55E00", "75% reduction in transmission"="#009E73")
+cols <- c("Current" = "#D55E00", "50% reduction in transmission"="#009E73")
 
 #cols <- c( "Total"="#D55E00") #"Omicron" = "#009E73",
 gg_ON <- plot_projection(modelproj, dat, date_column = "date") +
@@ -286,7 +249,7 @@ gg_ON <- plot_projection(modelproj, dat, date_column = "date") +
   geom_ribbon(data=incid, aes(x=date, ymin = incid_sd_ON$lower, ymax = incid_sd_ON$upper),
               inherit.aes = FALSE, fill = "grey", alpha = 0.5) +
   
-  geom_line(data=incid_int, aes(x=date, y=inc_tot, col ="75% reduction in transmission"), 
+  geom_line(data=incid_int, aes(x=date, y=inc_tot, col ="50% reduction in transmission"), 
             size=1, alpha = 0.5) +
   geom_ribbon(data=incid_int, aes(x=date, ymin = incid_sd_ON_int$lower, ymax = incid_sd_ON_int$upper),
               inherit.aes = FALSE, fill = "blue", alpha = 0.1) +
@@ -298,7 +261,7 @@ gg_ON <- plot_projection(modelproj, dat, date_column = "date") +
   
   #geom_ribbon(data = btout, aes(x=date, ymax = y_rep_0.95, ymin=y_rep_0.05), 
   #            alpha=0.3, fill="red")+
-  coord_cartesian(ylim = c(0, 40000), expand = FALSE) + 
+  coord_cartesian(ylim = c(0, 70000), expand = FALSE) + 
   scale_x_date(date_breaks = "months", date_labels = "%b") +theme_light() +
   scale_color_manual(values = cols) +  theme(axis.text=element_text(size=15),
                                              plot.title = element_text(size=15, face="bold"),
@@ -308,7 +271,7 @@ gg_ON <- plot_projection(modelproj, dat, date_column = "date") +
   
   labs(color = " ",title="ON")
 
-
+gg_ON
 
 saveRDS(gg_ON, file.path("figs/ON-fig.rds"))
 ggsave(file="figs/ON_proj.png", gg_ON, width = 10, height = 8)
