@@ -42,7 +42,7 @@ dat$day <- 1:length(dat$cases)
 saveRDS(dat, file.path("data/AB-dat.rds"))
 
 
-###################BC###############################
+################### BC ###############################
 
 bcpub <-get_british_columbia_case_data() #readr::read_csv("data-raw/BCCDC_COVID19_Dashboard_Case_Details.csv")
 #bcpub <- readr::read_rds("bcpub-2020-09-29.rds")
@@ -74,7 +74,7 @@ dat_add <- filter(dat, date >= "2020-06-22")
 dat_add$day <- 1:length(dat_add$cases)
 
 #saveRDS(dat_add, file.path("data/BC-dat_add.rds")) # was PUB-dat but moving to this
-d#at_add = readRDS( file.path("data/BC-dat_add.rds"))
+#dat_add = readRDS( file.path("data/BC-dat_add.rds"))
 
 
 dat <- filter(dat, date >= "2020-06-22")

@@ -5,10 +5,17 @@ library(pomp)
 library(dplyr)
 library(plyr)
 
-dat_omic <- filter(dat, date >= ymd("2021-12-05")) %>% select(c("day", "value"))
+source("analysis/functions.R")
+
+#importing data 
+dat = readRDS("data/BC-dat.rds")
+
+#Including Omicron wave only 
+intro_date <-  ymd("2021-11-28")
+dat_omic <- filter(dat, date >= intro_date) %>% select(c("day", "value"))
 dat_omic$day <- 1:nrow(dat_omic)
 
-ascFrac <- 0.6 
+#create a pomp object for fitting
 
 pomp(
   data=dat_omic,
@@ -47,15 +54,8 @@ pomp(
   statenames=c("S","Er","Em", "Ir", "Im", "R", "V", "Erv",
                "Emv", "Irv", "Imv", "Rv", "W", "Erw", "Emw", "Irw","Imw", "Rw")) -> BC_obj
 
-negbin.loglik <- function (params) {
-  x <- trajectory(BC_obj,params=params)
-  prediction <-  (x["Er",,]+ x["Erv",,] + x["Erw",,]
-                   + x["Em",,]+ x["Emv",,] + x["Emw",,])
- sum(dnbinom(x=obs(BC_obj),
-              mu=ascFrac*prediction,size=1/params["theta"],
-              log=TRUE))
-}
 
+#declearing fixed parameters 
 
 parameters <-         c(sigma=1/3, # incubation period (3 days) (to fixed)
                         gamma=1/(5), #recovery rate (fixed)
@@ -66,7 +66,7 @@ parameters <-         c(sigma=1/3, # incubation period (3 days) (to fixed)
                         w3= 1/(3*365),# waning rate Rw to W (fixed)
                         ve=1, # I think this should be 1. it is not really efficacy  ( fixed)
                         #beta_r=0.72, #transmission rate (to estimate) (0.35)
-                        beta_m=0.8*2, #transmission rate (to estimate)(*1.9)
+                        #    beta_m=0.8*2.2, #transmission rate (to estimate)(*1.9)
                         epsilon_r = (1-0.8), # % this should be 1-ve 
                         epsilon_m = (1-0.6), # % escape capacity #(fixed)
                         b= 0.006, # booster rate  (fixed)
@@ -75,51 +75,107 @@ parameters <-         c(sigma=1/3, # incubation period (3 days) (to fixed)
                         c=1
 )
 
+
+#setting values to generate initial copnditions 
+N=5.07e6
+N_pop=N
+#ascFrac <- 0.5
+vaxlevel_in = 0.8
+port_wane_in = 0.04 
+past_infection_in = 0.1
+incres_in = 300
+incmut_in = 10
+init <- make_init() #to generatee initial state 
+
+
+#define a likelihood function 
+#theta is the over dispersion parameter 
+#parameter p is sampling efficiency and ascertainment prob 
+
+negbin.loglik <- function (params) {
+  x <- trajectory(BC_obj,params=params)
+  prediction <-  (x["Er",,]+ x["Erv",,] + x["Erw",,]
+                   + x["Em",,]+ x["Emv",,] + x["Emw",,])
+ sum(dnbinom(x=obs(BC_obj),
+              mu=params["p"]*prediction,size=1/params["theta"],
+              log=TRUE))
+}
+
+
+
 f7 <- function (par) {
-  params <- c(S_0=make_init()[[1]],Er_0=make_init()[[2]],Em_0=make_init()[[3]],Ir_0=make_init()[[4]],
-              Im_0=make_init()[[5]],R_0=make_init()[[6]],V_0=make_init()[[7]],Erv_0=make_init()[[8]], 
-              Emv_0=make_init()[[9]],Irv_0=make_init()[[10]],Imv_0=make_init()[[11]],Rv_0=make_init()[[12]],
-              W_0=make_init()[[13]],Erw_0=make_init()[[14]],Emw_0=make_init()[[15]],Irw_0=make_init()[[16]],
-              Imw_0=make_init()[[17]],Rw_0=make_init()[[18]] ,parameters,
-              beta_r=exp(par[1]),theta=exp(par[2]))
+  params <- c(S_0=init[[1]],Er_0=init[[2]],Em_0=init[[3]],Ir_0=init[[4]],
+              Im_0=init[[5]],R_0=init[[6]],V_0=init[[7]],Erv_0=init[[8]], 
+              Emv_0=init[[9]],Irv_0=init[[10]],Imv_0=init[[11]],Rv_0=init[[12]],
+              W_0=init[[13]],Erw_0=init[[14]],Emw_0=init[[15]],Irw_0=init[[16]],
+              Imw_0=init[[17]],Rw_0=init[[18]] ,parameters,
+              beta_r=exp(par[1]),p=expit(par[2]),beta_m=exp(par[3]),theta=exp(par[4]))
   -negbin.loglik(params)
 }
 
-guess <- c(log(10),log(1))
-
-fit7 <- optim(fn=f7,par=guess); fit7
-mle3 <- c(beta_r=exp(fit7$par[1]),theta=exp(fit7$par[2]))
-signif(mle3,3)
 
 
-coef(BC_obj) <- c(c(S_0=make_init()[[1]],Er_0=make_init()[[2]],Em_0=make_init()[[3]],Ir_0=make_init()[[4]],
-                    Im_0=make_init()[[5]],R_0=make_init()[[6]],V_0=make_init()[[7]],Erv_0=make_init()[[8]], 
-                    Emv_0=make_init()[[9]],Irv_0=make_init()[[10]],Imv_0=make_init()[[11]],Rv_0=make_init()[[12]],
-                    W_0=make_init()[[13]],Erw_0=make_init()[[14]],Emw_0=make_init()[[15]],Irw_0=make_init()[[16]],
-                    Imw_0=make_init()[[17]],Rw_0=make_init()[[18]] ,parameters,mle3))
 
-model.pred <- parameters[[1]]*(trajectory(BC_obj)["Er",,]+ trajectory(BC_obj)["Erv",,] +trajectory(BC_obj)["Erw",,]+
-                                 trajectory(BC_obj)["Em",,]+trajectory(BC_obj)["Emv",,] + 
-                             trajectory(BC_obj)["Emw",,])
+guess <- c(log(1.03), logit(0.65), log(1.34), log(0.01)) #c(log(10),log(15),log(1))
+
+fit_BC <- optim(fn=f7,par=guess, lower=c(log(0.6), 0.5, log(1.2), log(0.1)), 
+              upper = c(log(2), 0.7, log(2.3), log(0)), method = "L-BFGS-B")
+fit_BC
+mle_est_BC <- c(beta_r=exp(fit_BC$par[1]),p=expit(fit_BC$par[2]), beta_m=exp(fit_BC$par[3]),theta=exp(fit_BC$par[4]))
+#mle_est_BC  <- c(beta_r=0.72, p=0.3, beta_m=1.44, theta=0.5,wf=0.2)
+signif(mle_est_BC,3)
 
 
-raply(100000,rnbinom(n=length(model.pred),
-                     mu=ascFrac*model.pred,
+
+coef(BC_obj) <- c(c(S_0=init[[1]],Er_0=init[[2]],Em_0=init[[3]],Ir_0=init[[4]],
+                    Im_0=init[[5]],R_0=init[[6]],V_0=init[[7]],Erv_0=init[[8]], 
+                    Emv_0=init[[9]],Irv_0=init[[10]],Imv_0=init[[11]],Rv_0=init[[12]],
+                    W_0=init[[13]],Erw_0=init[[14]],Emw_0=init[[15]],Irw_0=init[[16]],
+                    Imw_0=init[[17]],Rw_0=init[[18]] ,c(parameters,mle_est_BC)))
+
+
+#an attempt to model changes in ascertainment probability 
+test_prop <- 1 - 0.5/(1+ exp(-1.25*(1:nrow(dat_omic)-32)))
+
+# model predictions (incidence, sigma*(Er +Em + Erv + Emv + Erw + Emw)) 
+
+model.pred <- test_prop*parameters[[1]]*(trajectory(BC_obj)["Er",,]+ 
+              trajectory(BC_obj)["Erv",,] +trajectory(BC_obj)["Erw",,]+
+              trajectory(BC_obj)["Em",,]+trajectory(BC_obj)["Emv",,] + 
+              trajectory(BC_obj)["Emw",,])
+
+
+#this generates multiple  model realization 
+
+raply(10000,rnbinom(n=length(model.pred),
+                     mu=coef(BC_obj,"p")*model.pred,
                      size=1/coef(BC_obj,"theta"))) -> simdat
+
+#this generates appriopriate quantiles
 
 aaply(simdat,2,quantile,probs=c(0.025,0.5,0.975)) -> quantiles
 
 
-typ <- sample(nrow(simdat),1)
+#sample a typical model realization (sanity check)
+typ <- sample(nrow(simdat),1) 
 
-ggplot(data=cbind(as.data.frame(BC_obj),
-                  quantiles,
-                  typical=simdat[typ,]),
-       mapping=aes(x=day))+
-  geom_line(aes(y=`50%`),color='red')+
-  geom_ribbon(aes(ymin=`2.5%`,ymax=`97.5%`),fill='red',alpha=0.2)+
+
+dat_sim <- cbind(as.data.frame(BC_obj),
+                 quantiles,
+                 typical=simdat[typ,]) 
+
+#create dates 
+dat_sim = dat_sim %>% mutate(date=seq.Date(ymd(intro_date),
+                      ymd(intro_date)-1+nrow(dat_omic), 1))
+
+ggplot(data=dat_sim,
+       mapping=aes(x=date))+
+  geom_line(aes(y=`50%`),color='blue',size=1.2,alpha=0.5)+
+  geom_ribbon(aes(ymin=`2.5%`,ymax=`97.5%`),fill='blue',alpha=0.1)+
   geom_point(aes(y=value),color='black')+
- # geom_line(aes(y=typical),color='blue')
-  labs(y="cases",x="days") #+ ylim(c(0,4000))
+ geom_line(aes(y=typical),color='blue') +
+  labs(y="cases",x="date") + ylim(c(0,7000))
  
+
+
 
