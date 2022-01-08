@@ -10,7 +10,7 @@ source("analysis/functions.R")
 #importing data 
 dat = readRDS("data/BC-dat.rds")
 
-#Including Omicron wave only 
+#including Omicron wave only 
 intro_date <-  ymd("2021-11-28")
 dat_omic <- filter(dat, date >= intro_date) %>% select(c("day", "value"))
 dat_omic$day <- 1:nrow(dat_omic)
@@ -76,7 +76,7 @@ parameters <-         c(sigma=1/3, # incubation period (3 days) (to fixed)
 )
 
 
-#setting values to generate initial copnditions 
+#setting values to generate initial conditions with make_init()
 N=5.07e6
 N_pop=N
 #ascFrac <- 0.5
@@ -101,9 +101,8 @@ negbin.loglik <- function (params) {
               log=TRUE))
 }
 
-
-
-f7 <- function (par) {
+#use to generate neg log likelihood estimates  
+f_loglik <- function (par) {
   params <- c(S_0=init[[1]],Er_0=init[[2]],Em_0=init[[3]],Ir_0=init[[4]],
               Im_0=init[[5]],R_0=init[[6]],V_0=init[[7]],Erv_0=init[[8]], 
               Emv_0=init[[9]],Irv_0=init[[10]],Imv_0=init[[11]],Rv_0=init[[12]],
@@ -118,15 +117,19 @@ f7 <- function (par) {
 
 guess <- c(log(1.03), logit(0.65), log(1.34), log(0.01)) #c(log(10),log(15),log(1))
 
-fit_BC <- optim(fn=f7,par=guess, lower=c(log(0.6), 0.5, log(1.2), log(0.1)), 
+#the parameters are constrained  accordingly (lower and upper)
+
+fit_BC <- optim(fn=f_loglik,par=guess, lower=c(log(0.6), 0.5, log(1.2), log(0.1)), 
               upper = c(log(2), 0.7, log(2.3), log(0)), method = "L-BFGS-B")
-fit_BC
+
+
+#this catches estimated parameter values from MLE 
 mle_est_BC <- c(beta_r=exp(fit_BC$par[1]),p=expit(fit_BC$par[2]), beta_m=exp(fit_BC$par[3]),theta=exp(fit_BC$par[4]))
-#mle_est_BC  <- c(beta_r=0.72, p=0.3, beta_m=1.44, theta=0.5,wf=0.2)
+
 signif(mle_est_BC,3)
 
 
-
+#estimated parameter values will now be used for for prediction 
 coef(BC_obj) <- c(c(S_0=init[[1]],Er_0=init[[2]],Em_0=init[[3]],Ir_0=init[[4]],
                     Im_0=init[[5]],R_0=init[[6]],V_0=init[[7]],Erv_0=init[[8]], 
                     Emv_0=init[[9]],Irv_0=init[[10]],Imv_0=init[[11]],Rv_0=init[[12]],
@@ -145,7 +148,7 @@ model.pred <- test_prop*parameters[[1]]*(trajectory(BC_obj)["Er",,]+
               trajectory(BC_obj)["Emw",,])
 
 
-#this generates multiple  model realization 
+#this generates multiple  model realizations 
 
 raply(10000,rnbinom(n=length(model.pred),
                      mu=coef(BC_obj,"p")*model.pred,
