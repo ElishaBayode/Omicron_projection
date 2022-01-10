@@ -2,6 +2,7 @@ library(CanCovidData)
 library(lubridate)
 library(tidyverse)
 library(tidyr)
+library(dplyr)
 location <- "CAN.csv"
 linkRaw <- "https://raw.githubusercontent.com/ishaberry/Covid19Canada/master/timeseries_prov/cases_timeseries_prov.csv"
 data <- readr::read_csv(linkRaw)

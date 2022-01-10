@@ -25,6 +25,8 @@ modelproj = proj2 %>% tidy_seir()
 modelproj$date = modelproj$day + lut$date[1] - 1 
 
 
+
+
 N=5.07e6
 N_pop=N
 times <- seq(0,70,1)

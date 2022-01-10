@@ -93,6 +93,9 @@ lag_func <- function(x, k = 1, pad = NA){
     c(tail(x, k), nas) else c(nas, head(x, -k))
 }
 
+# ------
+
+
 # this just pulls out some incidence values 
 get_total_incidence = function(output, parameters, lag = 0) {
   with(as.list( parameters), {
