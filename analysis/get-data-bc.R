@@ -1,7 +1,8 @@
+library(readr)
 get_british_columbia_case_data <- function(){
     path="http://www.bccdc.ca/Health-Info-Site/Documents/BCCDC_COVID19_Dashboard_Case_Details.csv"
     read_csv(path,col_types=cols(.default="c")) %>%
-        rename(`Reported Date`=Reported_Date,`Health Authority`=HA,`Age group`=Age_Group) %>%
+       dplyr::rename(`Reported Date`=Reported_Date,`Health Authority`=HA,`Age group`=Age_Group) %>%
         mutate(`Age group`=recode(`Age group`,"19-Oct"="10-19")) %>%
         mutate(Reported_Date=as.Date(`Reported Date`,tryFormats = c("%Y-%m-%d", "%m/%d/%Y")))
 }
@@ -23,6 +24,17 @@ dat$date <- dat$Reported_Date
 tail(dat)
 # check if this is required 
 # dat <- dat[-nrow(dat), ]
+
+
+# Hospital admissions for Health Authorities scraped from dashboard. 
+# Scrapes the dashboard 6pm every day and is updated shortly after.
+hosp1path = "https://mountainmath.ca/bc_total_hospitalizations.csv"
+
+# Sally posted 
+# https://docs.google.com/spreadsheets/d/1KvX2bNs4hUYGY8Kk47c4SmFVHrKT_0vEYY0NqKQShZs/edit#gid=0
+
+# Rob Dumont has : 
+# https://docs.google.com/spreadsheets/d/1VxUA8Les5TK-Uarz-2Cw20B-r0xIXHYDX0eCU7u47NY/edit#gid=274465377
 
 # ggplot(dat, aes(Reported_Date, cases)) +
 #    geom_point() +

@@ -1,17 +1,19 @@
 # original init 
+library(covidseir)
 source("analysis/functions.R")
 #init <- c(S=N-132,Er=100, Em= 5,Ir=20,
 #          Im=0,R=0,V=0,Erv=3,Emv=5,Irv=2,Imv=0, 
 #          Rv=0,W=0,Erw=1,Emw=1, Irw=0, Imw=0,Rw=0)
 
 # create bc dat object. 
+dat.old = dat
  source("analysis/get-data-bc.R") # NOTE check the last line of data, may need to remove.
 
 # ----- covidseir stuff ---- 
 
 
 #set path to recent PHAC forecasts data
-#fit = readRDS("/Users/elishaare/Desktop/PHAC_forecasts_14DEC2021/COVID-PHAC-forecasts/data-generated/BC-fit.rds")
+fit = readRDS("~/Omicron_projection-backup/data/BC-fit.rds")
 #dat = readRDS("/Users/elishaare/Desktop/PHAC_forecasts_14DEC2021/COVID-PHAC-forecasts/data-generated/BC-dat.rds")
 
 
@@ -205,23 +207,23 @@ gg_BC <- plot_projection(modelproj, dat, date_column = "date") +
   # geom_line(data=incid, aes(x=date, y=inc_mut, col ="Omicron"), size=1.4) +
   geom_ribbon(data=incid, aes(x=date, ymin = incid_sd_BC$lower, ymax = incid_sd_BC$upper),
              inherit.aes = FALSE, fill = "grey", alpha = 0.5) +
-  
-  geom_line(data=incid_int, aes(x=date, y=inc_tot, col ="Reduction in transmission"), 
-            size=1, alpha = 0.5) +
-  geom_ribbon(data=incid_int, aes(x=date, ymin = incid_sd_BC_int$lower, ymax = incid_sd_BC_int$upper),
-              inherit.aes = FALSE, fill = "blue", alpha = 0.1) +
+#  geom_line(data=incid_int, aes(x=date, y=inc_tot, col ="Reduction in transmission"), 
+#            size=1, alpha = 0.5) +
+#  #geom_ribbon(data=incid_int, aes(x=date, ymin = incid_sd_BC_int$lower, ymax = incid_sd_BC_int$upper),
+#              inherit.aes = FALSE, fill = "blue", alpha = 0.1) +
   geom_line(data=incid, aes(x=date, y=inc_tot, col ="Current"), 
             size=1, alpha = 0.5) +
-  coord_cartesian(ylim = c(0, 150000), xlim=c(mindate, maxdate), expand = FALSE) + 
+  coord_cartesian(ylim = c(0, 5000), xlim=c(mindate, maxdate), expand = FALSE) + 
   scale_x_date(date_breaks = "months", date_labels = "%b") +theme_light() +
-  scale_color_manual(values = cols) +  theme(axis.text=element_text(size=15),
+ #  scale_color_manual(values = cols) + 
+  theme(axis.text=element_text(size=15),
                                              plot.title = element_text(size=15, face="bold"),
                                              legend.position = "bottom", legend.title = element_text(size=15),
                                              legend.text = element_text(size=15),
                                              axis.title=element_text(size=15,face="bold")) +
   labs(color = " ",title="BC")
 
-gg_BC
+gg_BC 
 
 
 

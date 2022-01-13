@@ -108,6 +108,18 @@ get_total_incidence = function(output, parameters, lag = 0) {
     return(incid)})
 }
 
+get_true_incidence = function(output, parameters) {
+  with(as.list( parameters), {
+    ascFrac=1 # for TRUE incidence, don't reduce by ascertainment, and don't lag
+    lag = 0
+    incid =  output %>% mutate(inc_res = ascFrac*sigma*lag_func(Er+Erv+Erw, k=lag), 
+                               inc_mut = ascFrac*sigma*lag_func(Em +Emv +Emw, k=lag), 
+                               inc_tot = ascFrac*sigma*lag_func(Er+Erv+Erw+Em +Emv +Emw, k=lag), 
+                               inc_vax = ascFrac*sigma*lag_func(Erv+Erw + Emv +Emw, k=lag), 
+                               inc_nonvax = ascFrac*sigma*lag_func(Er+Em), k=lag) %>% 
+      select(time, inc_res, inc_mut, inc_tot, inc_vax, inc_nonvax)
+    return(incid)})
+}
 
 get_vax = function(output) {
   vax = output %>% mutate(vaxtot = V+ Erv + Emv+ 
