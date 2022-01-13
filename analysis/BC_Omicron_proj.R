@@ -257,7 +257,7 @@ gg_BC <- plot_projection(modelproj, dat, date_column = "date") +
   
   #geom_ribbon(data = btout, aes(x=date, ymax = y_rep_0.95, ymin=y_rep_0.05), 
   #            alpha=0.3, fill="red")+
-  coord_cartesian(ylim = c(0, 20000), expand = FALSE) + 
+  coord_cartesian(ylim = c(0, 150000), expand = FALSE) + 
   scale_x_date(date_breaks = "months", date_labels = "%b") +theme_light() +
   scale_color_manual(values = cols) +  theme(axis.text=element_text(size=15),
                                              plot.title = element_text(size=15, face="bold"),

@@ -14,10 +14,10 @@ readr::write_csv(data, file.path("data", location))
 # https://www.alberta.ca/stats/covid-19-alberta-statistics.htm
 
 abdat <- readr::read_csv("data/covid-19-alberta-statistics-data.csv")
-abdat <- abdat %>%
-  group_by(`Date reported`) %>%
-  summarise(cases = n()) %>%
-  rename(date = `Date reported`)
+abdat$thiscase <- 1
+abdat <- abdat %>% group_by(`Date reported`) %>%
+  summarise(cases = sum(thiscase)) %>% rename(date = `Date reported`)
+
 ggplot(data = abdat, aes(x = date, y = cases)) +
   geom_point() +
   scale_x_date(date_breaks = "2 weeks", date_labels = "%Y-%m-%d") +
@@ -62,7 +62,7 @@ dat$Reported_Date[1:2] <- c(ymd("2020-03-01"), ymd("2020-03-02"))
 dat$day <- seq(1, nrow(dat))
 dat$value <- dat$cases
 dat$date <- dat$Reported_Date
-dat <- dat[-nrow(dat), ] # remove today - incomplete reporting before 3pm and other fiddles
+#dat <- dat[-nrow(dat), ] # remove today - incomplete reporting before 3pm and other fiddles
 tail(dat)
 
 ggplot(dat, aes(Reported_Date, cases)) +
@@ -346,6 +346,10 @@ tot2d <- dat$adjust_cases[ii_jul1 + 1]
 dat$adjust_cases[c(ii_jul1, ii_jul1 + 1)] <- realloc(tot2d, 2)
 
 
+ii_jul1 <- which(dat$date == ymd("2022-01-04"))
+tot2d <- dat$adjust_cases[ii_jul1 + 1]
+dat$adjust_cases[c(ii_jul1, ii_jul1 + 1)] <- realloc(tot2d, 2)
+
 # fix other weekends
 isStartWeekend <- (dat$adjust_cases == 0 &
                      dat$adjust_cases[c(2:nrow(dat), 1)] == 0
@@ -375,7 +379,7 @@ ggplot(dat, aes(date, adjust_cases)) +
 
 dat$value <- abs(dat$adjust_cases)
 
-tail(dat)
+tail(dat,10)
 
 
 ggplot(dat, aes(date, adjust_cases)) +
@@ -469,6 +473,23 @@ ii_jul1 <- which(dat$date == ymd("2021-02-15"))
 tot2d <- dat$adjust_cases[ii_jul1 + 1]
 dat$adjust_cases[c(ii_jul1, ii_jul1 + 1)] <- realloc(tot2d, 2)
 
+ii_jul1 <- which(dat$date == ymd("2021-12-27"))
+tot2d <- dat$adjust_cases[ii_jul1 + 1]
+dat$adjust_cases[c(ii_jul1, ii_jul1 + 1)] <- realloc(tot2d, 2)
+
+ii_jul1 <- which(dat$date == ymd("2021-12-26"))
+tot2d <- dat$adjust_cases[ii_jul1 + 1]
+dat$adjust_cases[c(ii_jul1, ii_jul1 + 1)] <- realloc(tot2d, 2)
+
+ii_jul1 <- which(dat$date == ymd("2021-12-25"))
+tot2d <- dat$adjust_cases[ii_jul1 + 1]
+dat$adjust_cases[c(ii_jul1, ii_jul1 + 1)] <- realloc(tot2d, 2)
+
+ii_jul1 <- which(dat$date == ymd("2021-12-24"))
+tot2d <- dat$adjust_cases[ii_jul1 + 1]
+dat$adjust_cases[c(ii_jul1, ii_jul1 + 1)] <- realloc(tot2d, 2)
+
+
 ###temporary: check next week if this is  needed
 ii_jul1 <- which(dat$date == ymd("2022-01-03"))
 tot2d <- dat$adjust_cases[ii_jul1 + 1]
@@ -492,7 +513,7 @@ ggplot(dat, aes(date, adjust_cases)) +
   theme(axis.text.x = element_text(angle = 35, hjust = 1), panel.grid.major = element_line(color = "grey"))
 
 
-tail(dat)
+tail(dat,20)
 #dat$value <- dat$cases
 dat$value <- dat$adjust_cases
 dat <- dat[-c(nrow(dat)-1, nrow(dat)), ]

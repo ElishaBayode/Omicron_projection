@@ -76,8 +76,7 @@ f_loglik <- function (par) {
 
 
 
-
-case_projection <- function(out_state=out_state,forecast_days=forecast_days, lag = lag,
+case_projection <- function(out_state=out_state,forecast_days=forecast_days, lag = lag ,
                             parameters_estim=estim_parameters, simu_size=simu_size,
                             pomp_obj=pomp_obj , dat_sim=dat_sim){
   init_current = c(S=last(out_state["S",,]),Er=last(out_state["Er",,]),Em=last(out_state["Em",,]),
@@ -98,7 +97,7 @@ case_projection <- function(out_state=out_state,forecast_days=forecast_days, lag
   uncert_bound = raply(simu_size,rnbinom(n=length(incidence_forecast),
                                          mu=coef(pomp_obj ,"p")*incidence_forecast,
                                          size=1/coef(pomp_obj ,"theta")))
-  quantiles_proj =  as.data.frame(aaply(uncert_bound ,2,quantile,probs=c(0.025,0.5,0.975)))
+  quantiles_proj =  as.data.frame(aaply(uncert_bound ,2,quantile,na.rm=TRUE,probs=c(0.025,0.5,0.975)))
   
   project_dat = quantiles_proj %>% mutate(date=seq.Date(ymd(last(dat_sim$date)),
                                                         ymd(last(dat_sim$date))-1+last(forecast_days), 1))
