@@ -207,6 +207,8 @@ ggplot(data = df, aes(x=date, y=under70cases))+
 # now get test_prop - 
 # to get test_prop we need to compute Wtot = (Cases in 70+ )* ( 1 + exp(offset) ) 
 # test_prop is now (total cases) / Wtot 
+
+
 tots = group_by(dat, Reported_Date) %>%
     summarise(cases = n()) %>%
     filter(Reported_Date >= min(upred$Reported_Date)) 
@@ -215,7 +217,11 @@ seriesoffset$totalcases  <-tots$cases
 seriesoffset$under70 = filter(mydat, under70=="Yes")$totcases
 seriesoffset$over70 = filter(mydat, under70=="No")$totcases
 
-ggplot(filter(seriesoffset, date< mydate), aes(x=date, y = soffset))+geom_point()
+seriesoffset$Wtot = seriesoffset$over70*(1+exp(seriesoffset$model))
+seriesoffset$test_prop = seriesoffset$totalcases/seriesoffset$Wtot
+
+# should use the spline instead because it's jumpy BUT here it is! 
+ggplot(seriesoffset, aes(x=date, y = test_prop))+geom_point()
     
     
     
