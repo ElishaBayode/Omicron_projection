@@ -180,15 +180,15 @@ getoffset = function(startvalue = 3.73, endvalue=2.68, halftime=15, steepness=0.
 myoffset= getoffset(halftime=100,steepness = 0.05) # really flat, like Sally's
 
 # (option 4) 
-L1 = ymd("2021-12-21")-min(seriesoffset$date) # 
-seriesoffset$model = NA
-seriesoffset$model[1:L1] = seriesoffset$soffset[1:L1]
-L2 = nrow(seriesoffset)- L1 # how many values to fill in with the new offset? 
-seriesoffset$model[(L1+1):nrow(seriesoffset)] = myoffset[1:L2]
+L1 = ymd("2021-12-21")-min(pred$Reported_Date) # 
+pred$totmodel = NA
+pred$totmodel[1:L1] = upred$predlcases[1:L1] -pred$predlcases[1:L1]
+L2 = nrow(pred)- L1 # how many values to fill in with the new offset? 
+pred$totmodel[(L1+1):nrow(seriesoffset)] = myoffset[1:L2]
 
-ggplot(seriesoffset, aes(x=date, y=model))+geom_point()+ylim(c(0,3.8))
 
-pred$totmodel = pred$predlcases + seriesoffset$model
+
+# pred$totmodel = pred$predlcases + seriesoffset$model
 df = data.frame(date = logunder70$Reported_Date, 
                 under70cases = filter(mydat, under70=="Yes")$totcases, 
                 under70spline = exp(upred$predlcases), 
@@ -204,27 +204,74 @@ ggplot(data = df, aes(x=date, y=under70cases))+
     scale_y_continuous(trans = "log10")+annotation_logticks() +
     ylab("Cases - log scale") + ggtitle("Green - 70+. Blue - under 70. Black: combined spline") 
 
-# now get test_prop - 
-# to get test_prop we need to compute Wtot = (Cases in 70+ )* ( 1 + exp(offset) ) 
-# test_prop is now (total cases) / Wtot 
+# --- here is how to get a smooth nice test_prop 
+# we use  (model for Cases in 70+ )* ( 1 + exp(offset) ) for the 'would have beens'
+# test_prop is now (spline model for total cases) / would have beens 
+off1= getoffset(halftime=100,steepness = 0.05) # this one is really flat, like Sally's
+offconst = upred$predlcases-pred$predlcases
+L1 = ymd("2021-12-21")-min(pred$Reported_Date) # 
+L2 = nrow(pred)- L1 # how many values to fill in with the new offset? 
+offconst = upred$predlcases-pred$predlcases
+offconst[(L1+1):nrow(seriesoffset)] = off1[1:L2]
+
+testpropdf = data.frame(date = pred$Reported_Date, 
+                        totalmodel = exp(pred$predlcases)+ exp(upred$predlcases), 
+                        totaladjusted = exp(pred$predlcases+offconst), 
+                        test_prop = pmin(1,(exp(pred$predlcases)+ exp(upred$predlcases))/ exp(pred$predlcases+offconst)))
+ plot(testpropdf$date, testpropdf$test_prop)
 
 
-tots = group_by(dat, Reported_Date) %>%
-    summarise(cases = n()) %>%
-    filter(Reported_Date >= min(upred$Reported_Date)) 
+# ---- make a few different offsets, plot them together, and illustrate how 
+# much the total cases depend on the offset assumptions
 
-seriesoffset$totalcases  <-tots$cases
-seriesoffset$under70 = filter(mydat, under70=="Yes")$totcases
-seriesoffset$over70 = filter(mydat, under70=="No")$totcases
 
-seriesoffset$Wtot = seriesoffset$over70*(1+exp(seriesoffset$model))
-seriesoffset$test_prop = seriesoffset$totalcases/seriesoffset$Wtot
+off1= getoffset(halftime=100,steepness = 0.05) # really flat, like Sally's
+off2 = getoffset(halftime=15,steepness = 0.25) # changes over 60 days and not very steep
+plot(off2)
+L1 = ymd("2021-12-21")-min(pred$Reported_Date) # 
+L2 = nrow(pred)- L1 # how many values to fill in with the new offset? 
+offconst = upred$predlcases-pred$predlcases
+offrevert = offconst
+offconst[(L1+1):nrow(seriesoffset)] = off1[1:L2]
+offrevert[(L1+1):nrow(seriesoffset)] = off2[1:L2]
 
-# should use the spline instead because it's jumpy BUT here it is! 
-ggplot(seriesoffset, aes(x=date, y = test_prop))+geom_point()
-    
-    
-    
-    
-    
-    
+# need a data frame with date, the cases by age band (mydat), and the model by age band 
+# (pred and upred) 
+
+
+df = mydat %>% ungroup() %>%  mutate(cases = totcases, 
+                           date = Reported_Date, 
+                           agegroup = ifelse(under70=="Yes", "Under 70", "Over 70")) %>% 
+    select(date,cases,agegroup) 
+bothmodels = rbind(pred %>% mutate(date = Reported_Date, model = exp(predlcases),
+                                   adjmodel1=exp(predlcases),
+                                   adjmodel2=exp(predlcases), 
+                                   agegroup = "Over 70") %>% select(date, model, adjmodel1,
+                                                                    adjmodel2, agegroup), 
+                   upred  %>% mutate(date = Reported_Date, model = exp(predlcases),
+                                     adjmodel2=exp(offrevert+pred$predlcases),
+                                     adjmodel1 = exp(offconst + pred$predlcases),
+                                     agegroup = "Under 70") %>% select(date, model,adjmodel1,
+                                                                       adjmodel2, agegroup))
+test  = merge(df, bothmodels)
+ggplot(test, aes(x=date, y = cases, color=agegroup))+geom_point() +
+    geom_line(aes(x=date, y=model)) + 
+    geom_line(aes(x=date, y=adjmodel2),linetype= "dashed") + 
+    geom_line(aes(x=date, y=adjmodel1),linetype= "dotdash")
+
+
+# ---- just to show the offsets to the bc covid group 
+library(tidyr)
+tmp = data.frame(date= pred$Reported_Date, 
+                 sally = offconst, 
+                 rawdata = upred$predlcases-pred$predlcases,
+                 anotherchoice = offrevert) %>% 
+    pivot_longer(2:4, names_to = "type", values_to = "offset")
+ggplot(filter(tmp, date > ymd("2021-12-01")), aes(x=date, y=offset, color=type))+geom_line()+ylim(c(0,4)) +
+    ylab("Log of the scale factor between  <70 and 70+")
+
+
+
+
+
+
