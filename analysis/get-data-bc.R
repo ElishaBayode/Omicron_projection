@@ -177,7 +177,7 @@ plot(1:60, myoffset)
 getoffset = function(startvalue = 3.73, endvalue=2.68, halftime=15, steepness=0.25, ndays=60) {
  return( startvalue - (startvalue-endvalue)/(1+exp(-steepness*(1:ndays-halftime))))  
 }
-myoffset= getoffset(halftime=30,steepness = 0.15)
+myoffset= getoffset(halftime=100,steepness = 0.05) # really flat, like Sally's
 
 # (option 4) 
 L1 = ymd("2021-12-21")-min(seriesoffset$date) # 
@@ -186,7 +186,7 @@ seriesoffset$model[1:L1] = seriesoffset$soffset[1:L1]
 L2 = nrow(seriesoffset)- L1 # how many values to fill in with the new offset? 
 seriesoffset$model[(L1+1):nrow(seriesoffset)] = myoffset[1:L2]
 
-ggplot(seriesoffset, aes(x=date, y=model))+geom_point()
+ggplot(seriesoffset, aes(x=date, y=model))+geom_point()+ylim(c(0,3.8))
 
 pred$totmodel = pred$predlcases + seriesoffset$model
 df = data.frame(date = logunder70$Reported_Date, 
@@ -207,4 +207,18 @@ ggplot(data = df, aes(x=date, y=under70cases))+
 # now get test_prop - 
 # to get test_prop we need to compute Wtot = (Cases in 70+ )* ( 1 + exp(offset) ) 
 # test_prop is now (total cases) / Wtot 
+tots = group_by(dat, Reported_Date) %>%
+    summarise(cases = n()) %>%
+    filter(Reported_Date >= min(upred$Reported_Date)) 
 
+seriesoffset$totalcases  <-tots$cases
+seriesoffset$under70 = filter(mydat, under70=="Yes")$totcases
+seriesoffset$over70 = filter(mydat, under70=="No")$totcases
+
+ggplot(filter(seriesoffset, date< mydate), aes(x=date, y = soffset))+geom_point()
+    
+    
+    
+    
+    
+    
