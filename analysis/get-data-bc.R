@@ -2,6 +2,7 @@ library(readr)
 library(CanCovidData)
 library(dplyr)
 library(lubridate)
+library(ggplot2) 
 get_british_columbia_case_data <- function(){
     path="http://www.bccdc.ca/Health-Info-Site/Documents/BCCDC_COVID19_Dashboard_Case_Details.csv"
     read_csv(path,col_types=cols(.default="c")) %>%
@@ -81,10 +82,6 @@ ggplot(wwd, aes(x=Date, y=Value,color=Plant)) + geom_point() + geom_line() +
 
 
 ######### BEGIN SECTION FOR ADJUSTING REPORTED CASES 
-# -- note - a lot of this is now available with the new functions
-# make_case_splines and get_testprop. 
-# the code below is a messy exploration done in development of those two functions
-
 # ---- adjust for under-reporting based on continued testing in the 70+s ----
 
 
@@ -94,10 +91,6 @@ dat = get_british_columbia_case_data()
 agedat <- group_by(dat, Reported_Date, `Age group`) %>%
     summarise(cases = n()) %>%
     filter(Reported_Date >= ymd("2021-09-01"))
-# still need to patch gaps in the first few days 
-
-
-# steps: 
 
 # get a time series for <70 and 70+ 
 lowerages = c("<10" , "10-19","20-29", "30-39",  "40-49" , "50-59" , "60-69")
@@ -107,13 +100,28 @@ agedat$under70[which(agedat$`Age group` %in% lowerages)] = "Yes"
 mydat =  group_by(agedat, Reported_Date, under70) %>% 
     summarise(totcases = sum(cases)) 
 
+# make the splines 
+splinetest = make_case_splines(mydat)
+
+# check the quality 
+ggplot(data = splinetest$pred, aes(x=Reported_Date, y=lcases))+geom_point(color="blue", alpha=0.5) +
+     geom_line(data =splinetest$pred, aes(x=Reported_Date, y=predlcases))
+    
+# make the test proportion by adjusting from 70+ 
+
+mytest = get_testprop(changedate = ymd("2021-12-21"), 
+                      mysplines = splinetest, 
+                      halftime = 20, steepness = 0.1)
+# check : should be 1, then less than 1
+ggplot(mytest, aes(x=date, y=test_prop))+geom_line()
 
 
-ggplot(data = filter(mydat, Reported_Date > "2021-06-01"),  aes(x=Reported_Date, y=totcases, color=under70))+
-    geom_point() + ylim(c(0,3000))
+### ######### -- begin junk leftovers ######## ########
+# -- note - a lot of this is now available with the new functions
+# make_case_splines and get_testprop. 
+# the code below is a messy exploration done in development of those two functions
 
-## get a smooth.spline for the log of 70+ and the log of under 70 
-# (1) over 70
+
 over70 = filter(mydat, under70=="No")
 logover70 = over70 %>% mutate(lcases = log(totcases)) %>% select(Reported_Date, lcases)
 ospline = smooth.spline(logover70$Reported_Date, logover70$lcases, df=15)
