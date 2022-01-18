@@ -81,6 +81,10 @@ ggplot(wwd, aes(x=Date, y=Value,color=Plant)) + geom_point() + geom_line() +
 
 
 ######### BEGIN SECTION FOR ADJUSTING REPORTED CASES 
+# -- note - a lot of this is now available with the new functions
+# make_case_splines and get_testprop. 
+# the code below is a messy exploration done in development of those two functions
+
 # ---- adjust for under-reporting based on continued testing in the 70+s ----
 
 
@@ -263,11 +267,11 @@ ggplot(test, aes(x=date, y = cases, color=agegroup))+geom_point() +
 # ---- just to show the offsets to the bc covid group 
 library(tidyr)
 tmp = data.frame(date= pred$Reported_Date, 
-                 sally = offconst, 
+                 constant = offconst, 
                  rawdata = upred$predlcases-pred$predlcases,
                  anotherchoice = offrevert) %>% 
     pivot_longer(2:4, names_to = "type", values_to = "offset")
-ggplot(filter(tmp, date > ymd("2021-12-01")), aes(x=date, y=offset, color=type))+geom_line()+ylim(c(0,4)) +
+ggplot(filter(tmp, date > ymd("2021-09-01")), aes(x=date, y=offset, color=type))+geom_line()+ylim(c(0,4)) +
     ylab("Log of the scale factor between  <70 and 70+")
 
 
