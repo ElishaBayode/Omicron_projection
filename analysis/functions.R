@@ -155,3 +155,66 @@ get_selection_coef = function(growth_rate){
   sele_coef = growth_rate$mut - growth_rate$res  
   return(sele_coef)
 }
+
+# ---- functions related to test_prop 
+
+# mydat is a data frame with Reported_Date, under70 ("Yes" or "No") and the cases in that group on that day (totcases)
+make_case_splines = function(mydat) {
+  over70 = filter(mydat, under70=="No")
+  logover70 = over70 %>% mutate(lcases = log(totcases)) %>% select(Reported_Date, lcases)
+  ospline = smooth.spline(logover70$Reported_Date, logover70$lcases, df=15)
+  pred = data.frame( predlcases = ospline$y,
+                     cases = over70$totcases, lcases = log(over70$totcases),
+                     Reported_Date = logover70$Reported_Date)
+  # (2) under 70 
+  under70 = filter(mydat, under70=="Yes")
+  logunder70 = under70 %>% mutate(lcases = log(totcases)) %>% select(Reported_Date, lcases)
+  uspline = smooth.spline(logunder70$Reported_Date, logunder70$lcases, df=15)
+  upred = data.frame( predlcases = uspline$y, 
+                      cases = under70$totcases, lcases = log(under70$totcases),
+                      Reported_Date = logunder70$Reported_Date)
+  return(list(pred=pred,upred=upred))
+}
+# splinetest = make_case_splines(mydat)
+# the function returns two data fraems, pred and upred. 
+# both have the date, the predicted log cases( from the spline), the cases from the data, and teh log cases from the data 
+
+# do a sanity check for the spline to make sure that it looks ok. The 'df' parameter might need to change for example
+# ggplot(data = splinetest$pred, aes(x=Reported_Date, y=lcases))+geom_point(color="blue", alpha=0.5) +
+#  geom_line(data =splinetest$pred, aes(x=Reported_Date, y=predlcases))
+
+
+# next we need a function to use this, a date, and an 'offset' to make test_prop. 
+
+
+get_testprop = function(changedate, mysplines, halftime, steepness) { 
+  # need to get start and end value for the new offset. 
+  # the offset starts at the value of the estimated offset on the change date: 
+  offstart = filter(mysplines$upred, Reported_Date == changedate)$predlcases -
+    filter(mysplines$pred, Reported_Date == changedate)$predlcases 
+  # and it will move, over a time about equal to 2*halftime, to its historical value: 
+  offend = mean(filter(mysplines$upred, Reported_Date <= changedate)$predlcases -
+                  filter(mysplines$pred, Reported_Date <= changedate)$predlcases)
+  
+  
+  offconst = mysplines$upred$predlcases-mysplines$pred$predlcases
+  L1 = changedate - min(mysplines$pred$Reported_Date)
+  L2 = nrow(mysplines$pred)-L1 
+  offconst[(L1+1):nrow(mysplines$pred)] = 
+    getoffset(startvalue=offstart,   endvalue = offend, halftime= halftime,
+              steepness = steepness, ndays = L2) 
+  testpropdf = data.frame(date = mysplines$pred$Reported_Date, 
+                          totalmodel = exp(mysplines$pred$predlcases)+ exp(mysplines$upred$predlcases), 
+                          totaladjusted = exp(mysplines$pred$predlcases+offconst), 
+                          test_prop = pmin(1,(exp(mysplines$pred$predlcases)+
+                                                exp(mysplines$upred$predlcases))/ exp(mysplines$pred$predlcases+offconst)))
+  return(testpropdf) 
+}
+
+# mytest = get_testprop(changedate = ymd("2021-12-21"), 
+# mysplines = splinetest, 
+# halftime = 20, steepness = 0.1)
+# glimpse(mytest)
+# ggplot(mytest, aes(x=date, y=test_prop))+geom_line()
+
+
