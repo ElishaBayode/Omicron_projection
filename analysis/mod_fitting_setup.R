@@ -57,7 +57,7 @@ pomp(
 negbin.loglik <- function (params) {
   x <- trajectory(pomp_obj ,params=params)
   prediction <-  (x["Er",,]+ x["Erv",,] + x["Erw",,]
-                   + x["Em",,]+ x["Emv",,] + x["Emw",,])
+                   + x["Em",,]+ x["Emv",,] + x["Emw",,])*test_prop
  sum(dnbinom(x=obs(pomp_obj ),
               mu=params["p"]*prediction,size=1/params["theta"],
               log=TRUE))

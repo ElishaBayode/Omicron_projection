@@ -12,7 +12,7 @@ get_british_columbia_case_data <- function(){
 dat = get_british_columbia_case_data()
 
 dat <- group_by(dat, Reported_Date) %>%
-    summarise(cases = n()) %>%
+    dplyr::summarise(cases = n()) %>%
     filter(Reported_Date >= ymd("2020-02-27"))
 # still need to patch gaps in the first few days 
 dat$Reported_Date[1:2] <- c(ymd("2020-03-01"), ymd("2020-03-02"))
@@ -88,7 +88,7 @@ dat = get_british_columbia_case_data()
 
 # going to start this whole thin in fall 2021 
 agedat <- group_by(dat, Reported_Date, `Age group`) %>%
-    summarise(cases = n()) %>%
+    dplyr::summarise(cases = n()) %>%
     filter(Reported_Date >= ymd("2021-09-01"))
 # still need to patch gaps in the first few days 
 
@@ -101,7 +101,7 @@ agedat$under70 = "No"
 agedat$under70[which(agedat$`Age group` %in% lowerages)] = "Yes"
 
 mydat =  group_by(agedat, Reported_Date, under70) %>% 
-    summarise(totcases = sum(cases)) 
+    dplyr::summarise(totcases = sum(cases)) 
 
 
 

@@ -51,7 +51,7 @@ bcpub <-get_british_columbia_case_data() #readr::read_csv("data-raw/BCCDC_COVID1
 bcpub$Reported_Date <- lubridate::ymd(bcpub$`Reported Date`)
 bcpub$thiscase <- 1
 dat <- group_by(bcpub, Reported_Date) %>%
-  summarise(cases = sum(thiscase)) %>%
+  dplyr::summarise(cases = sum(thiscase)) %>%
   filter(Reported_Date >= ymd("2020-02-27"))
 dat <- dat[order(dat$Reported_Date), ]
 dat$day <- seq(1, nrow(dat))

@@ -1,22 +1,26 @@
 #importing data 
 dat = readRDS("data/BC-dat.rds")
 
+
+
 #including Omicron wave only 
 intro_date <-  ymd("2021-12-07")
-dat_omic <- filter(dat, date <= ymd("2022-01-09"))
+dat_omic <- filter(dat, date <= ymd("2022-01-16"))
 dat_omic <- filter(dat_omic, date >= intro_date) %>% select(c("day", "value"))
 dat_omic$day <- 1:nrow(dat_omic)
+
+test_prop <- filter(testpropdf, date >= intro_date)$test_prop
 
 source("analysis/mod_fitting_setup.R")
 #setting values to generate initial conditions with make_init()
 N=5.07e6
 N_pop=N
 #ascFrac <- 0.5
-vaxlevel_in = 0.8
+vaxlevel_in = 0.85
 port_wane_in = 0.04 
-past_infection_in = 0.1
-incres_in = 300
-incmut_in = 10
+past_infection_in = 0.25
+incres_in = 250
+incmut_in = 150
 init <- make_init() #to generatee initial state 
 
 
@@ -34,10 +38,10 @@ parameters <-         c(sigma=1/3, # incubation period (3 days) (to fixed)
                         #beta_r=0.72, #transmission rate (to estimate) (0.35)
                         #beta_m=0.8*2.2, #transmission rate (to estimate)(*1.9)
                         epsilon_r = (1-0.8), # % this should be 1-ve 
-                        epsilon_m = (1-0.6), # % escape capacity #(fixed)
+                        epsilon_m = (1-0.7), # % escape capacity #(fixed)
                         b= 0.006, # booster rate  (fixed)
                         beff = 0.7, # booster efficacy
-                        wf=0.2, # protection for newly recoverd #0.2
+                        wf=0.1, # protection for newly recoverd #0.2
                         N=5e6,
                         c=1
 )
@@ -50,8 +54,8 @@ guess <- c(log(1.3), logit(0.8), log(2.5), log(0.01))
 
 #the parameters are constrained  accordingly (lower and upper)
 
-fit_BC <- optim(fn=f_loglik,par=guess, lower=c(log(0.7), 0.0001, log(2), log(0.1)), 
-                upper = c(log(1.6), 0.001, log(3), log(0)), method = "L-BFGS-B")
+fit_BC <- optim(fn=f_loglik,par=guess, lower=c(log(0.7), 0.0001, log(1.6), log(0.1)), 
+                upper = c(log(1.6), 0.001, log(2.6), log(0)), method = "L-BFGS-B")
 
 
 #this catches estimated parameter values from MLE 
@@ -78,10 +82,10 @@ parameters_1 <- c(sigma=1/3, # incubation period (3 days) (to fixed)
               w3= 1/(3*365),# waning rate Rw to W (fixed)
              ve=1, # I think this should be 1. it is not really efficacy  ( fixed)
              epsilon_r = (1-0.8), # % this should be 1-ve 
-             epsilon_m = (1-0.6), # % escape capacity #(fixed)
+             epsilon_m = (1-0.7), # % escape capacity #(fixed)
              b= 0.006, # booster rate  (fixed) orig 0.006 
             beff = 0.7, # booster efficacy
-              wf=0.2, # protection for newly recoverd #0.2
+              wf=0.1, # protection for newly recoverd #0.2
              stngcy= 0,#0.78, #(*%(reduction)) strength of intervention (reduction in beta's)
             eff_t = as.numeric(eff_date - intro_date)  # time to 50% intervention effectiveness
 ) 
@@ -98,10 +102,10 @@ estim_parameters <- c(parameters_1,mle_est_BC)
 
 
 #an attempt to model changes in ascertainment probability 
-test_prop <- 1 - 0.55/(1+ exp(-1.25*(1:nrow(dat_omic)-20)))
-test_prop1 <- 1 - 0.75/(1+ exp(-1.25*(1:nrow(dat_omic)-100)))
-test_prop2 <- 1 - 0.65/(1+ exp(-1.25*(1:nrow(dat_omic)-100)))
-test_prop <- test_prop*test_prop1*test_prop2
+#test_prop <- 1 - 0.55/(1+ exp(-1.25*(1:nrow(dat_omic)-20)))
+#test_prop1 <- 1 - 0.75/(1+ exp(-1.25*(1:nrow(dat_omic)-100)))
+#test_prop2 <- 1 - 0.65/(1+ exp(-1.25*(1:nrow(dat_omic)-100)))
+#test_prop <- test_prop*test_prop1*test_prop2
 
 # model predictions (incidence, sigma*(Er +Em + Erv + Emv + Erw + Emw)) 
 
@@ -127,7 +131,7 @@ model.pred <- test_prop*parameters[[1]]*(out_state["Er",,]+
 #aaply(sim_true_inc,2,quantile,probs=c(0.025,0.5,0.975)) -> quantiles_true 
 #this generates multiple  model realizations 
 
-raply(10000,rnbinom(n=length(model.pred),
+raply(100000,rnbinom(n=length(model.pred),
                     mu=coef(pomp_obj ,"p")*model.pred,
                     size=1/coef(pomp_obj ,"theta"))) -> simdat
 
@@ -141,8 +145,7 @@ aaply(simdat,2,quantile,probs=c(0.025,0.5,0.975)) -> quantiles
 
 
 dat_sim <- cbind(as.data.frame(pomp_obj ),
-                 quantiles,
-                 typical=simdat[typ,]) 
+                 quantiles) 
 
 #true_inc <-  cbind(as.data.frame(pomp_obj ),
  #                  quantiles_true) 
@@ -181,11 +184,11 @@ parameters_2 <- c(sigma=1/3, # incubation period (3 days) (to fixed)
                   w3= 1/(3*365),# waning rate Rw to W (fixed)
                   ve=1, # I think this should be 1. it is not really efficacy  ( fixed)
                   epsilon_r = (1-0.8), # % this should be 1-ve 
-                  epsilon_m = (1-0.6), # % escape capacity #(fixed)
+                  epsilon_m = (1-0.7), # % escape capacity #(fixed)
                   b= 0.006, # booster rate  (fixed) orig 0.006 
                   beff = 0.7, # booster efficacy
-                  wf=0.2, # protection for newly recoverd #0.2
-                  stngcy= 0.5,#0.78, #(*%(reduction)) strength of intervention (reduction in beta's)
+                  wf=0.1, # protection for newly recoverd #0.2
+                  stngcy= 0,#0.78, #(*%(reduction)) strength of intervention (reduction in beta's)
                   eff_t = as.numeric(eff_date - intro_date)  # time to 50% intervention effectiveness
 )
 
@@ -224,7 +227,7 @@ gg_BC <- ggplot() + geom_line(data=dat_sim,aes(x=date,y=`50%`),color='blue',size
   geom_line(data=BC_forecast_int,aes(x=date, y=`50%`, color="50% reduction in transmission"),size=1.2,alpha=0.5) +
  geom_ribbon(data=BC_forecast_int,aes(x=date,ymin=`2.5%`,ymax=`97.5%`),fill='green',alpha=0.1)+
   #geom_line(aes(y=typical),color='blue') +
-  labs(y="Reported cases",x="Date") + ylim(c(0,120000)) + 
+  labs(y="Reported cases",x="Date") + ylim(c(0,10000)) + 
   scale_x_date(date_breaks = "10 days", date_labels = "%b-%d-%y") +theme_light() +
   scale_color_manual(values = cols) +  theme(axis.text=element_text(size=15),
                                              plot.title = element_text(size=15, face="bold"),
