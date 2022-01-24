@@ -1,6 +1,7 @@
 library(erer)
-library(gridExtra)
+library(gridExtra)#
 library(data.table)
+library(ggplot2)
 AB_Omicron = as.data.frame(readRDS(file.path("data/AB_dat_sim.rds")))
 BC_Omicron  = as.data.frame(readRDS(file.path("data/BC_dat_sim.rds")))
 MB_Omicron  = as.data.frame(readRDS(file.path("data/MB_dat_sim.rds")))
@@ -11,6 +12,19 @@ SK_Omicron = as.data.frame(readRDS(file.path("data/SK_dat_sim.rds")))
 #SK_Omicron <- filter(SK_Omicron, date <= ymd("2022-01-09"))
 #BC_Omicron$day <- 1:length(BC_Omicron$value)
 #plot(ON_Omicron$inc_tot)
+
+QC_Omicron$date
+
+AB_Omicron_rel = as.data.frame(readRDS(file.path("data/AB_dat_sim_rel.rds")))
+BC_Omicron_rel  = as.data.frame(readRDS(file.path("data/BC_dat_sim_rel.rds")))
+MB_Omicron_rel = as.data.frame(readRDS(file.path("data/MB_dat_sim_rel.rds")))
+ON_Omicron_rel  = as.data.frame(readRDS(file.path("data/ON_dat_sim_rel.rds")))
+QC_Omicron_rel  = as.data.frame(readRDS(file.path("data/QC_dat_sim_rel.rds")))
+SK_Omicron_rel = as.data.frame(readRDS(file.path("data/SK_dat_sim_rel.rds")))
+
+
+
+
 
 
 AB_Omicron_er = as.data.frame(readRDS(file.path("data/AB_forecast.rds")))
@@ -45,19 +59,26 @@ SK_Omicron_int$day <- 1:30
 
 
 showOmicron <- list(AB=AB_Omicron,BC=BC_Omicron,MB=MB_Omicron,
-                    ON=ON_Omicron,QC=QC_Omicron,SK=SK_Omicron)  
+                    ON=ON_Omicron,QC=QC_Omicron,SK=SK_Omicron
+                    )  
 
+showOmicron_rel <- list(AB=AB_Omicron_rel,BC=BC_Omicron_rel,MB=MB_Omicron_rel,
+                    ON=ON_Omicron_rel,QC=QC_Omicron_rel,SK=SK_Omicron_rel
+)  
 showOmicron_er <- list(AB=AB_Omicron_er,BC=BC_Omicron_er,MB=MB_Omicron_er,
-                    ON=ON_Omicron_er,QC=QC_Omicron_er,SK=SK_Omicron_er)
+                    ON=ON_Omicron_er,QC=QC_Omicron_er,SK=SK_Omicron_er
+                    )
 
 showOmicron_int <- list(AB=AB_Omicron_int,BC=BC_Omicron_int,MB=MB_Omicron_int,
-                       ON=ON_Omicron_int,QC=QC_Omicron_int,SK=SK_Omicron_int)
+                       ON=ON_Omicron_int,QC=QC_Omicron_int,SK=SK_Omicron_int
+                       )
 
 
 
 write.list(z = showOmicron, file = "data/fits.csv")
 write.list(z = showOmicron_er, file = "data/projection_current.csv")
-write.list(z = showOmicron_int, file = "data/projection_reduce_transm.csv")
+write.list(z = showOmicron_int, file = "data/projection_adjusted.csv")
+write.list(z = showOmicron_rel, file = "data/test_adjusted_fit.csv")
 library(data.table)
 
 
@@ -65,14 +86,14 @@ library(data.table)
 
 showOmicron <- rbindlist(showOmicron, fill = TRUE)[,lapply(.SD, sum, na.rm = TRUE) , day]
 
-
-showOmicron$date <- BC_Omicron$date
+showOmicron_rel <- rbindlist(showOmicron_rel, fill = TRUE)[,lapply(.SD, sum, na.rm = TRUE) , day]
+showOmicron_rel$date <- QC_Omicron_rel$date
 
 showOmicron_er <- rbindlist(showOmicron_er, fill = TRUE)[,lapply(.SD, sum, na.rm = TRUE) , day]
-showOmicron_er$date <- SK_Omicron_er$date
+showOmicron_er$date <- QC_Omicron_er$date
 
 showOmicron_int <- rbindlist(showOmicron_int, fill = TRUE)[,lapply(.SD, sum, na.rm = TRUE) , day]
-showOmicron_int$date <- BC_Omicron_int$date
+showOmicron_int$date <- QC_Omicron_int$date
 
 
 
@@ -124,25 +145,29 @@ newQCshowSimple = readRDS(file.path("figs/QC-fig.rds"))
 newSKshowSimple = readRDS(file.path("figs/SK-fig.rds"))
 
 
-combine_Omicron_freq <- grid.arrange(newONshowSimple, newQCshowSimple, newMBshowSimple, nrow = 3, ncol = 1)
+combine_Omicron_freq <- grid.arrange(newONshowSimple, newQCshowSimple,  newMBshowSimple,nrow = 3, ncol = 1) #
 ggsave(file="figs/Omicron_freqPAGE1.pdf", combine_Omicron_freq, width = 9, height = 12)
 ggsave(file="figs/Omicron_freqPAGE1.png", combine_Omicron_freq, width = 9, height = 12)
 
-combine_Omicron_freq <- grid.arrange(newSKshowSimple, newABshowSimple, newBCshowSimple, nrow = 3, ncol = 1)
+combine_Omicron_freq <- grid.arrange( newABshowSimple, newBCshowSimple,newSKshowSimple, nrow = 3, ncol = 1) #
 ggsave(file="figs/Omicron_freqPAGE2.pdf", combine_Omicron_freq, width = 9, height = 12)
 ggsave(file="figs/Omicron_freqPAGE2.png", combine_Omicron_freq, width = 9, height = 12)
 
+showOmicron$date <- BC_Omicron_rel$date
 
+cols <- c("Current, with testing constraints" = "darkgreen", "Without testing constraints"="orange")
 
 gg_combine  <- ggplot() + geom_line(data=showOmicron,aes(x=date,y=X50.),color='blue',size=1.2,alpha=0.4) +
    geom_ribbon(data=showOmicron,aes(x=date,ymin=X2.5.,ymax=X97.5.),fill='blue',alpha=0.1) +
    geom_point(data=showOmicron,aes(x=date, y=value),color='grey28', alpha=0.5) +
-   geom_line(data=showOmicron_er,aes(x=date,y=X50.,color="Current"),size=1.2,alpha=0.5) +
-   geom_ribbon(data=showOmicron_er,aes(x=date,ymin=X2.5.,ymax=X97.5.),fill='orange',alpha=0.1) +
-   geom_line(data=showOmicron_int,aes(x=date,y=X50., color="50% reduction in transmission"),size=1.2,alpha=0.5) +
-   geom_ribbon(data=showOmicron_int,aes(x=date,ymin=X2.5.,ymax=X97.5.),fill='green',alpha=0.1)+
+   geom_line(data=showOmicron_er,aes(x=date,y=X50.),color="darkgreen",size=1.2,alpha=0.5) +
+   geom_ribbon(data=showOmicron_er,aes(x=date,ymin=X2.5.,ymax=X97.5.),fill='darkgreen',alpha=0.1) +
+   geom_line(data=showOmicron_int,aes(x=date,y=X50., color="Without testing constraints"),size=1.2,alpha=0.5) +
+   geom_ribbon(data=showOmicron_rel,aes(x=date,ymin=`2.5%`,ymax=`97.5%`),fill='orange',alpha=0.1) +
+   geom_line(data=showOmicron_rel,aes(x=date,y=`50%`, color="Without testing constraints"),size=1.2,alpha=0.5) +
+   geom_ribbon(data=showOmicron_int,aes(x=date,ymin=X2.5.,ymax=X97.5.),fill='orange',alpha=0.1)+
    #geom_line(aes(y=typical),color='blue') +
-   labs(y="Reported cases",x="Date") + ylim(c(0,1000000)) + 
+   labs(y="Reported cases",x="Date") + ylim(c(0,250000)) + 
    scale_x_date(date_breaks = "10 days", date_labels = "%b-%d-%y") +theme_light() +
    scale_color_manual(values = cols) +  theme(axis.text=element_text(size=15),
                                               plot.title = element_text(size=15, face="bold"),

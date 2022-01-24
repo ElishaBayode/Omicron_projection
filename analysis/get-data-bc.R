@@ -88,17 +88,19 @@ ggplot(wwd, aes(x=Date, y=Value,color=Plant)) + geom_point() + geom_line() +
 dat = get_british_columbia_case_data()
 
 # going to start this whole thin in fall 2021 
-agedat <- group_by(dat, Reported_Date, `Age group`) %>%
+agedat <- group_by(dat,`Reported Date`, `Age group`) %>%
     dplyr::summarise(cases = n()) %>%
-    filter(Reported_Date >= ymd("2021-09-01"))
+    filter(`Reported Date` >= ymd("2021-09-01"))
 
 # get a time series for <70 and 70+ 
 lowerages = c("<10" , "10-19","20-29", "30-39",  "40-49" , "50-59" , "60-69")
 agedat$under70 = "No" 
 agedat$under70[which(agedat$`Age group` %in% lowerages)] = "Yes"
 
-mydat =  group_by(agedat, Reported_Date, under70) %>% 
+mydat =  group_by(agedat,`Reported Date`, under70) %>% 
     dplyr::summarise(totcases = sum(cases)) 
+
+mydat$Reported_Date <- mydat$`Reported Date`
 
 # make the splines 
 splinetest = make_case_splines(mydat)

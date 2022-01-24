@@ -13,10 +13,11 @@ readr::write_csv(data, file.path("data", location))
 #download .csv manually and save in data
 # https://www.alberta.ca/stats/covid-19-alberta-statistics.htm
 
-abdat <- readr::read_csv("data/covid-19-alberta-statistics-data.csv")
+#abdat <- readr::read_csv("data/covid-19-alberta-statistics-data.csv")
+abdat <- get_alberta_case_data()
 abdat$thiscase <- 1
 abdat <- abdat %>% group_by(`Date reported`) %>%
-  summarise(cases = sum(thiscase)) %>% rename(date = `Date reported`)
+  dplyr::summarise(cases = sum(thiscase)) %>% dplyr::rename(date = `Date reported`)
 
 ggplot(data = abdat, aes(x = date, y = cases)) +
   geom_point() +
@@ -25,7 +26,7 @@ ggplot(data = abdat, aes(x = date, y = cases)) +
 startDate <- lubridate::ymd("2020-03-06")
 dat <- filter(abdat, date > startDate)
 
-
+tail(dat)
 
 dat$value <- dat$cases
 #dat$adjust_cases <-dat$cases 
@@ -222,7 +223,7 @@ ondat <- readr::read_csv("https://data.ontario.ca/dataset/f4112442-bdc8-45d2-be3
 
 ondat <- ondat %>%
   group_by(Case_Reported_Date) %>%
-  summarise(cases = n())
+  dplyr::summarise(cases = n())
 ggplot(data = ondat, aes(x = Case_Reported_Date, y = cases)) +
   geom_point(color = "blue") +
   #   geom_point(data = dat, aes(x = date, y = cases), color = "red") +
@@ -405,7 +406,7 @@ dat =readRDS(file.path("data/QC-dat.rds"))
 # Read and prepare data -----------------------------------------------------
 
 #dat <- readr::read_csv("https://dashboard.saskatchewan.ca/export/cases/2097.csv")
-# dat <- readr::read_csv("https://raw.githubusercontent.com/ishaberry/Covid19Canada/master/timeseries_prov/cases_timeseries_prov.csv")
+ dat <- readr::read_csv("https://raw.githubusercontent.com/ishaberry/Covid19Canada/master/timeseries_prov/cases_timeseries_prov.csv")
 
 dat <- readr::read_csv(file.path("data/CAN.csv"))
 dat$date <- lubridate::dmy(dat$date_report)
@@ -523,3 +524,127 @@ dat <- filter(dat, date >= "2020-09-22")
 dat$day <- 1:length(dat$cases)
 saveRDS(dat, file.path("data/SK-dat.rds"))
 dat =readRDS(file.path("data/SK-dat.rds"))
+
+
+
+
+
+
+###### AB_age structured data ############
+
+
+dat = get_alberta_case_data()
+
+# going to start this whole thin in fall 2021 
+agedat <- group_by(dat, `Date reported`, `Age group`) %>%
+  dplyr::summarise(cases = n()) %>%
+  filter(`Date reported` >= ymd("2021-09-01"))
+
+# get a time series for <70 and 70+ 
+#lowerages = c("<10" , "10-19","20-29", "30-39",  "40-49" , "50-59" , "60-69")
+lowerages = c("Under 1 year", "1-4 years" , "5-9 years","10-19 years", 
+              "20-29 years",  "30-39 years",  "40-49 years" ,"50-59 years", "60-69 years",
+             "Unknown")
+
+agedat$under70 = "No" 
+agedat$under70[which(agedat$`Age group` %in% lowerages)] = "Yes"
+
+mydat_AB =  group_by(agedat,  `Date reported`, under70) %>% 
+  dplyr::summarise(totcases = sum(cases)) 
+mydat_AB$`Reported_Date` <- mydat_AB$`Date reported`
+
+test_ABspline  <- make_case_splines(mydat_AB)
+
+ mytest_AB = get_testprop(changedate = ymd("2021-12-21"), 
+     mysplines = test_ABspline, 
+     halftime = 30, steepness = 0.1)
+glimpse(mytest_AB)
+ggplot(mytest_AB, aes(x=date, y=test_prop))+geom_line()
+
+
+################################  QC test Prop  ###########################
+
+dat_qc <- readr::read_csv("data/DomesticSurveillanceData_2022-01-13_DISCOVER.csv")
+
+dat_qc <- filter(dat_qc,  reporteddate >= ymd("2021-09-01")) 
+# going to start this whole thin in fall 2021 
+agedat_qc <- group_by(dat_qc, reporteddate,agegroup10) %>%
+  dplyr::summarise(cases = n()) %>%
+  filter(reporteddate >= ymd("2021-09-01"))
+lowerages = c("0 to 19" ,"20 to 29", "30 to 39", "40 to 49", "50 to 59", "60 to 69", "unknown")
+agedat_qc$under70 = "No" 
+agedat_qc$under70[which(agedat_qc$agegroup10 %in% lowerages)] = "Yes"
+
+mydat_QC =  group_by(agedat_qc, reporteddate , under70) %>% 
+  dplyr::summarise(totcases = sum(cases)) 
+mydat_QC$`Reported_Date` <- mydat_QC$reporteddate
+
+test_QCspline  <- make_case_splines(mydat_QC)
+
+mytest_QC = get_testprop(changedate = ymd("2021-12-21"), 
+                         mysplines = test_QCspline, 
+                         halftime = 35, steepness = 0.15)
+glimpse(mytest_QC)
+ggplot(mytest_QC, aes(x=date, y=test_prop))+geom_line()
+
+
+################################  ON test Prop  ###########################
+ondat <- readr::read_csv("https://data.ontario.ca/dataset/f4112442-bdc8-45d2-be3c-12efae72fb27/resource/455fd63b-603d-4608-8216-7d8647f43350/download/conposcovidloc.csv")
+
+agedat_on <- group_by(ondat, Test_Reported_Date,Age_Group) %>%
+  dplyr::summarise(cases = n()) %>%
+  filter(Test_Reported_Date >= ymd("2021-09-01"))
+
+lowerages = c("<20","20s", "30s", "40s", "50s", "60s","UNKNOWN")
+agedat_on$under70 = "No" 
+agedat_on$under70[which(agedat_on$Age_Group %in% lowerages)] = "Yes"
+
+mydat_ON =  group_by(agedat_on, Test_Reported_Date , under70) %>% 
+  dplyr::summarise(totcases = sum(cases)) 
+mydat_ON$`Reported_Date` <- mydat_ON$Test_Reported_Date 
+
+test_ONspline  <- make_case_splines(mydat_ON)
+
+mytest_ON = get_testprop(changedate = ymd("2021-12-21"), 
+                         mysplines = test_ONspline, 
+                         halftime = 35, steepness = 0.15)
+glimpse(mytest_ON)
+ggplot(mytest_ON, aes(x=date, y=test_prop))+geom_line()
+
+
+
+
+
+################################  SK test Prop  ###########################
+
+
+dat = get_saskatchewan_case_data()
+
+# going to start this whole thin in fall 2021 
+agedat <- group_by(dat, `Date reported`, `Age group`) %>%
+  dplyr::summarise(cases = n()) %>%
+  filter(`Date reported` >= ymd("2021-09-01"))
+
+# get a time series for <70 and 70+ 
+#lowerages = c("<10" , "10-19","20-29", "30-39",  "40-49" , "50-59" , "60-69")
+lowerages = c("Under 1 year", "1-4 years" , "5-9 years","10-19 years", 
+              "20-29 years",  "30-39 years",  "40-49 years" ,"50-59 years", "60-69 years",
+              "Unknown")
+
+agedat$under70 = "No" 
+agedat$under70[which(agedat$`Age group` %in% lowerages)] = "Yes"
+
+mydat_AB =  group_by(agedat,  `Date reported`, under70) %>% 
+  dplyr::summarise(totcases = sum(cases)) 
+mydat_AB$`Reported_Date` <- mydat_AB$`Date reported`
+
+test_ABspline  <- make_case_splines(mydat_AB)
+
+mytest_AB = get_testprop(changedate = ymd("2021-12-21"), 
+                         mysplines = test_ABspline, 
+                         halftime = 30, steepness = 0.1)
+glimpse(mytest_AB)
+ggplot(mytest_AB, aes(x=date, y=test_prop))+geom_line()
+
+
+

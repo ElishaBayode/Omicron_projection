@@ -63,6 +63,16 @@ negbin.loglik <- function (params) {
               log=TRUE))
 }
 
+
+negbin.loglik_1 <- function (params) {
+  x <- trajectory(pomp_obj ,params=params)
+  prediction <-  (x["Er",,]+ x["Erv",,] + x["Erw",,]
+                  + x["Em",,]+ x["Emv",,] + x["Emw",,])*test_prop
+  sum(dnbinom(x=obs(pomp_obj ),
+              mu=params["p"]*prediction,size=1/params["theta"],
+              log=TRUE))
+}
+
 #use to generate neg log likelihood estimates  
 f_loglik <- function (par) {
   params <- c(S_0=init[[1]],Er_0=init[[2]],Em_0=init[[3]],Ir_0=init[[4]],
@@ -74,25 +84,34 @@ f_loglik <- function (par) {
   -negbin.loglik(params)
 }
 
-
+f_loglik_2 <- function (par) {
+  params <- c(S_0=last(out_state["S",,]),Er_0=last(out_state["Er",,]),Em_0=last(out_state["Em",,]),
+              Ir_0=last(out_state["Ir",,]),Im_0=last(out_state["Im",,]), R_0=last(out_state["R",,]),
+              V_0=last(out_state["V",,]),Erv_0=last(out_state["Erv",,]), Emv_0=last(out_state["Emv",,]), 
+              Irv_0=last(out_state["Irv",,]),Imv_0=last(out_state["Imv",,]), Rv_0=last(out_state["Rv",,]),
+              W_0=last(out_state["W",,]),Erw_0=last(out_state["Erw",,]), Emw_0=last(out_state["Emw",,]),
+              Irw_0=last(out_state["Irw",,]),Imw_0=last(out_state["Imw",,]), Rw_0=last(out_state["Rw",,])
+              ,parameters, beta_r=exp(par[1]),p=expit(par[2]),beta_m=exp(par[3]),theta=exp(par[4]))
+  -negbin.loglik_1(params)
+}
 
 case_projection <- function(out_state=out_state,forecast_days=forecast_days, lag = lag ,
                             parameters_estim=estim_parameters, simu_size=simu_size,
-                            pomp_obj=pomp_obj , dat_sim=dat_sim){
-  init_current = c(S=last(out_state["S",,]),Er=last(out_state["Er",,]),Em=last(out_state["Em",,]),
-                   Ir=last(out_state["Ir",,]),Im=last(out_state["Im",,]), R=last(out_state["R",,]),
-                   V=last(out_state["V",,]),Erv=last(out_state["Erv",,]), Emv=last(out_state["Emv",,]), 
-                   Irv=last(out_state["Irv",,]),Imv=last(out_state["Imv",,]), Rv=last(out_state["Rv",,]),
-                   W=last(out_state["W",,]),Erw=last(out_state["Erw",,]), Emw=last(out_state["Emw",,]),
-                   Irw=last(out_state["Irw",,]),Imw=last(out_state["Imw",,]), Rw=last(out_state["Rw",,])) 
+                            pomp_obj=pomp_obj , dat_sim=dat_sim,test_prop=test_prop){
+  init_current = c(S=last(out_state_2["S",,]),Er=last(out_state_2["Er",,]),Em=last(out_state_2["Em",,]),
+                   Ir=last(out_state_2["Ir",,]),Im=last(out_state_2["Im",,]), R=last(out_state_2["R",,]),
+                   V=last(out_state_2["V",,]),Erv=last(out_state_2["Erv",,]), Emv=last(out_state_2["Emv",,]), 
+                   Irv=last(out_state_2["Irv",,]),Imv=last(out_state_2["Imv",,]), Rv=last(out_state_2["Rv",,]),
+                   W=last(out_state_2["W",,]),Erw=last(out_state_2["Erw",,]), Emw=last(out_state_2["Emw",,]),
+                   Irw=last(out_state_2["Irw",,]),Imw=last(out_state_2["Imw",,]), Rw=last(out_state_2["Rw",,])) 
   forecast_days = seq(1, forecast_days, 1)
   output = as.data.frame(deSolve::ode(y=init_current,times=forecast_days,func=sveirs,
                                       parms=c(estim_parameters)))       
   
   incidence_forecast =  last(test_prop)*estim_parameters[[1]]*lag_func(output$Er +
-                                                                         output$Erv+ output$Erw +
-                                                                         output$Em + output$Emv +
-                                                                         output$Emw, k=lag)
+                                                      output$Erv+ output$Erw +
+                                                      output$Em + output$Emv +
+                                                      output$Emw, k=lag)
   
   uncert_bound = raply(simu_size,rnbinom(n=length(incidence_forecast),
                                          mu=coef(pomp_obj ,"p")*incidence_forecast,
@@ -106,6 +125,33 @@ case_projection <- function(out_state=out_state,forecast_days=forecast_days, lag
 }
 
  
+case_projection_rel <- function(out_state=out_state_2,forecast_days=forecast_days, lag = lag ,
+                            parameters_estim=estim_parameters, simu_size=simu_size,
+                            pomp_obj=pomp_obj , dat_sim=dat_sim, test_prop=test_prop){
+  init_current = c(S=last(out_state_2["S",,]),Er=last(out_state_2["Er",,]),Em=last(out_state_2["Em",,]),
+                   Ir=last(out_state_2["Ir",,]),Im=last(out_state_2["Im",,]), R=last(out_state_2["R",,]),
+                   V=last(out_state_2["V",,]),Erv=last(out_state_2["Erv",,]), Emv=last(out_state_2["Emv",,]), 
+                   Irv=last(out_state_2["Irv",,]),Imv=last(out_state_2["Imv",,]), Rv=last(out_state_2["Rv",,]),
+                   W=last(out_state_2["W",,]),Erw=last(out_state_2["Erw",,]), Emw=last(out_state_2["Emw",,]),
+                   Irw=last(out_state_2["Irw",,]),Imw=last(out_state_2["Imw",,]), Rw=last(out_state_2["Rw",,])) 
+  forecast_days = seq(1, forecast_days, 1)
+  output = as.data.frame(deSolve::ode(y=init_current,times=forecast_days,func=sveirs,
+                                      parms=c(estim_parameters)))       
+  
+  incidence_forecast =  estim_parameters[[1]]*lag_func(output$Er + output$Erv+ output$Erw +
+                                                                         output$Em + output$Emv +
+                                                                         output$Emw, k=lag)
+  
+  uncert_bound = raply(simu_size,rnbinom(n=length(incidence_forecast),
+                                         mu=coef(pomp_obj ,"p")*incidence_forecast,
+                                         size=1/coef(pomp_obj ,"theta")))
+  quantiles_proj =  as.data.frame(aaply(uncert_bound ,2,quantile,na.rm=TRUE,probs=c(0.025,0.5,0.975)))
+  
+  project_dat = quantiles_proj %>% mutate(date=seq.Date(ymd(last(dat_sim$date)),
+                                                        ymd(last(dat_sim$date))-1+last(forecast_days), 1))
+  return(project_dat)
+  
+}
 
 
 
