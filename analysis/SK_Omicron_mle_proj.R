@@ -51,7 +51,7 @@ parameters <-         c(sigma=1/3, # incubation period (3 days) (to fixed)
                         #beta_r=0.72, #transmission rate (to estimate) (0.35)
                         #beta_m=0.8*2.2, #transmission rate (to estimate)(*1.9)
                         epsilon_r = (1-0.8), # % this should be 1-ve 
-                        epsilon_m = (1-0.65), # % escape capacity #(fixed)
+                        epsilon_m = (1-0.6), # % escape capacity #(fixed)
                         b= 0.006, # booster rate  (fixed)
                         beff = 0.7, # booster efficacy
                         wf=0.2, # protection for newly recoverd #0.2
@@ -99,7 +99,7 @@ parameters <-         c(sigma=1/3, # incubation period (3 days) (to fixed)
                         #beta_r=0.72, #transmission rate (to estimate) (0.35)
                         #beta_m=0.8*2.2, #transmission rate (to estimate)(*1.9)
                         epsilon_r = (1-0.8), # % this should be 1-ve 
-                        epsilon_m = (1-0.65), # % escape capacity #(fixed)
+                        epsilon_m = (1-0.6), # % escape capacity #(fixed)
                         b= 0.006, # booster rate  (fixed)
                         beff = 0.7, # booster efficacy
                         wf=0.2, # protection for newly recoverd #0.2
@@ -145,7 +145,7 @@ parameters_1 <- c(sigma=1/3, # incubation period (3 days) (to fixed)
                   w3= 1/(3*365),# waning rate Rw to W (fixed)
                   ve=1, # I think this should be 1. it is not really efficacy  ( fixed)
                   epsilon_r = (1-0.8), # % this should be 1-ve 
-                  epsilon_m = (1-0.65), # % escape capacity #(fixed)
+                  epsilon_m = (1-0.6), # % escape capacity #(fixed)
                   b= 0.006, # booster rate  (fixed) orig 0.006 
                   beff = 0.7, # booster efficacy
                   wf=0.2, # protection for newly recoverd #0.2
@@ -187,10 +187,10 @@ source("analysis/mod_fitting_setup.R")
 
 
 #gues_part2 <- c(log(0.8),  log(0.1))
-guess <- c(log(0.5), logit(0.1), log(0.3), log(0.11))
+guess_part2 <- c(log(0.5), logit(0.1), log(0.3), log(0.11))
 #the parameters are constrained  accordingly (lower and upper)
 
-fit_SK2 <- optim(fn=f_loglik,par=guess, lower=c(log(0.2), log(0.001)), 
+fit_SK2 <- optim(fn=f_loglik_2(),par=guess_part2, lower=c(log(0.2), log(0.001)), 
                  upper = c(log(1.3), log(1)), method = "L-BFGS-B")
 
 
@@ -343,7 +343,7 @@ parameters_2 <- c(sigma=1/3, # incubation period (3 days) (to fixed)
                   w3= 1/(3*365),# waning rate Rw to W (fixed)
                   ve=1, # I think this should be 1. it is not really efficacy  ( fixed)
                   epsilon_r = (1-0.8), # % this should be 1-ve 
-                  epsilon_m = (1-0.65), # % escape capacity #(fixed)
+                  epsilon_m = (1-0.6), # % escape capacity #(fixed)
                   b= 0.006, # booster rate  (fixed) orig 0.006 
                   beff = 0.7, # booster efficacy
                   wf=0.2, # protection for newly recoverd #0.2

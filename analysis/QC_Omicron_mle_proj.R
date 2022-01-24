@@ -18,8 +18,8 @@ source("analysis/mod_fitting_setup.R")
 
 N=8.485e6
 vaxlevel_in = 0.76
-port_wane_in = 0.1
-past_infection_in = 0.13 
+port_wane_in = 0.04
+past_infection_in = 0.25
 incres_in = 1820
 incmut_in = 30
 N_pop=N
@@ -75,15 +75,15 @@ source("analysis/mod_fitting_setup.R")
 
 
 
-N=8.485e6
-vaxlevel_in = 0.76
-port_wane_in = 0.1
-past_infection_in = 0.27
-incres_in = 1820
-incmut_in = 100
-N_pop=N
-intro_date <- ymd("2021-12-07")
-init <- make_init()  #to generatee initial state 
+#N=8.485e6
+#vaxlevel_in = 0.76
+#port_wane_in = 0.1
+#past_infection_in = 0.27
+##incres_in = 1820
+#incmut_in = 100
+#N_pop=N
+##intro_date <- ymd("2021-12-07")
+#init <- make_init()  #to generatee initial state 
 
 
 
@@ -100,7 +100,7 @@ parameters <-         c(sigma=1/3, # incubation period (3 days) (to fixed)
                         #beta_r=0.72, #transmission rate (to estimate) (0.35)
                         #beta_m=0.8*2.2, #transmission rate (to estimate)(*1.9)
                         epsilon_r = (1-0.8), # % this should be 1-ve 
-                        epsilon_m = (1-0.65), # % escape capacity #(fixed)
+                        epsilon_m = (1-0.6), # % escape capacity #(fixed)
                         b= 0.006, # booster rate  (fixed)
                         beff = 0.7, # booster efficacy
                         wf=0.2, # protection for newly recoverd #0.2
@@ -116,7 +116,7 @@ guess <- c(log(0.8), logit(0.52), log(2.9), log(0.11))
 #the parameters are constrained  accordingly (lower and upper)
 
 fit_QC <- optim(fn=f_loglik,par=guess, lower=c(log(0.3), 0.1, log(2.1), log(0.1)), 
-                upper = c(log(0.0), 0.6, log(3.1), log(0.12)), method = "L-BFGS-B")
+                upper = c(log(0.0), 0.6, log(2.4), log(0.12)), method = "L-BFGS-B")
 
 
 #this catches estimated parameter values from MLE 
@@ -148,7 +148,7 @@ parameters_1 <- c(sigma=1/3, # incubation period (3 days) (to fixed)
                   w3= 1/(3*365),# waning rate Rw to W (fixed)
                   ve=1, # I think this should be 1. it is not really efficacy  ( fixed)
                   epsilon_r = (1-0.8), # % this should be 1-ve 
-                  epsilon_m = (1-0.65), # % escape capacity #(fixed)
+                  epsilon_m = (1-0.6), # % escape capacity #(fixed)
                   b= 0.006, # booster rate  (fixed) orig 0.006 
                   beff = 0.7, # booster efficacy
                   wf=0.2, # protection for newly recoverd #0.2
@@ -190,10 +190,10 @@ source("analysis/mod_fitting_setup.R")
 
 
 #gues_part2 <- c(log(0.8),  log(0.1))
-guess <- c(log(0.5), logit(0.1), log(0.3), log(0.11))
+guess_part2 <- c(log(0.5), logit(0.1), log(0.3), log(0.11))
 #the parameters are constrained  accordingly (lower and upper)
 
-fit_QC2 <- optim(fn=f_loglik,par=guess, lower=c(log(0.2), log(0.001)), 
+fit_QC2 <- optim(fn=f_loglik_2,par=guess_part2, lower=c(log(0.2), log(0.001)), 
                  upper = c(log(0.9), log(0.7)), method = "L-BFGS-B")
 
 
@@ -225,9 +225,9 @@ model.pred_2 <-   parameters[[1]]*(out_state_2["Er",,]+
                                      out_state_2["Emw",,])
 
 model.pred_fake  <- model.pred
-model.pred <- c(model.pred_fake,model.pred_2)*c(test_prop,rep(last(test_prop_QC),5))
+model.pred_rel <- c(model.pred_fake,model.pred_2) 
+model.pred <- c(model.pred_fake,model.pred_2)*c(test_prop, rep(last(test_prop),5))
 
-model.pred_rel <- c(model.pred_fake,model.pred_2)
 
 
 
@@ -346,7 +346,7 @@ parameters_2 <- c(sigma=1/3, # incubation period (3 days) (to fixed)
                   w3= 1/(3*365),# waning rate Rw to W (fixed)
                   ve=1, # I think this should be 1. it is not really efficacy  ( fixed)
                   epsilon_r = (1-0.8), # % this should be 1-ve 
-                  epsilon_m = (1-0.65), # % escape capacity #(fixed)
+                  epsilon_m = (1-0.6), # % escape capacity #(fixed)
                   b= 0.006, # booster rate  (fixed) orig 0.006 
                   beff = 0.7, # booster efficacy
                   wf=0.2, # protection for newly recoverd #0.2
@@ -392,7 +392,7 @@ gg_QC <- ggplot() + geom_line(data=dat_sim, aes(x=date ,y =`50%`),color='blue',s
   geom_line(data=QC_forecast_int,aes(x=date, y=`50%`, color="Without testing constraints"),size=1.2,alpha=0.5) +
   geom_ribbon(data=QC_forecast_int,aes(x=date,ymin=`2.5%`,ymax=`97.5%`),fill='orange',alpha=0.1)+
   #geom_line(aes(y=typical),color='blue') +
-  labs(y="Reported cases",x="Date") + ylim(c(0,80000)) + 
+  labs(y="Reported cases",x="Date") + ylim(c(0,120000)) + 
   scale_x_date(date_breaks = "8 days", date_labels = "%b-%d-%y") +theme_light() +
   scale_color_manual(values = cols) +  theme(axis.text=element_text(size=15),
                                              plot.title = element_text(size=15, face="bold"),

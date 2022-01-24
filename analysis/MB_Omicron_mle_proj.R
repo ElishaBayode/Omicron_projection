@@ -76,7 +76,8 @@ dat_omic$day <- 1:nrow(dat_omic)
 
 
 test_prop_MB <- filter(mytest_MB, date >= intro_date)$test_prop
-test_prop_MB =  test_prop_AB
+
+test_prop_MB =  test_prop
 
 test_prop <- test_prop_MB
 source("analysis/mod_fitting_setup.R")
@@ -220,9 +221,10 @@ model.pred_2 <-   parameters[[1]]*(out_state_2["Er",,]+
                                      out_state_2["Emw",,])
 
 model.pred_fake  <- model.pred
-model.pred <- c(model.pred_fake,model.pred_2)*test_prop #test_prop_MB
-
 model.pred_rel <- c(model.pred_fake,model.pred_2)
+model.pred <- c(model.pred_fake,model.pred_2)*test_prop[1:length(model.pred_rel)] #test_prop_MB
+
+
 
 
 
@@ -321,8 +323,9 @@ tail(dat_sim_rel)
 ######## forecast cases ############### 
 MB_forecast <- case_projection(out_state=out_state_2,
                                forecast_days=30, 
+                               
                                lag=0,
-                               test_prop = test_prop_MB,
+                               test_prop = test_prop[1:length(model.pred_rel)],
                                parameters_estim = estim_parameters, 
                                simu_size = 100000,
                                pomp_obj = pomp_obj , 
