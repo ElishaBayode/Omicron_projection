@@ -1,13 +1,13 @@
 #include Omicron wave only 
 
 intro_date <-  ymd("2021-12-07")
-stop_date <- ymd("2022-01-23") # make it uniform 
+stop_date <- ymd("2022-01-20") # make it uniform 
 #import data 
 dat = readRDS("data/BC-dat.rds")
 
 
-dat <- dat %>% filter(date >= intro_date)
-dat_omic <- filter(dat, date <= stop_date)
+dat <- dat %>% filter(date >= intro_date &  date <= stop_date)
+dat_omic <- dat
 dat_omic <- filter(dat_omic, date >= intro_date) %>% select(c("day", "value"))
 dat_omic$day <- 1:nrow(dat_omic)
 
@@ -99,7 +99,7 @@ out_state <-  trajectory(pomp_obj) #Computes trajectories of the deterministic s
 model.pred <- parameters[[1]]*(out_state["Er",,]+ 
                                  out_state["Erv",,] + out_state["Erw",,]+
                                  out_state["Em",,]+ out_state["Emv",,] + 
-                                 out_state["Emw",,])*test_prop
+                                 out_state["Emw",,])*test_prop[1:length(dat_omic$value)]
 
 raply(simu_size,rnbinom(n=length(model.pred),
                       mu=coef(pomp_obj ,"p")*model.pred,
@@ -109,7 +109,7 @@ raply(simu_size,rnbinom(n=length(model.pred),
 
 aaply(simdat,2,quantile,probs=c(0.025,0.5,0.975)) -> quantiles
 dat$day <- 1:nrow(dat)
-dat_sim <- cbind(select(dat, c("day", "value")),
+dat_sim <- cbind(select(dat_omic, c("day", "value")),
                  quantiles) 
 dat_sim = dat_sim %>% mutate(date=seq.Date(ymd(intro_date),
                                            ymd(intro_date)-1+nrow(dat), 1))
@@ -162,7 +162,7 @@ out_BC <- as.data.frame(deSolve::ode(y=init_BC,time=times,func= sveirs,
                            parms=parameters))   
 
 #test_prop is shorter than projection, so we'll use the last value of test_prop for the rest of the simulation 
-test_prop_BC <- c(test_prop, rep(last(test_prop),forecasts_days))
+test_prop_BC <- c(test_prop[1:length(dat_omic$value)], rep(last(test_prop),forecasts_days))
 
 #with test_prop 
 incidence_BC =  parameters[[1]]*(out_BC$Er + out_BC$Erv + out_BC$Erw +
@@ -197,11 +197,11 @@ project_dat_BC_rel = quantiles_proj_BC_rel %>% mutate(date=seq.Date(ymd(intro_da
                                               ymd(intro_date)-1+length(times), 1))
 
 
-saveRDS(project_dat_BC, file.path("data/test_constraints.rds"))
-project_dat_BC =readRDS(file.path("data/test_constraints.rds"))
+saveRDS(project_dat_BC, file.path("data/BC_test_constraints.rds"))
+project_dat_BC =readRDS(file.path("data/BC_test_constraints.rds"))
 
-saveRDS(project_dat_BC_rel, file.path("data/no_constraints.rds"))
-project_dat_BC_rel =readRDS(file.path("data/no_constraints.rds"))
+saveRDS(project_dat_BC_rel, file.path("data/BC_no_constraints.rds"))
+project_dat_BC_rel =readRDS(file.path("data/BC_no_constraints.rds"))
 
 
 
@@ -242,7 +242,7 @@ saveRDS(gg_BC, file.path("figs/BC-fig.rds"))
 #lines(dat_sim$value)
 #lines(dat_sim$`50%`)
 #lines(project_dat_BC$`50%`)
-#lines(project_dat_BC$`50%`/c(test_prop, rep(last(test_prop),forecasts_days)))
+#lines(project_dat_BC_rel$`50%`)
 #dat_sim$`50%` - project_dat_BC$`50%`
 
 
