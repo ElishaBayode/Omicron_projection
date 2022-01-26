@@ -2,10 +2,10 @@
 intro_date <-  ymd("2021-12-07")
 stop_date <- ymd("2022-01-20") # make it uniform 
 #import data 
-dat = readRDS("data/AB-dat.rds")
+dat = readRDS("data/MB-dat.rds")
 
 
-dat <- dat %>% filter(date >= intro_date)
+dat <- dat %>% filter(date >= intro_date & date <= stop_date)
 dat_omic <- filter(dat, date <= stop_date)
 dat_omic <- filter(dat_omic, date >= intro_date) %>% select(c("day", "value"))
 dat_omic$day <- 1:nrow(dat_omic)
@@ -13,36 +13,31 @@ dat_omic$day <- 1:nrow(dat_omic)
 
 tail(dat)
 #this assumes we've run catch_data.R (to load testpropdf)
-test_prop_AB <- filter(mytest_AB, date >= intro_date)$test_prop
+test_prop_MB <- filter(mytest_AB, date >= intro_date)$test_prop
 
 
 #use a lower test_prop with more flexibility (and smooth)
+test_prop_MB <- c(test_prop_MB[1:length(dat_omic$value)], rep(last(test_prop_MB),forecasts_days))
+fake_test_prop_MB <- (1 - (1-0.04)/(1 + exp(-0.2*(1:length(test_prop_MB)-36))))
 
-test_prop_AB1 <- c(test_prop_AB[1:length(dat_omic$value)], rep(last(test_prop_AB),forecasts_days))
-fake_test_prop_AB <- (1 - (1-0.19)/(1 + exp(-0.2*(1:length(test_prop_AB1)-37))))
+plot(fake_test_prop_MB)
+lines(test_prop_MB)
 
-plot(fake_test_prop_AB)
-lines(test_prop_AB)
+test_prop_MB <- fake_test_prop_MB[1:length(dat_omic$day)]
 
-test_prop_AB <- fake_test_prop_AB[1:length(dat_omic$day)]
-
-test_prop <- test_prop_AB 
+test_prop <- test_prop_MB 
 
 
 #set values to generate initial conditions with make_init()
 
-N=4.37e6
-N_pop<- N 
-vaxlevel_in <- 0.8
-port_wane_in <- 0.04
-past_infection_in = 0.2
-incres_in = 250
-incmut_in = 62
-simu_size = 1e5
-forecasts_days =30
-times = 1:(nrow(dat_omic) + forecasts_days)
 
-
+N = 1.36e6
+N_pop = N
+vaxlevel_in = 0.78
+port_wane_in = 0.1
+past_infection_in = 0.18
+incres_in = 200
+incmut_in = 25
 
 
 #declaring fixed parameters 
@@ -62,7 +57,7 @@ parameters <-         c(sigma=1/3, # incubation period (3 days) (to fixed)
                         b= 0.006, # booster rate  (fixed)
                         beff = 0.7, # booster efficacy
                         wf=0.2, # protection for newly recoverd #0.2
-                        N=4.37e6,
+                        N=1.36e6,
                         stngcy= 0,#0.78, #(*%(reduction)) strength of intervention (reduction in beta's)
                         eff_t = as.numeric(eff_date - intro_date),
                         c=1
@@ -76,20 +71,20 @@ source("analysis-new/mod_fitting_setup.R")
 
 
 
+
 #guess <- c(log(1.03), logit(0.65), log(1.34), log(0.01)) #c(log(10),log(15),log(1))
-guess <- c(log(1.3), logit(0.6), log(2), log(0.01))
+guess <- c(log(0.8), logit(0.52), log(2.1), log(0.15))
 
 #the parameters are constrained  accordingly (lower and upper)
 
-fit_AB <- optim(fn=f_loglik,par=guess, lower=c(log(0.6), 0.1, log(1.8), log(0.1)), 
-                upper = c(log(1.6), 0.3, log(3), log(0)), method = "L-BFGS-B")
+fit_MB <- optim(fn=f_loglik,par=guess, lower=c(log(0.7), 0.1, log(1.7), log(0.1)), 
+                upper = c(log(0.9), 0.6, log(2), log(0.3)), method = "L-BFGS-B")
 
 
 #this catches estimated parameter values from MLE 
-mle_est_AB <- c(beta_r=exp(fit_AB$par[1]),p=expit(fit_AB$par[2]), 
-                beta_m=exp(fit_AB$par[3]),theta=exp(fit_AB$par[4]))
+mle_est_MB <- c(beta_r=exp(fit_MB$par[1]),p=expit(fit_MB$par[2]), beta_m=exp(fit_MB$par[3]),theta=exp(fit_MB$par[4]))
 
-signif(mle_est_AB,3)
+signif(mle_est_MB,3)
 
 
 
@@ -99,7 +94,7 @@ coef(pomp_obj ) <- c(c(S_0=init[[1]],Er_0=init[[2]],Em_0=init[[3]],Ir_0=init[[4]
                        Im_0=init[[5]],R_0=init[[6]],V_0=init[[7]],Erv_0=init[[8]], 
                        Emv_0=init[[9]],Irv_0=init[[10]],Imv_0=init[[11]],Rv_0=init[[12]],
                        W_0=init[[13]],Erw_0=init[[14]],Emw_0=init[[15]],Irw_0=init[[16]],
-                       Imw_0=init[[17]],Rw_0=init[[18]] ,c(parameters,mle_est_AB)))
+                       Imw_0=init[[17]],Rw_0=init[[18]] ,c(parameters,mle_est_MB)))
 
 
 
@@ -129,21 +124,21 @@ dat_sim = dat_sim %>% mutate(date=seq.Date(ymd(intro_date),
 
 ggplot() + geom_line(data=dat_sim,aes(x=date,y=`50%`),color='blue',size=1.2,alpha=0.4) +
   geom_ribbon(data=dat_sim,aes(x=date,ymin=`2.5%`,ymax=`97.5%`),fill='blue',alpha=0.1) +
-  geom_point(data=dat_sim,aes(x=date, y=value),color='grey48', alpha=0.8)  + ylim(c(0,4000)) 
+  geom_point(data=dat_sim,aes(x=date, y=value),color='grey48', alpha=0.8)  + ylim(c(0,10000)) 
 
 
 ########now we make prediction and projections with estimated parameters 
 
 #load initial state    
-init_AB <- c(S=init[[1]],Er=init[[2]],Em=init[[3]],Ir=init[[4]],
+init_MB <- c(S=init[[1]],Er=init[[2]],Em=init[[3]],Ir=init[[4]],
              Im=init[[5]],R=init[[6]],V=init[[7]],Erv=init[[8]], 
              Emv=init[[9]],Irv=init[[10]],Imv=init[[11]],Rv=init[[12]],
              W=init[[13]],Erw=init[[14]],Emw=init[[15]],Irw=init[[16]],
              Imw=init[[17]],Rw=init[[18]])
 
-eff_date <-   ymd("2021-12-29")  # intervention date 
+eff_date <-   ymd("2021-12-30")  # intervention date 
 
-parameters_AB <- c(sigma=1/3, # incubation period (3 days) (to fixed)
+parameters_MB <- c(sigma=1/3, # incubation period (3 days) (to fixed)
                    gamma=1/(4), #recovery rate (fixed)
                    nu =0.007, #vax rate: 0.7% per day (fixed)
                    mu=1/(82*365), # 1/life expectancy (fixed)
@@ -156,19 +151,19 @@ parameters_AB <- c(sigma=1/3, # incubation period (3 days) (to fixed)
                    b= 0.006, # booster rate  (fixed) orig 0.006 
                    beff = 0.7, # booster efficacy
                    wf=0.2, # protection for newly recoverd #0.2
-                   N=4.37e6,
-                   stngcy= 0.44,#0.78, #(*%(reduction)) strength of intervention (reduction in beta's)
+                   N=1.36e6,
+                   stngcy= 0.37,#0.78, #(*%(reduction)) strength of intervention (reduction in beta's)
                    eff_t = as.numeric(eff_date - intro_date)  # time to 50% intervention effectiveness
 )
 
 
 #use estimated parameters 
 
-parameters <- c(parameters_AB,mle_est_AB)
+parameters <- c(parameters_MB,mle_est_MB)
 
 #use estimated parameters to make projectons 
 
-out_AB <- as.data.frame(deSolve::ode(y=init_AB,time=times,func= sveirs,
+out_MB <- as.data.frame(deSolve::ode(y=init_MB,time=times,func= sveirs,
                                      parms=parameters))   
 
 #test_prop is shorter than projection, so we'll use the last value of test_prop for the rest of the simulation 
@@ -177,43 +172,43 @@ out_AB <- as.data.frame(deSolve::ode(y=init_AB,time=times,func= sveirs,
 
 
 #with test_prop 
-incidence_AB =  parameters[[1]]*(out_AB$Er + out_AB$Erv + out_AB$Erw +
-                                   out_AB$Em + out_AB$Emv +
-                                   out_AB$Emw)*fake_test_prop_AB 
+incidence_MB =  parameters[[1]]*(out_MB$Er + out_MB$Erv + out_MB$Erw +
+                                   out_MB$Em + out_MB$Emv +
+                                   out_MB$Emw)*fake_test_prop_MB 
 
 #without test_prop 
-incidence_AB_rel =  parameters[[1]]*(out_AB$Er + out_AB$Erv + out_AB$Erw +
-                                       out_AB$Em + out_AB$Emv +
-                                       out_AB$Emw)
+incidence_MB_rel =  parameters[[1]]*(out_MB$Er + out_MB$Erv + out_MB$Erw +
+                                       out_MB$Em + out_MB$Emv +
+                                       out_MB$Emw)
 
-uncert_bound_AB = raply(simu_size,rnbinom(n=length(incidence_AB),
-                                          mu=coef(pomp_obj ,"p")*incidence_AB,
+uncert_bound_MB = raply(simu_size,rnbinom(n=length(incidence_MB),
+                                          mu=coef(pomp_obj ,"p")*incidence_MB,
                                           size=1/coef(pomp_obj ,"theta")))
 
-quantiles_proj_AB =  as.data.frame(aaply(uncert_bound_AB 
+quantiles_proj_MB =  as.data.frame(aaply(uncert_bound_MB 
                                          ,2,quantile,na.rm=TRUE,probs=c(0.025,0.5,0.975)))
 
-project_dat_AB = quantiles_proj_AB %>% mutate(date=seq.Date(ymd(intro_date),
+project_dat_MB = quantiles_proj_MB %>% mutate(date=seq.Date(ymd(intro_date),
                                                             ymd(intro_date)-1+length(times), 1))
 
 
 
-uncert_bound_AB_rel = raply(simu_size,rnbinom(n=length(incidence_AB_rel),
-                                              mu=coef(pomp_obj ,"p")*incidence_AB_rel,
+uncert_bound_MB_rel = raply(simu_size,rnbinom(n=length(incidence_MB_rel),
+                                              mu=coef(pomp_obj ,"p")*incidence_MB_rel,
                                               size=1/coef(pomp_obj ,"theta")))
 
-quantiles_proj_AB_rel =  as.data.frame(aaply(uncert_bound_AB_rel,2
+quantiles_proj_MB_rel =  as.data.frame(aaply(uncert_bound_MB_rel,2
                                              ,quantile,na.rm=TRUE,probs=c(0.025,0.5,0.975)))
 
-project_dat_AB_rel = quantiles_proj_AB_rel %>% mutate(date=seq.Date(ymd(intro_date),
+project_dat_MB_rel = quantiles_proj_MB_rel %>% mutate(date=seq.Date(ymd(intro_date),
                                                                     ymd(intro_date)-1+length(times), 1))
 
 
-saveRDS(project_dat_AB, file.path("data/AB_test_constraints.rds"))
-project_dat_AB =readRDS(file.path("data/AB_test_constraints.rds"))
+saveRDS(project_dat_MB, file.path("data/MB_test_constraints.rds"))
+project_dat_MB =readRDS(file.path("data/MB_test_constraints.rds"))
 
-saveRDS(project_dat_AB_rel, file.path("data/AB_no_constraints.rds"))
-project_dat_AB_rel =readRDS(file.path("data/AB_no_constraints.rds"))
+saveRDS(project_dat_MB_rel, file.path("data/MB_no_constraints.rds"))
+project_dat_MB_rel =readRDS(file.path("data/MB_no_constraints.rds"))
 
 
 
@@ -221,13 +216,13 @@ project_dat_AB_rel =readRDS(file.path("data/AB_no_constraints.rds"))
 
 cols <- c("Current, with testing constraints" = "darkgreen", "Without testing constraints"="orange")
 
-gg_AB <- ggplot() + geom_line(data=project_dat_AB,aes(x=date,y=`50%`, colour = "Current, with testing constraints"),size=1.2,alpha=0.4) +
-  geom_ribbon(data=project_dat_AB,aes(x=date,ymin=`2.5%`,ymax=`97.5%`),fill='darkgreen',alpha=0.1)+
-  geom_line(data=project_dat_AB_rel,aes(x=date,y=`50%`, color="Without testing constraints"),size=1.2,alpha=0.4) +
-  geom_ribbon(data=project_dat_AB_rel,aes(x=date,ymin=`2.5%`,ymax=`97.5%`),fill='orange',alpha=0.1)+
+gg_MB <- ggplot() + geom_line(data=project_dat_MB,aes(x=date,y=`50%`, colour = "Current, with testing constraints"),size=1.2,alpha=0.4) +
+  geom_ribbon(data=project_dat_MB,aes(x=date,ymin=`2.5%`,ymax=`97.5%`),fill='darkgreen',alpha=0.1)+
+  geom_line(data=project_dat_MB_rel,aes(x=date,y=`50%`, color="Without testing constraints"),size=1.2,alpha=0.4) +
+  geom_ribbon(data=project_dat_MB_rel,aes(x=date,ymin=`2.5%`,ymax=`97.5%`),fill='orange',alpha=0.1)+
   geom_point(data=dat_sim,aes(x=date, y=value),color='grey48', alpha=0.8) + 
   #geom_line(aes(y=typical),color='blue') +
-  labs(y="Reported cases",x="Date") + ylim(c(0,40000)) + 
+  labs(y="Reported cases",x="Date") + ylim(c(0,20000)) + 
   scale_x_date(date_breaks = "8 days", date_labels = "%b-%d-%y") +theme_light() +
   scale_color_manual(values = cols) +  theme(axis.text=element_text(size=15),
                                              plot.title = element_text(size=15, face="bold"),
@@ -236,12 +231,12 @@ gg_AB <- ggplot() + geom_line(data=project_dat_AB,aes(x=date,y=`50%`, colour = "
                                              legend.text = element_text(size=15),
                                              axis.title=element_text(size=15,face="bold")) +
   
-  labs(color = " ",title="AB") +  geom_vline(xintercept=eff_date, linetype="dashed", 
+  labs(color = " ",title="MB") +  geom_vline(xintercept=eff_date, linetype="dashed", 
                                              color = "grey", size=1)
 
 
-gg_AB
+gg_MB
 
-ggsave(file="figs/AB_proj.png", gg_AB, width = 10, height = 8)
-saveRDS(gg_AB, file.path("figs/AB-fig.rds"))
+ggsave(file="figs/MB_proj.png", gg_MB, width = 10, height = 8)
+saveRDS(gg_MB, file.path("figs/MB-fig.rds"))
 

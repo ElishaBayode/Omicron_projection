@@ -561,7 +561,7 @@ test_ABspline  <- make_case_splines(mydat_AB)
 glimpse(mytest_AB)
 ggplot(mytest_AB, aes(x=date, y=test_prop))+geom_line()
 
-
+mytest_AB$test_prop
 ################################  QC test Prop  ###########################
 
 dat_qc <- readr::read_csv("data/DomesticSurveillanceData_2022-01-13_DISCOVER.csv")
