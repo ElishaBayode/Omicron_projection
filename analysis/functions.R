@@ -217,4 +217,7 @@ get_testprop = function(changedate, mysplines, halftime, steepness) {
 # glimpse(mytest)
 # ggplot(mytest, aes(x=date, y=test_prop))+geom_line()
 
+getoffset = function(startvalue = 3.73, endvalue=2.68, halftime=15, steepness=0.25, ndays=60) {
+  return( startvalue - (startvalue-endvalue)/(1+exp(-steepness*(1:ndays-halftime))))  
+}
 
