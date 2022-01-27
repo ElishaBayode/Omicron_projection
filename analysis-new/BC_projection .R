@@ -14,7 +14,19 @@ dat_omic$day <- 1:nrow(dat_omic)
 
 #this assumes we've run catch_data.R (to load testpropdf)
 test_prop_BC <- filter(testpropdf, date >= intro_date)$test_prop
-test_prop <- test_prop_BC
+
+
+#use a lower test_prop with more flexibility (and smooth)
+
+test_prop_BC1 <- c(test_prop_BC[1:length(dat_omic$value)], rep(last(test_prop_BC),forecasts_days))
+fake_test_prop_BC <- (1 - (1-0.19)/(1 + exp(-0.35*(1:length(test_prop_BC1)-26))))
+
+plot(fake_test_prop_BC)
+lines(test_prop_BC)
+
+test_prop_BC <- fake_test_prop_BC[1:length(dat_omic$day)]
+
+test_prop <- test_prop_BC 
 
 
 #set values to generate initial conditions with make_init()
@@ -131,6 +143,12 @@ init_BC <- c(S=init[[1]],Er=init[[2]],Em=init[[3]],Ir=init[[4]],
            W=init[[13]],Erw=init[[14]],Emw=init[[15]],Irw=init[[16]],
            Imw=init[[17]],Rw=init[[18]])
 
+
+
+
+
+
+
 eff_date <-   ymd("2021-12-30")  # intervention date 
 
 parameters_BC <- c(sigma=1/3, # incubation period (3 days) (to fixed)
@@ -152,6 +170,16 @@ parameters_BC <- c(sigma=1/3, # incubation period (3 days) (to fixed)
 )
 
 
+
+get_true_incidence_plot(times, start_date=intro_date, 
+                        parameters_base=c(parameters_BC,mle_est_BC), init=init_BC)
+
+get_true_incidence_prop_plot(times, start_date=intro_date, 
+                             parameters_base=c(parameters_BC,mle_est_BC), init=init_BC)
+
+
+
+
 #use estimated parameters 
 
 parameters <- c(parameters_BC,mle_est_BC)
@@ -159,15 +187,17 @@ parameters <- c(parameters_BC,mle_est_BC)
 #use estimated parameters to make projectons 
 
 out_BC <- as.data.frame(deSolve::ode(y=init_BC,time=times,func= sveirs,
-                           parms=parameters))   
+                           parms=parameters)) 
 
+  
 #test_prop is shorter than projection, so we'll use the last value of test_prop for the rest of the simulation 
-test_prop_BC <- c(test_prop[1:length(dat_omic$value)], rep(last(test_prop),forecasts_days))
+#test_prop_BC <- c(test_prop[1:length(dat_omic$value)], rep(last(test_prop),forecasts_days))
+
 
 #with test_prop 
 incidence_BC =  parameters[[1]]*(out_BC$Er + out_BC$Erv + out_BC$Erw +
                                                        out_BC$Em + out_BC$Emv +
-                                                       out_BC$Emw)*test_prop_BC 
+                                                       out_BC$Emw)*fake_test_prop_BC
 
 #without test_prop 
 incidence_BC_rel =  parameters[[1]]*(out_BC$Er + out_BC$Erv + out_BC$Erw +
@@ -246,7 +276,7 @@ saveRDS(gg_BC, file.path("figs/BC-fig.rds"))
 #dat_sim$`50%` - project_dat_BC$`50%`
 
 
-
+get_true_incidence()
 
 
 

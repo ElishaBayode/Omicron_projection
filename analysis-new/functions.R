@@ -106,18 +106,72 @@ get_total_incidence = function(output, parameters, lag = 0) {
     return(incid)})
 }
 
-get_true_incidence = function(output, parameters) {
+get_true_incidence_plot = function(times, start_date, parameters_base,init) {
   with(as.list( parameters), {
     ascFrac=1 # for TRUE incidence, don't reduce by ascertainment, and don't lag
     lag = 0
+    output   = as.data.frame(deSolve::ode(y=init,time=times,func= sveirs,
+                               parms=parameters_base))
+    
     incid =  output %>% mutate(inc_res = ascFrac*sigma*lag_func(Er+Erv+Erw, k=lag), 
                                inc_mut = ascFrac*sigma*lag_func(Em +Emv +Emw, k=lag), 
                                inc_tot = ascFrac*sigma*lag_func(Er+Erv+Erw+Em +Emv +Emw, k=lag), 
                                inc_vax = ascFrac*sigma*lag_func(Erv+Erw + Emv +Emw, k=lag), 
                                inc_nonvax = ascFrac*sigma*lag_func(Er+Em), k=lag) %>% 
-      select(time, inc_res, inc_mut, inc_tot, inc_vax, inc_nonvax)
-    return(incid)})
+      select(time, inc_res, inc_mut, inc_tot, inc_vax, inc_nonvax) %>% 
+      mutate(date=seq.Date(ymd(start_date),
+      ymd(start_date)-1+length(time), 1))
+  
+      
+     cols = c("total" = "orange", "incidence_vax" = "blue","incidence_nonvax" = "darkgreen" )
+     plot = ggplot() + geom_line(data=incid,aes(x=date,y=inc_tot, colour="total"),size=1.2,alpha=0.4) +
+       geom_line(data=incid,aes(x=date,y=inc_vax, colour = "incidence_vax" ),size=1.2,alpha=0.4) +
+            geom_line(data=incid,aes(x=date,y=inc_nonvax, colour="incidence_nonvax"),size=1.2,alpha=0.4) +
+           
+            labs(y="True incidence",x="Date") + 
+             scale_x_date(date_breaks = "10 days", date_labels = "%b-%d-%y") +theme_light() +
+             theme(legend.position = "bottom") +
+             scale_color_manual(values = cols) + labs(color = " ") 
+     return(plot)})
+
+ }
+
+
+get_true_incidence_prop_plot = function(times, start_date, parameters_base,init) {
+  with(as.list( parameters), {
+    ascFrac=1 # for TRUE incidence, don't reduce by ascertainment, and don't lag
+    lag = 0
+    output   = as.data.frame(deSolve::ode(y=init,time=times,func= sveirs,
+                                          parms=parameters_base))
+    
+    incid_prop =  output %>% mutate(inc_vax_prop = ascFrac*sigma*lag_func((Erv+ Emv)/(V+Erv + Emv+Irv+Imv +Rv), k=lag), 
+                  inc_boost_prop = ascFrac*sigma*lag_func((Erw+ Emw )/(W+Erw+Emw+Irw+Imw+Rw), k=lag),
+                  inc_totvax_prop = ascFrac*sigma*lag_func((Erw+ Emw +Erv+ Emv)/(W+Erw+Emw+Irw+Imw+Rw+V+Erv + 
+                                                                                Emv+Irv+Imv +Rv), k=lag),
+                               inc_nonvax_prop = ascFrac*sigma*lag_func((Er+Em)/(S+R+Er+Em), k=lag)) %>% 
+      select(time, inc_vax_prop, inc_boost_prop, inc_totvax_prop, inc_nonvax_prop) %>% 
+      mutate(date=seq.Date(ymd(start_date),
+                           ymd(start_date)-1+length(time), 1))
+    
+    
+    cols = c("incidence_totvax_prop" = "orange", "incidence_boost_prop" = "blue","incidence_vax_prop" = "darkgreen", 
+             "incidence_nonvax_prop"="purple" )
+    plot = ggplot() + geom_line(data=incid_prop,aes(x=date,y=inc_totvax_prop, colour="incidence_totvax_prop"),size=1.2,alpha=0.4) +
+      geom_line(data=incid_prop,aes(x=date,y=inc_boost_prop, colour =  "incidence_boost_prop"),size=1.2,alpha=0.4) +
+      geom_line(data=incid_prop,aes(x=date,y=inc_vax_prop, colour="incidence_vax_prop"),size=1.2,alpha=0.4) +
+      geom_line(data=incid_prop,aes(x=date,y=inc_nonvax_prop, colour="incidence_nonvax_prop"),size=1.2,alpha=0.4) +
+      labs(y="True incidence proportion",x="Date") + 
+      scale_x_date(date_breaks = "10 days", date_labels = "%b-%d-%y") +theme_light() +
+      theme(legend.position = "bottom") +
+      scale_color_manual(values = cols) + labs(color = " ") 
+    return(plot)})
+  
 }
+
+
+
+
+
 
 get_vax = function(output) {
   vax = output %>% mutate(vaxtot = V+ Erv + Emv+ 
@@ -209,6 +263,20 @@ get_testprop = function(changedate, mysplines, halftime, steepness) {
   return(testpropdf) 
 }
 
+
+
+
+------#function to get incidence by vaccination status 
+  
+  
+  
+get
+  
+  
+  
+  
+  
+  
 # mytest = get_testprop(changedate = ymd("2021-12-21"), 
 # mysplines = splinetest, 
 # halftime = 20, steepness = 0.1)
