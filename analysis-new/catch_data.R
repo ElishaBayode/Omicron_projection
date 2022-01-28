@@ -562,6 +562,7 @@ glimpse(mytest_AB)
 ggplot(mytest_AB, aes(x=date, y=test_prop))+geom_line()
 
 mytest_AB$test_prop
+
 ################################  QC test Prop  ###########################
 
 dat_qc <- readr::read_csv("data/DomesticSurveillanceData_2022-01-13_DISCOVER.csv")
@@ -615,154 +616,145 @@ ggplot(mytest_ON, aes(x=date, y=test_prop))+geom_line()
 
 ######################BC ##################################################
 
-dat = get_british_columbia_case_data()
-
-# going to start this whole thin in fall 2021 
-agedat <- group_by(dat,`Reported Date`, `Age group`) %>%
-  dplyr::summarise(cases = n()) %>%
-  filter(`Reported Date` >= ymd("2021-09-01"))
-
-# get a time series for <70 and 70+ 
-lowerages = c("<10" , "10-19","20-29", "30-39",  "40-49" , "50-59" , "60-69")
-agedat$under70 = "No" 
-agedat$under70[which(agedat$`Age group` %in% lowerages)] = "Yes"
-
-mydat =  group_by(agedat,`Reported Date`, under70) %>% 
-  dplyr::summarise(totcases = sum(cases)) 
-
-mydat$Reported_Date <- mydat$`Reported Date`
-
-# make the splines 
-splinetest = make_case_splines(mydat)
-
-# check the quality 
-ggplot(data = splinetest$pred, aes(x=Reported_Date, y=lcases))+geom_point(color="blue", alpha=0.5) +
-  geom_line(data =splinetest$pred, aes(x=Reported_Date, y=predlcases))
-
-# make the test proportion by adjusting from 70+ 
-
-mytest = get_testprop(changedate = ymd("2021-12-21"), 
-                      mysplines = splinetest, 
-                      halftime = 20, steepness = 0.1)
-# check : should be 1, then less than 1
-ggplot(mytest, aes(x=date, y=test_prop))+geom_line()
-
-
-### ######### -- begin junk leftovers ######## ########
-# -- note - a lot of this is now available with the new functions
-# make_case_splines and get_testprop. 
-# the code below is a messy exploration done in development of those two functions
-
-
-over70 = filter(mydat, under70=="No")
-logover70 = over70 %>% mutate(lcases = log(totcases)) %>% select(Reported_Date, lcases)
-ospline = smooth.spline(logover70$Reported_Date, logover70$lcases, df=15)
-pred = data.frame(x = ospline$x, predlcases = ospline$y, 
-                  Reported_Date = logover70$Reported_Date)
-ggplot(data = logover70, aes(x=Reported_Date, y=lcases))+geom_point(color="blue", alpha=0.5) +
-  geom_line(data =pred, aes(x=Reported_Date, y=predlcases))
-# (2) under 70 
-under70 = filter(mydat, under70=="Yes")
-logunder70 = under70 %>% mutate(lcases = log(totcases)) %>% select(Reported_Date, lcases)
-uspline = smooth.spline(logunder70$Reported_Date, logunder70$lcases, df=15)
-upred = data.frame(x = uspline$x, predlcases = uspline$y, 
-                   Reported_Date = logunder70$Reported_Date)
-ggplot(data = logunder70, aes(x=Reported_Date, y=lcases))+geom_point(color="blue", alpha=0.5) +
-  geom_line(data =upred, aes(x=Reported_Date, y=predlcases))
-
-# three options for the offset 
-# get the offset between 70+ and under 70 cases at a particular date, 
-# which is the difference between the two above splines at a fixed date 
-mydate = ymd("2021-12-21") 
-# (option 1) offset at a particular date (Sally) 
-offset = filter(upred,Reported_Date == mydate)$predlcases -
-  filter(pred, Reported_Date == mydate)$predlcases 
-# (option 2) offset time series - this varies quite a bit, actually 
-seriesoffset = data.frame(date = upred$Reported_Date, soffset= upred$predlcases - 
-                            pred$predlcases) 
-ggplot(data = seriesoffset, aes(x=date, y = soffset))+geom_point()+
-  geom_line() # yes , dec 21 was an absolute peak 
-
-# (option 3) mean offset over the time in the fall before my chosen date 
-offset = mean(filter(upred,Reported_Date <= mydate)$predlcases - 
-                filter(pred,Reported_Date <= mydate)$predlcases)
-# the problem is that this produces a model fit that is *under* the real reported cases in 
-# those under 70 (because in Dec the offset was higher than the mean for the fall) 
-
-# add whichever offset you have chosen to the 70+ cases to get a model for the total cases. 
-pred$totmodel = pred$predlcases + offset 
-
-# plot this with sensible y labels. note - would be better to make 
-# one or two long data frames, and then there would be a legend that would make sense 
-df = data.frame(date = logunder70$Reported_Date, 
-                under70cases = filter(mydat, under70=="Yes")$totcases, 
-                under70spline = exp(upred$predlcases), 
-                over70cases = filter(mydat, under70 =="No")$totcases, 
-                over70spline = exp(pred$predlcases), 
-                totalsplines = exp(pred$totmodel)) 
-ggplot(data = df, aes(x=date, y=under70cases))+
-  geom_point(color="blue", alpha=0.5) +
-  geom_line(data = df, aes(x=date, y=under70spline),color="blue") + 
-  geom_point(data = df, aes(x=date, y =over70cases),color="darkgreen",alpha=0.5) + 
-  geom_line(data = df, aes(x=date, y=over70spline),color="darkgreen") +
-  geom_line(data=df, aes(x=date, y=totalsplines), color="black")+
-  scale_y_continuous(trans = "log10")+annotation_logticks() +
-  ylab("Cases - log scale") + ggtitle("Green - 70+. Blue - under 70. Black: combined spline") 
 
 
 
-# ---- making test_prop using this stuff ---- 
-# i want a function that transitions from the offset on dec 21 to the mean offset over the 
-# fall period, in a time frame of about a month.
-thalf=15
-myoffset <- 3.73 - (3.73-2.68)/(1+ exp(-0.25*(1:60-thalf)))
-plot(1:60, myoffset)
-
-getoffset = function(startvalue = 3.73, endvalue=2.68, halftime=15, steepness=0.25, ndays=60) {
-  return( startvalue - (startvalue-endvalue)/(1+exp(-steepness*(1:ndays-halftime))))  
-}
-myoffset= getoffset(halftime=100,steepness = 0.05) # really flat, like Sally's
-
-# (option 4) 
-L1 = ymd("2021-12-21")-min(pred$Reported_Date) # 
-pred$totmodel = NA
-pred$totmodel[1:L1] = upred$predlcases[1:L1] -pred$predlcases[1:L1]
-L2 = nrow(pred)- L1 # how many values to fill in with the new offset? 
-pred$totmodel[(L1+1):nrow(seriesoffset)] = myoffset[1:L2]
 
 
-
-# pred$totmodel = pred$predlcases + seriesoffset$model
-df = data.frame(date = logunder70$Reported_Date, 
-                under70cases = filter(mydat, under70=="Yes")$totcases, 
-                under70spline = exp(upred$predlcases), 
-                over70cases = filter(mydat, under70 =="No")$totcases, 
-                over70spline = exp(pred$predlcases), 
-                totalsplines = exp(pred$totmodel)) 
-ggplot(data = df, aes(x=date, y=under70cases))+
-  geom_point(color="blue", alpha=0.5) +
-  geom_line(data = df, aes(x=date, y=under70spline),color="blue") + 
-  geom_point(data = df, aes(x=date, y =over70cases),color="darkgreen",alpha=0.5) + 
-  geom_line(data = df, aes(x=date, y=over70spline),color="darkgreen") +
-  geom_line(data=df, aes(x=date, y=totalsplines), color="black")+
-  scale_y_continuous(trans = "log10")+annotation_logticks() +
-  ylab("Cases - log scale") + ggtitle("Green - 70+. Blue - under 70. Black: combined spline") 
-
-# --- here is how to get a smooth nice test_prop 
-# we use  (model for Cases in 70+ )* ( 1 + exp(offset) ) for the 'would have beens'
-# test_prop is now (spline model for total cases) / would have beens 
-off1= getoffset(halftime=100,steepness = 0.05) # this one is really flat, like Sally's
-offconst = upred$predlcases-pred$predlcases
-L1 = ymd("2021-12-21")-min(pred$Reported_Date) # 
-L2 = nrow(pred)- L1 # how many values to fill in with the new offset? 
-offconst = upred$predlcases-pred$predlcases
-offconst[(L1+1):nrow(seriesoffset)] = off1[1:L2]
-
-testpropdf = data.frame(date = pred$Reported_Date, 
-                        totalmodel = exp(pred$predlcases)+ exp(upred$predlcases), 
-                        totaladjusted = exp(pred$predlcases+offconst), 
-                        test_prop = pmin(1,(exp(pred$predlcases)+ exp(upred$predlcases))/ exp(pred$predlcases+offconst)))
-plot(testpropdf$date, testpropdf$test_prop)
+# 
+# 
+# 
+# # make the splines 
+# splinetest = make_case_splines(mydat)
+# 
+# # check the quality 
+# ggplot(data = splinetest$pred, aes(x=Reported_Date, y=lcases))+geom_point(color="blue", alpha=0.5) +
+#   geom_line(data =splinetest$pred, aes(x=Reported_Date, y=predlcases))
+# 
+# # make the test proportion by adjusting from 70+ 
+# 
+# mytest = get_testprop(changedate = ymd("2021-12-21"), 
+#                       mysplines = splinetest, 
+#                       halftime = 20, steepness = 0.1)
+# # check : should be 1, then less than 1
+# ggplot(mytest, aes(x=date, y=test_prop))+geom_line()
+# 
+# 
+# ### ######### -- begin junk leftovers ######## ########
+# # -- note - a lot of this is now available with the new functions
+# # make_case_splines and get_testprop. 
+# # the code below is a messy exploration done in development of those two functions
+# 
+# 
+# over70 = filter(mydat, under70=="No")
+# logover70 = over70 %>% mutate(lcases = log(totcases)) %>% select(Reported_Date, lcases)
+# ospline = smooth.spline(logover70$Reported_Date, logover70$lcases, df=15)
+# pred = data.frame(x = ospline$x, predlcases = ospline$y, 
+#                   Reported_Date = logover70$Reported_Date)
+# ggplot(data = logover70, aes(x=Reported_Date, y=lcases))+geom_point(color="blue", alpha=0.5) +
+#   geom_line(data =pred, aes(x=Reported_Date, y=predlcases))
+# # (2) under 70 
+# under70 = filter(mydat, under70=="Yes")
+# logunder70 = under70 %>% mutate(lcases = log(totcases)) %>% select(Reported_Date, lcases)
+# uspline = smooth.spline(logunder70$Reported_Date, logunder70$lcases, df=15)
+# upred = data.frame(x = uspline$x, predlcases = uspline$y, 
+#                    Reported_Date = logunder70$Reported_Date)
+# ggplot(data = logunder70, aes(x=Reported_Date, y=lcases))+geom_point(color="blue", alpha=0.5) +
+#   geom_line(data =upred, aes(x=Reported_Date, y=predlcases))
+# 
+# # three options for the offset 
+# # get the offset between 70+ and under 70 cases at a particular date, 
+# # which is the difference between the two above splines at a fixed date 
+# mydate = ymd("2021-12-21") 
+# # (option 1) offset at a particular date (Sally) 
+# offset = filter(upred,Reported_Date == mydate)$predlcases -
+#   filter(pred, Reported_Date == mydate)$predlcases 
+# # (option 2) offset time series - this varies quite a bit, actually 
+# seriesoffset = data.frame(date = upred$Reported_Date, soffset= upred$predlcases - 
+#                             pred$predlcases) 
+# ggplot(data = seriesoffset, aes(x=date, y = soffset))+geom_point()+
+#   geom_line() # yes , dec 21 was an absolute peak 
+# 
+# # (option 3) mean offset over the time in the fall before my chosen date 
+# offset = mean(filter(upred,Reported_Date <= mydate)$predlcases - 
+#                 filter(pred,Reported_Date <= mydate)$predlcases)
+# # the problem is that this produces a model fit that is *under* the real reported cases in 
+# # those under 70 (because in Dec the offset was higher than the mean for the fall) 
+# 
+# # add whichever offset you have chosen to the 70+ cases to get a model for the total cases. 
+# pred$totmodel = pred$predlcases + offset 
+# 
+# # plot this with sensible y labels. note - would be better to make 
+# # one or two long data frames, and then there would be a legend that would make sense 
+# df = data.frame(date = logunder70$Reported_Date, 
+#                 under70cases = filter(mydat, under70=="Yes")$totcases, 
+#                 under70spline = exp(upred$predlcases), 
+#                 over70cases = filter(mydat, under70 =="No")$totcases, 
+#                 over70spline = exp(pred$predlcases), 
+#                 totalsplines = exp(pred$totmodel)) 
+# ggplot(data = df, aes(x=date, y=under70cases))+
+#   geom_point(color="blue", alpha=0.5) +
+#   geom_line(data = df, aes(x=date, y=under70spline),color="blue") + 
+#   geom_point(data = df, aes(x=date, y =over70cases),color="darkgreen",alpha=0.5) + 
+#   geom_line(data = df, aes(x=date, y=over70spline),color="darkgreen") +
+#   geom_line(data=df, aes(x=date, y=totalsplines), color="black")+
+#   scale_y_continuous(trans = "log10")+annotation_logticks() +
+#   ylab("Cases - log scale") + ggtitle("Green - 70+. Blue - under 70. Black: combined spline") 
+# 
+# 
+# 
+# # ---- making test_prop using this stuff ---- 
+# # i want a function that transitions from the offset on dec 21 to the mean offset over the 
+# # fall period, in a time frame of about a month.
+# thalf=15
+# myoffset <- 3.73 - (3.73-2.68)/(1+ exp(-0.25*(1:60-thalf)))
+# plot(1:60, myoffset)
+# 
+# getoffset = function(startvalue = 3.73, endvalue=2.68, halftime=15, steepness=0.25, ndays=60) {
+#   return( startvalue - (startvalue-endvalue)/(1+exp(-steepness*(1:ndays-halftime))))  
+# }
+# myoffset= getoffset(halftime=100,steepness = 0.05) # really flat, like Sally's
+# 
+# # (option 4) 
+# L1 = ymd("2021-12-21")-min(pred$Reported_Date) # 
+# pred$totmodel = NA
+# pred$totmodel[1:L1] = upred$predlcases[1:L1] -pred$predlcases[1:L1]
+# L2 = nrow(pred)- L1 # how many values to fill in with the new offset? 
+# pred$totmodel[(L1+1):nrow(seriesoffset)] = myoffset[1:L2]
+# 
+# 
+# 
+# # pred$totmodel = pred$predlcases + seriesoffset$model
+# df = data.frame(date = logunder70$Reported_Date, 
+#                 under70cases = filter(mydat, under70=="Yes")$totcases, 
+#                 under70spline = exp(upred$predlcases), 
+#                 over70cases = filter(mydat, under70 =="No")$totcases, 
+#                 over70spline = exp(pred$predlcases), 
+#                 totalsplines = exp(pred$totmodel)) 
+# ggplot(data = df, aes(x=date, y=under70cases))+
+#   geom_point(color="blue", alpha=0.5) +
+#   geom_line(data = df, aes(x=date, y=under70spline),color="blue") + 
+#   geom_point(data = df, aes(x=date, y =over70cases),color="darkgreen",alpha=0.5) + 
+#   geom_line(data = df, aes(x=date, y=over70spline),color="darkgreen") +
+#   geom_line(data=df, aes(x=date, y=totalsplines), color="black")+
+#   scale_y_continuous(trans = "log10")+annotation_logticks() +
+#   ylab("Cases - log scale") + ggtitle("Green - 70+. Blue - under 70. Black: combined spline") 
+# 
+# # --- here is how to get a smooth nice test_prop 
+# # we use  (model for Cases in 70+ )* ( 1 + exp(offset) ) for the 'would have beens'
+# # test_prop is now (spline model for total cases) / would have beens 
+# off1= getoffset(halftime=100,steepness = 0.05) # this one is really flat, like Sally's
+# offconst = upred$predlcases-pred$predlcases
+# L1 = ymd("2021-12-21")-min(pred$Reported_Date) # 
+# L2 = nrow(pred)- L1 # how many values to fill in with the new offset? 
+# offconst = upred$predlcases-pred$predlcases
+# offconst[(L1+1):nrow(seriesoffset)] = off1[1:L2]
+# 
+# testpropdf = data.frame(date = pred$Reported_Date, 
+#                         totalmodel = exp(pred$predlcases)+ exp(upred$predlcases), 
+#                         totaladjusted = exp(pred$predlcases+offconst), 
+#                         test_prop = pmin(1,(exp(pred$predlcases)+ exp(upred$predlcases))/ exp(pred$predlcases+offconst)))
+# plot(testpropdf$date, testpropdf$test_prop)
 
 ################################  SK test Prop  ###########################
 

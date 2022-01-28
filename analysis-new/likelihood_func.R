@@ -1,18 +1,35 @@
-negbin.loglik_ckeck <- function (params) {
-  x <-   out_BC
+negbin.loglik <- function (params) {
+  x <-   as.data.frame(deSolve::ode(y=init,time=times,func= sveirs,
+                                    parms= params)) 
   prediction <-  (x$Er+ x$Erv + x$Erw
-                  + x$Em+ x$Emv + x$Emw)*test_prop
+                  + x$Em+ x$Emv + x$Emw)*test_prop 
   sum(dnbinom(x=dat_omic$value,
               mu=params["p"]*prediction,size=1/params["theta"],
               log=TRUE))
 }
 
-f_loglik_check <- function (par) {
-  params <- c(S_0=init[[1]],Er_0=init[[2]],Em_0=init[[3]],Ir_0=init[[4]],
-              Im_0=init[[5]],R_0=init[[6]],V_0=init[[7]],Erv_0=init[[8]], 
-              Emv_0=init[[9]],Irv_0=init[[10]],Imv_0=init[[11]],Rv_0=init[[12]],
-              W_0=init[[13]],Erw_0=init[[14]],Emw_0=init[[15]],Irw_0=init[[16]],
-              Imw_0=init[[17]],Rw_0=init[[18]] ,parameters,
-              beta_r=exp(par[1]),p=expit(par[2]),beta_m=exp(par[3]),theta=exp(par[4]))
-  -negbin.loglik_ckeck(params)
+func_loglik <- function (par,test_prop,dat_omic) {
+  params <- c(parameters, beta_r= exp(par[1]),beta_m=exp(par[2]), p=expit(par[3]),theta=exp(par[4]))
+  -negbin.loglik(params)
 }
+
+
+negbin.loglik_2 <- function (params) {
+  x <-   as.data.frame(deSolve::ode(y=init,time=times,func= sveirs,
+                                    parms= params)) 
+  prediction <-  (x$Er+ x$Erv + x$Erw
+                  + x$Em+ x$Emv + x$Emw)
+  sum(dnbinom(x=dat_omic$value,
+              mu=params["p"]*prediction,size=1/params["theta"],
+              log=TRUE))
+}
+
+func_loglik_2 <- function (par,dat_omic) {
+  params <- c(parameters, beta_r= exp(par[1]),beta_m=exp(par[2]), p=expit(par[3]),theta=exp(par[4]))
+  -negbin.loglik_2(params)
+}
+
+
+
+
+

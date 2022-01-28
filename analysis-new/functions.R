@@ -270,8 +270,6 @@ get_testprop = function(changedate, mysplines, halftime, steepness) {
   
   
   
-get
-  
   
   
   
