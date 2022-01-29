@@ -97,12 +97,34 @@ source("analysis-new/likelihood_func.R")
 
 #fitting beta_r, beta_m, p and dispersion parameter 
 guess <- c(log(0.7), logit(0.8),log(2.1),log(0.01))
+# JS: TRIED SWITCHING AND LOGIT TO MATCH LIKELIHOOD_FUNC.R. But then the lh is not finite?
+# guess <- c(log(1.8), log(1.5),logit(0.5),log(0.1))
 
 #the parameters are constrained  accordingly (lower and upper)
 
 fit_BC <- optim(fn=func_loglik,  par=guess, lower=c(log(0.6), log(1.9), 0.0001,  log(0.1)), 
                 upper = c(log(0.8),log(2.5), 0.001,  log(0)), method = "L-BFGS-B")
 
+# JS: testing out other ways to optimize:
+#fit_BC <- optim(fn=func_loglik,  par=guess, lower=c(log(1), log(0.4), 0.0001,  log(0)), 
+#                upper = c(log(2.5),log(2.5), 10, -log(0)), method = "L-BFGS-B")
+#fit_BC <- optim(fn=func_loglik,  par=guess, method = "L-BFGS-B")
+#fit_BC <- nlm(f=func_loglik,  p=guess, typsize=guess)
+
+fit_BC 
+exp(fit_BC$par)
+#exp(fit_BC$estimate)
+
+# JS: Plotting likelihood surfaces
+#z <- matrix(NA, 50,50)
+#x <- c(seq(1.2, 5, length.out=50))
+#y <- c(seq(1.2, 5, length.out=50))
+#for (i in 1:50){
+#  for (j in 1:50){
+#   z[i,j] <- func_loglik(par=c(log(x[i]), log(y[j]), log(0.5), log(0.1)),test_prop,dat_omic)
+#  }
+#}
+#image(x,y,z)
 
 #this catches estimated parameter values from MLE 
 mle_est_BC <- c(beta_r=exp(fit_BC$par[1]),beta_m=exp(fit_BC$par[2]), p=expit(fit_BC$par[3])
