@@ -96,9 +96,9 @@ source("analysis-new/likelihood_func.R")
 
 
 #fitting beta_r, beta_m, p and dispersion parameter 
-guess <- c(log(0.7), logit(0.8),log(2.1),log(0.01))
-# JS: TRIED SWITCHING AND LOGIT TO MATCH LIKELIHOOD_FUNC.R. But then the lh is not finite?
-# guess <- c(log(1.8), log(1.5),logit(0.5),log(0.1))
+#guess <- c(log(0.7), logit(0.8),log(2.1),log(0.01))
+# JS: Switched log and logit to match likelihood_func.R
+guess <- c(log(1.7), log(1.8),logit(0.5),log(0.1))
 
 #the parameters are constrained  accordingly (lower and upper)
 
@@ -106,16 +106,19 @@ fit_BC <- optim(fn=func_loglik,  par=guess, lower=c(log(0.6), log(1.9), 0.0001, 
                 upper = c(log(0.8),log(2.5), 0.001,  log(0)), method = "L-BFGS-B")
 
 # JS: testing out other ways to optimize:
+# Other bounds
 #fit_BC <- optim(fn=func_loglik,  par=guess, lower=c(log(1), log(0.4), 0.0001,  log(0)), 
 #                upper = c(log(2.5),log(2.5), 10, -log(0)), method = "L-BFGS-B")
+# No bounds
 #fit_BC <- optim(fn=func_loglik,  par=guess, method = "L-BFGS-B")
+# function 'nlm' instead of optim
 #fit_BC <- nlm(f=func_loglik,  p=guess, typsize=guess)
 
 fit_BC 
-exp(fit_BC$par)
+c(exp(fit_BC$par[1]), exp(fit_BC$par[2]), expit(fit_BC$par[3]), exp(fit_BC$par[4]))
 #exp(fit_BC$estimate)
 
-# JS: Plotting likelihood surfaces
+# JS: Quick plotting likelihood surfaces
 #z <- matrix(NA, 50,50)
 #x <- c(seq(1.2, 5, length.out=50))
 #y <- c(seq(1.2, 5, length.out=50))
