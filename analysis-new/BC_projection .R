@@ -24,7 +24,7 @@ test_prop_BC <- filter(mytest_BC, date >= intro_date)$test_prop
 #fit (by eyeballing) test_prop to a sigmoid function 
 
 test_prop_BC1 <- c(test_prop_BC[1:length(dat_omic$value)], rep(last(test_prop_BC),forecasts_days)) #ensuring the length is consistent
-fake_test_prop_BC <- (1 - (1-0.15)/(1 + exp(-0.35*(1:length(test_prop_BC1)-26))))
+fake_test_prop_BC <- (1 - (1-0.05)/(1 + exp(-0.25*(1:length(test_prop_BC1)-35))))
 
 
 plot(fake_test_prop_BC)
@@ -43,9 +43,9 @@ N_pop=N
 #ascFrac <- 0.5
 vaxlevel_in = 0.88
 port_wane_in = 0.04 
-past_infection_in = 0.2  #increase this from 0.1 to 0.2
-incres_in = 300
-incmut_in = 70
+past_infection_in = 0.18  #increased this from 0.1 to 0.18 
+incres_in = 330
+incmut_in = 100
 simu_size = 1e5
 forecasts_days =30
 times = 1:nrow(dat_omic)
@@ -54,19 +54,19 @@ times = 1:nrow(dat_omic)
 
 
 #declaring fixed parameters 
-eff_date <-   ymd("2021-12-30")  # intervention date 
+eff_date <-   ymd("2021-12-29")  # intervention date 
 parameters <-         c(sigma=1/3, # incubation period (3 days) (to fixed)
-                        gamma=1/(4), #recovery rate (fixed)
+                        gamma=1/(5), #recovery rate (fixed)
                         nu =0.007, #vax rate: 0.7% per day (fixed)
                         mu=1/(82*365), # 1/life expectancy (fixed)
                         w1= 1/(3*365),# waning rate from R to S (fixed)
                         w2= 1/(3*365), # waning rate from Rv to V (fixed)
                         w3= 1/(3*365),# waning rate Rw to W (fixed)
                         ve=1, # I think this should be 1. it is not really efficacy  ( fixed)
-                        #beta_r=0.72, #transmission rate (to estimate) (0.35)
+                        beta_r=0.6, #transmission rate (to estimate) (0.35)
                         #beta_m=0.8*2.2, #transmission rate (to estimate)(*1.9)
                         epsilon_r = (1-0.8), # % this should be 1-ve 
-                        epsilon_m = (1-0.6), # % escape capacity #(fixed)
+                        epsilon_m = 1-0.65, #(1-0.25)?(1-0.6), # % escape capacity #(fixed)
                         b= 0.006, # booster rate  (fixed)
                         beff = 0.7, # booster efficacy
                         wf=0.2, # protection for newly recoverd #0.2
@@ -98,12 +98,12 @@ source("analysis-new/likelihood_func.R")
 #fitting beta_r, beta_m, p and dispersion parameter 
 #guess <- c(log(0.7), logit(0.8),log(2.1),log(0.01))
 # JS: Switched log and logit to match likelihood_func.R
-guess <- c(log(1.7), log(1.8),logit(0.5),log(0.1))
+guess <- c(log(1.8), logit(0.4))
 
 #the parameters are constrained  accordingly (lower and upper)
 
-fit_BC <- optim(fn=func_loglik,  par=guess, lower=c(log(0.6), log(1.9), 0.0001,  log(0.1)), 
-                upper = c(log(0.8),log(2.5), 0.001,  log(0)), method = "L-BFGS-B")
+fit_BC <- optim(fn=func_loglik,  par=guess, lower=c(0.5, 0), 
+                upper = c(Inf, 1), method = "L-BFGS-B")
 
 # JS: testing out other ways to optimize:
 # Other bounds
@@ -111,17 +111,17 @@ fit_BC <- optim(fn=func_loglik,  par=guess, lower=c(log(0.6), log(1.9), 0.0001, 
 #                upper = c(log(2.5),log(2.5), 10, -log(0)), method = "L-BFGS-B")
 # No bounds
 #fit_BC <- optim(fn=func_loglik,  par=guess, method = "L-BFGS-B")
-# function 'nlm' instead of optim
+#function 'nlm' instead of optim
 #fit_BC <- nlm(f=func_loglik,  p=guess, typsize=guess)
 
 fit_BC 
-c(exp(fit_BC$par[1]), exp(fit_BC$par[2]), expit(fit_BC$par[3]), exp(fit_BC$par[4]))
+c(exp(fit_BC$par[1]),  expit(fit_BC$par[2]))
 #exp(fit_BC$estimate)
 
-# JS: Quick plotting likelihood surfaces
+#JS: Quick plotting likelihood surfaces
 #z <- matrix(NA, 50,50)
-#x <- c(seq(1.2, 5, length.out=50))
-#y <- c(seq(1.2, 5, length.out=50))
+#x <- c(seq(0, 5, length.out=50))
+#y <- c(seq(0, 5, length.out=50))
 #for (i in 1:50){
 #  for (j in 1:50){
 #   z[i,j] <- func_loglik(par=c(log(x[i]), log(y[j]), log(0.5), log(0.1)),test_prop,dat_omic)
@@ -129,9 +129,25 @@ c(exp(fit_BC$par[1]), exp(fit_BC$par[2]), expit(fit_BC$par[3]), exp(fit_BC$par[4
 #}
 #image(x,y,z)
 
+
+# beta_m <- seq(from=2.2,to=3.5,length=50)
+# beta_r <- seq(0.9,3,length=50)
+# grid <- expand.grid(x=beta_r,y=beta_m)
+# 
+# 
+# grid <- ddply(grid,~x+y,mutate,loglik=func_loglik(par=c(x, y, logit(0.5),
+#                                                 log(0.1)),test_prop,dat_omic))
+# 
+# 
+# grid <- subset(grid,is.finite(loglik))
+# ggplot(grid,aes(x=x,y=y,z=loglik,fill=loglik))+
+#   geom_tile()+geom_contour(binwidth=1)
+# 
+
+
 #this catches estimated parameter values from MLE 
-mle_est_BC <- c(beta_r=exp(fit_BC$par[1]),beta_m=exp(fit_BC$par[2]), p=expit(fit_BC$par[3])
-                ,theta=exp(fit_BC$par[4]))
+mle_est_BC <- c(beta_m=exp(fit_BC$par[1]), p=expit(fit_BC$par[2])
+                ,theta=0.1)
 
 #check parameter estimates 
 mle_est_BC
@@ -165,7 +181,15 @@ project_dat_BC =  as.data.frame(aaply(uncert_bound_BC
   mutate(date=seq.Date(ymd(intro_date),
                        ymd(intro_date)-1+length(times), 1))
 
+#####################check fit ######################
 
+ggplot() + geom_line(data=project_dat_BC,aes(x=date,y=`50%`), col="green",size=1.5,alpha=0.4) +
+  geom_ribbon(data=project_dat_BC,aes(x=date,ymin=`2.5%`,ymax=`97.5%`),fill='darkgreen',alpha=0.1, size = 1.5)+
+  geom_point(data=dat_reported,aes(x=date, y=value),color='grey48', alpha=0.8, size = 1.5)
+
+
+
+##########################
 
 #re-estimate parameters without test_prop 
 
@@ -259,4 +283,12 @@ gg_BC
 
 ggsave(file="figs/BC_proj.png", gg_BC, width = 10, height = 8)
 saveRDS(gg_BC, file.path("figs/BC-fig.rds"))
+
+#things to try  
+# fix beta_r and probably p 
+# estimate beta_m alone 
+#reduce population immunity and increase duration 
+
+
+
 

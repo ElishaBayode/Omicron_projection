@@ -9,7 +9,8 @@ negbin.loglik <- function (params) {
 }
 
 func_loglik <- function (par,test_prop,dat_omic) {
-  params <- c(parameters, beta_r= exp(par[1]),beta_m=exp(par[2]), p=expit(par[3]),theta=exp(par[4]))
+  #params <- c(parameters, beta_r= exp(par[1]),beta_m=exp(par[2]), p=expit(par[3]),theta=exp(par[4]))
+  params <- c(parameters, beta_m=exp(par[1]), p=expit(par[2]),theta=0.1)
   -negbin.loglik(params)
 }
 
