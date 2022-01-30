@@ -5,9 +5,31 @@ library(lubridate)
 library(dplyr)
 library(data.table)
  
+# cc to do list
+# setup stuff 
+# - set up default parameters better (efficacy, beff etc) 
+# - if we are not fitting beta_r, ensure that the initial delta decline is reasonable
+# - alternatively we may want to start the model earlier
+# so that we have more information about beta_r, because omicron has not happened yet 
+
+# fit approach stuff 
+# - figure out what is identifiable: what can we really fit? 
+# - decide what parameters are being fitted
+# - show fit compared to data - even just the fit without resampling
+# - set up a section that does some  further sanity checking for the fit: 
+# --- is it just getting the bounds we put in? 
+# --- does the parameter seem reasonable based on what we know about omicron vs delta? 
+# --- are the trajectories sensible? what about portion infections in vax vs unvax? 
+
+# - check against positivity, wastewater to ensure that where we see a decline it 
+# is mirrored in these other data (waiting to hear on wastewater. have source for positivity) 
+# - make longer-term plots exploring the duration of immunity and its impact
+# - when doing that, explore the impact of vaccination rate
+
+
 forecasts_days <- 30 
 intro_date <-  ymd("2021-12-07")
-stop_date <- ymd("2022-01-24") # make it uniform 
+stop_date <- ymd("2022-01-24") # 
 #import data 
 #run BC_data.R (preferably line by line to check if there are 0 cases and NA's)
 dat = readRDS("data/BC-dat.rds")
@@ -41,15 +63,19 @@ test_prop <- test_prop_BC
 N=5.07e6
 N_pop=N
 #ascFrac <- 0.5
-vaxlevel_in = 0.82 # portion of the pop vaccinated at start time 
-port_wane_in = 0.04 # portion boosted at start tie 
-past_infection_in = 0.12  #increased this from 0.1 to 0.18 # total in R at start time
-incres_in = 330 # resident strain (delta) incidence at start 
-incmut_in = 100 # new (omicron) inc at stat 
-simu_size = 1e5 # i don't know what this means 
-forecasts_days =30 # how long to forecast for 
+vaxlevel_in = 0.82
+port_wane_in = 0.04 # this is the portion *boosted* at the start time 
+past_infection_in = 0.11  #increased this from 0.1 to 0.18 # cc - too high! 
+incres_in = 330
+incmut_in = 100
+simu_size = 1e5
+forecasts_days =30
 times = 1:nrow(dat_omic)
- 
+init <- make_init()   #generate initial states. this function now uses the above 
+# variables for its default input. 
+
+# why aren't we just using the names returned by make_init, rather than doing this? whatever. 
+init <- init_BC
 
 
 
@@ -75,19 +101,9 @@ parameters <-         c(sigma=1/3, # incubation period (3 days) (to fixed)
                         eff_t = as.numeric(eff_date - intro_date)
 
 )
-init <- make_init()   #generate initial states
+
 parameters_BC <- parameters
 
-
-
-# cc: i think these next lines are not needed. make_init already names the vector 
-init_BC <- c(S=init[[1]],Er=init[[2]],Em=init[[3]],Ir=init[[4]],
-             Im=init[[5]],R=init[[6]],V=init[[7]],Erv=init[[8]], 
-             Emv=init[[9]],Irv=init[[10]],Imv=init[[11]],Rv=init[[12]],
-             W=init[[13]],Erw=init[[14]],Emw=init[[15]],Irw=init[[16]],
-             Imw=init[[17]],Rw=init[[18]])
-
-init <- init_BC
 
 
 
