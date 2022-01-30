@@ -64,6 +64,7 @@ parameters <-         c(sigma=1/3, # incubation period (3 days) (to fixed)
                         w3= 1/(3*365),# waning rate Rw to W (fixed)
                         ve=1, # I think this should be 1. it is not really efficacy  ( fixed)
                         #beta_r=0.72, #transmission rate (to estimate) (0.35)
+                        beta_r=0.6, #transmission rate, resident strain
                         #beta_m=0.8*2.2, #transmission rate (to estimate)(*1.9)
                         epsilon_r = (1-0.8), # % this should be 1-ve 
                         epsilon_m = (1-0.6), # % escape capacity #(fixed)
@@ -95,20 +96,20 @@ source("analysis-new/mod_fitting_setup.R")
 source("analysis-new/likelihood_func.R")
 
 
-#fitting beta_r, beta_m, p and dispersion parameter 
-guess <- c(log(0.7), logit(0.8),log(2.1),log(0.01))
+#fitting beta_m, p in current version
+guess <- c(1.8, 0.4)
 
 #the parameters are constrained  accordingly (lower and upper)
 
-fit_BC <- optim(fn=func_loglik,  par=guess, lower=c(log(0.6), log(1.9), 0.0001,  log(0.1)), 
-                upper = c(log(0.8),log(2.5), 0.001,  log(0)), method = "L-BFGS-B")
+#fit_BC <- optim(fn=func_loglik,  par=guess, lower=c(log(0.6), log(1.9), 0.0001,  log(0.1)), 
+#                upper = c(log(0.8),log(2.5), 0.001,  log(0)), method = "L-BFGS-B")
+fit_BC <- optim(fn=func_loglik,  par=guess, lower=c(0, 0), 
+                upper = c(Inf, 1), method = "L-BFGS-B")
 
-fit_BC$par = log(c(0.5902557, 1.8336668, 0.2828775 , 0.0599712)) # from Jessica
-# but this is nonsensical because of a mis-matched transformation somewhere anyway 
+fit_BC$par 
 
 #this catches estimated parameter values from MLE 
-mle_est_BC <- c(beta_r=exp(fit_BC$par[1]),beta_m=exp(fit_BC$par[2]), p=expit(fit_BC$par[3])
-                ,theta=exp(fit_BC$par[4]))
+mle_est_BC <- c(beta_m=fit_BC$par[1], p=fit_BC$par[2], theta=0.1)
 
 #check parameter estimates 
 mle_est_BC

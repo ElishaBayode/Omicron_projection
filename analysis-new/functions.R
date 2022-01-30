@@ -276,15 +276,9 @@ get_testprop = function(changedate, mysplines, halftime, steepness) {
 
 
 
-------#function to get incidence by vaccination status 
-  
-  
-  
-  
-  
-  
-  
-  
+#function to get incidence by vaccination status 
+
+
 # mytest = get_testprop(changedate = ymd("2021-12-21"), 
 # mysplines = splinetest, 
 # halftime = 20, steepness = 0.1)

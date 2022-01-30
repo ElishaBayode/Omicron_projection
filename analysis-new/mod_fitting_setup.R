@@ -5,7 +5,7 @@ library(pomp)
 library(dplyr)
 library(plyr)
 
-source("analysis/functions.R")
+source("analysis-new/functions.R")
 
 # 
 # 
