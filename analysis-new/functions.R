@@ -104,7 +104,7 @@ lag_func <- function(x, k = 1, pad = NA){
 
 # this just pulls out some incidence values 
 get_total_incidence = function(output, parameters, lag = 0 ) {
-
+  ascFrac = parameters["p"]
   with(as.list( parameters), {
     incid =  output %>% mutate(inc_res = ascFrac*sigma*lag_func(Er+Erv+Erw, k=lag), 
                                inc_mut = ascFrac*sigma*lag_func(Em +Emv +Emw, k=lag), 
