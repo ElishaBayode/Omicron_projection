@@ -46,7 +46,7 @@ port_wane_in = 0.04 # portion boosted at start tie
 past_infection_in = 0.12  #increased this from 0.1 to 0.18 # total in R at start time
 incres_in = 330 # resident strain (delta) incidence at start 
 incmut_in = 100 # new (omicron) inc at stat 
-simu_size = 1e5 # i don't know what this means 
+simu_size = 1e5 # number of times to resample the negative binom (for ribbons)
 forecasts_days =30 # how long to forecast for 
 times = 1:nrow(dat_omic)
  
@@ -95,28 +95,24 @@ source("analysis-new/mod_fitting_setup.R")
 source("analysis-new/likelihood_func.R")
 
 
-#fitting beta_r, beta_m, p and dispersion parameter 
+#fitting some/all of beta_r, beta_m, p and dispersion parameter theta:
 #guess <- c(log(0.7), logit(0.8),log(2.1),log(0.01))
-# JS: Switched log and logit to match likelihood_func.R
-guess <- c(log(1.8), logit(0.4))
+# JS: removed parameter log and logit transforms
+# beta_m, p
+guess <- c(1.8, 0.4)
 
 #the parameters are constrained  accordingly (lower and upper)
 
-fit_BC <- optim(fn=func_loglik,  par=guess, lower=c(0.5, 0), 
+fit_BC <- optim(fn=func_loglik,  par=guess, lower=c(0, 0), 
                 upper = c(Inf, 1), method = "L-BFGS-B")
 
 # JS: testing out other ways to optimize:
-# Other bounds
-#fit_BC <- optim(fn=func_loglik,  par=guess, lower=c(log(1), log(0.4), 0.0001,  log(0)), 
-#                upper = c(log(2.5),log(2.5), 10, -log(0)), method = "L-BFGS-B")
 # No bounds
 #fit_BC <- optim(fn=func_loglik,  par=guess, method = "L-BFGS-B")
 #function 'nlm' instead of optim
 #fit_BC <- nlm(f=func_loglik,  p=guess, typsize=guess)
 
 fit_BC 
-c(exp(fit_BC$par[1]),  expit(fit_BC$par[2]))
-#exp(fit_BC$estimate)
 
 #JS: Quick plotting likelihood surfaces
 #z <- matrix(NA, 50,50)
@@ -124,10 +120,11 @@ c(exp(fit_BC$par[1]),  expit(fit_BC$par[2]))
 #y <- c(seq(0, 5, length.out=50))
 #for (i in 1:50){
 #  for (j in 1:50){
-#   z[i,j] <- func_loglik(par=c(log(x[i]), log(y[j]), log(0.5), log(0.1)),test_prop,dat_omic)
+#   z[i,j] <- func_loglik(par=c(x[i], y[j]),test_prop,dat_omic)
 #  }
 #}
 #image(x,y,z)
+#contour(x, y ,z, nlevels = 20, add=TRUE)
 
 
 # beta_m <- seq(from=2.2,to=3.5,length=50)
@@ -146,8 +143,7 @@ c(exp(fit_BC$par[1]),  expit(fit_BC$par[2]))
 
 
 #this catches estimated parameter values from MLE 
-mle_est_BC <- c(beta_m=exp(fit_BC$par[1]), p=expit(fit_BC$par[2])
-                ,theta=0.1)
+mle_est_BC <- c(beta_m=fit_BC$par[1], p=fit_BC$par[2], theta=0.1)
 
 #check parameter estimates 
 mle_est_BC
@@ -182,6 +178,10 @@ project_dat_BC =  as.data.frame(aaply(uncert_bound_BC
                        ymd(intro_date)-1+length(times), 1))
 
 #####################check fit ######################
+
+#add dat to data for plotting 
+dat_reported <- dat_omic  %>% mutate(date=seq.Date(ymd(intro_date),
+                                                   ymd(intro_date)-1+length(dat_omic$day), 1))
 
 ggplot() + geom_line(data=project_dat_BC,aes(x=date,y=`50%`), col="green",size=1.5,alpha=0.4) +
   geom_ribbon(data=project_dat_BC,aes(x=date,ymin=`2.5%`,ymax=`97.5%`),fill='darkgreen',alpha=0.1, size = 1.5)+
