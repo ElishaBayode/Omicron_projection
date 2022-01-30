@@ -44,7 +44,7 @@ make_init = function( N=N_pop, vaxlevel = vaxlevel_in,
                       port_wane = port_wane_in, 
                       past_infection = past_infection_in, incres = incres_in, incmut = incmut_in, 
                       pars=as.list(parameters)) {
-  ff=1 # fudge factor . hard to get incidence right since it depends on other pars too (2/3)
+  ff=6/7 # fudge factor . hard to get incidence right since it depends on other pars too (2/3)
   Vtot = vaxlevel*N*(1-port_wane) # allocate to V, Ev, Iv
   Wtot = vaxlevel*N*port_wane # allocate to W, Ew, Iw 
   # some have had covid. but they might also have been vaccinated. 
@@ -104,7 +104,7 @@ lag_func <- function(x, k = 1, pad = NA){
 
 # this just pulls out some incidence values 
 get_total_incidence = function(output, parameters, lag = 0 ) {
-  ascFrac = parameters["p"]
+
   with(as.list( parameters), {
     incid =  output %>% mutate(inc_res = ascFrac*sigma*lag_func(Er+Erv+Erw, k=lag), 
                                inc_mut = ascFrac*sigma*lag_func(Em +Emv +Emw, k=lag), 
@@ -115,6 +115,8 @@ get_total_incidence = function(output, parameters, lag = 0 ) {
              inc_tot, inc_vax, inc_nonvax)
     return(incid)})
 }
+
+
 
 get_true_incidence_plot = function(times, start_date, parameters_base,init) {
   with(as.list( parameters), {
@@ -285,4 +287,7 @@ get_testprop = function(changedate, mysplines, halftime, steepness) {
 # glimpse(mytest)
 # ggplot(mytest, aes(x=date, y=test_prop))+geom_line()
 
+getoffset = function(startvalue = 3.73, endvalue=2.68, halftime=15, steepness=0.25, ndays=60) {
+  return( startvalue - (startvalue-endvalue)/(1+exp(-steepness*(1:ndays-halftime))))  
+}
 
