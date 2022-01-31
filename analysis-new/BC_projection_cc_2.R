@@ -172,13 +172,11 @@ fit_BC
 # 
 
 
-#this catches estimated parameter values from MLE 
-mle_est_BC <- c(beta_m=fit_BC$par[1], p=fit_BC$par[2],theta=0.1)
 
-#check parameter estimates 
-mle_est_BC
+#this catches estimated parameter values from MLE , and adds them to 'parameters' structure
+parameters[names(guess)] <- fit_BC$par
 
-parameters <- c(parameters_BC,mle_est_BC)
+
 
 #make prediction and projection with estimated parameters 
 
