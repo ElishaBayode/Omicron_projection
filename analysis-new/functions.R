@@ -27,12 +27,12 @@ sveirs <- function(time, state, parameters) {
     dIrv <- sigma*Erv - (gamma + mu)*Irv
     dImv <- sigma*Emv - (gamma + mu)*Imv
     dRv <-  gamma*(Irv + Imv) -wf* (epsilon_r*lambda_r + epsilon_m*lambda_m)*Rv/N - (mu + w2 + b*ve)*Rv
-    dW <-   b*ve*V + w2*Rw - (1-beff)*(epsilon_r*lambda_r + epsilon_m*lambda_m)*W/N -(mu+ w3)*W
-    dErw <-(1-beff)*epsilon_r*lambda_r*W/N + (1-beff)*wf*epsilon_r*lambda_r*Rw/N - (sigma+mu)*Erw 
-    dEmw <- (1-beff)*epsilon_m*lambda_m*W/N + (1-beff)*wf*epsilon_m*lambda_m*Rw/N - (sigma+mu)*Emw 
+    dW <-   b*ve*V + w2*Rw - (1-beff)*(lambda_r + lambda_m)*W/N -(mu+ w3)*W
+    dErw <-(1-beff)*lambda_r*W/N + (1-beff)*wf*lambda_r*Rw/N - (sigma+mu)*Erw 
+    dEmw <- (1-beff)*lambda_m*W/N + (1-beff)*wf**lambda_m*Rw/N - (sigma+mu)*Emw 
     dIrw <- sigma*Erw - (gamma + mu)*Irw
     dImw <- sigma*Emw - (gamma + mu)*Imw
-    dRw <-  b*ve*Rv + gamma*(Irw + Imw) - wf*(1-beff)*(epsilon_r*lambda_r + epsilon_m*lambda_m)*Rw/N - (mu + w2)*Rw
+    dRw <-  b*ve*Rv + gamma*(Irw + Imw) - wf*(1-beff)*(lambda_r + lambda_m)*Rw/N - (mu + w2)*Rw
     return(list(c(dS,dEr,dEm,dIr,dIm,dR,dV,dErv,dEmv,dIrv,dImv,dRv,dW,dErw,dEmw,dIrw,dImw,dRw)))
   })
 }
