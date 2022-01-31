@@ -186,11 +186,12 @@ get_true_incidence_prop_plot = function(times, start_date, parameters_base,init)
 
 
 get_vax = function(output) {
-  vax = output %>% mutate(vaxtot = V+ Erv + Emv+ 
+  vax = output %>% mutate(unvax = S+Er + Em + Ir + Im + R, 
+                          vaxtot = V+ Erv + Emv+ 
                             Irv+ Imv+ Rv+ W +Erw+Emw+ Irw+ Imw+ Rw,
                           vaxtwodose = V+ Erv + Emv+ 
                             Irv+ Imv+ Rv, boosted = W +Erw+Emw+ Irw+ Imw+ Rw) %>% 
-    select(time, vaxtot, vaxtwodose, boosted) 
+    select(time,unvax, vaxtot, vaxtwodose, boosted) 
   return(vax) 
 }
 
@@ -291,3 +292,144 @@ getoffset = function(startvalue = 3.73, endvalue=2.68, halftime=15, steepness=0.
   return( startvalue - (startvalue-endvalue)/(1+exp(-steepness*(1:ndays-halftime))))  
 }
 
+
+# ---- two comparison functions -----
+compare_two_incid = function(pars1, pars2,name1 = "first", name2="second", 
+                             returnplot = T,numsamples = 1e3, numdays = 300, dispar=0.1,mode = "static") { 
+  if (mode == "static") { 
+    myfunction = sveirs 
+  } else {
+    myfunction = sveirs_evol
+  }
+  # run the first 
+  out1 <- as.data.frame(deSolve::ode(y=init_BC,time=1:numdays,func= myfunction,
+                                     parms=pars1)) 
+  inc1 =  pars1["sigma"]*(out1$Er + out1$Erv + out1$Erw +
+                            out1$Em + out1$Emv +
+                            out1$Emw)
+  unc1 = raply(numsamples,rnbinom(n=length(inc1),
+                                  mu=pars1[["p"]]*inc1,
+                                  size=1/dispar))
+  
+  proj1 =  as.data.frame(aaply(unc1,2,quantile,
+                               na.rm=TRUE,probs=c(0.025,0.5,0.975))) %>% 
+    mutate(date=seq.Date(ymd(intro_date),
+                         ymd(intro_date)-1+numdays, 1))
+  proj1$name = name1
+  # run the second 
+  out2 <- as.data.frame(deSolve::ode(y=init_BC,time=1:numdays,func= myfunction,
+                                     parms=pars2)) 
+  inc2 =  pars2["sigma"]*(out2$Er + out2$Erv + out2$Erw +
+                            out2$Em + out2$Emv +
+                            out2$Emw)
+  unc2 = raply(numsamples,rnbinom(n=length(inc2),
+                                  mu=pars2[["p"]]*inc2,
+                                  size=1/dispar))
+  
+  proj2 =  as.data.frame(aaply(unc2,2,quantile,
+                               na.rm=TRUE,probs=c(0.025,0.5,0.975))) %>% 
+    mutate(date=seq.Date(ymd(intro_date),
+                         ymd(intro_date)-1+numdays, 1))
+  proj2$name = name2
+  proj = rbind(proj1, proj2)
+  if (returnplot) { 
+    gg =   ggplot(data = proj) + geom_line(aes(x=date,y=`50%`, color=name),
+                                           size=1.5,alpha=0.6) +
+      geom_ribbon(aes(x=date,ymin=`2.5%`,ymax=`97.5%`, fill=name),
+                  alpha=0.2, size = 1.5)+
+      ylab("Incident infections") + theme_light() + theme(legend.position = "bottom",
+                                                          axis.title.x = element_blank(),
+                                                          legend.title = element_blank())
+    
+  } else {
+    return(proj) 
+  }
+}
+
+
+compare_two_preval = function(pars1, pars2,name1 = "first", name2="second", 
+                              returnplot = T,numsamples = 1e3, numdays = 300, dispar=0.1, 
+                              mode = "static") { 
+  if (mode == "static") { 
+    myfunction = sveirs 
+  } else {
+    myfunction = sveirs_evol
+  }
+  # run the first 
+  out1 <- as.data.frame(deSolve::ode(y=init_BC,time=1:numdays,func= myfunction,
+                                     parms=pars1)) 
+  prev1 =  (out1$Ir + out1$Irv + out1$Irw +
+              out1$Im + out1$Imv +
+              out1$Imw)
+  unc1 = raply(numsamples,rnbinom(n=length(prev1),
+                                  mu=prev1,
+                                  size=1/dispar))
+  
+  proj1 =  as.data.frame(aaply(unc1,2,quantile,
+                               na.rm=TRUE,probs=c(0.025,0.5,0.975))) %>% 
+    mutate(date=seq.Date(ymd(intro_date),
+                         ymd(intro_date)-1+numdays, 1))
+  proj1$name = name1
+  # run the second 
+  out2 <- as.data.frame(deSolve::ode(y=init_BC,time=1:numdays,func= myfunction,
+                                     parms=pars2)) 
+  prev2 =  (out2$Ir + out2$Irv + out2$Irw +
+              out2$Im + out2$Imv +
+              out2$Imw)
+  unc2 = raply(numsamples,rnbinom(n=length(prev2),
+                                  mu=prev2,
+                                  size=1/dispar))
+  
+  proj2 =  as.data.frame(aaply(unc2,2,quantile,
+                               na.rm=TRUE,probs=c(0.025,0.5,0.975))) %>% 
+    mutate(date=seq.Date(ymd(intro_date),
+                         ymd(intro_date)-1+numdays, 1))
+  proj2$name = name2
+  proj = rbind(proj1, proj2)
+  if (returnplot) { 
+    gg =   ggplot(data = proj) + geom_line(aes(x=date,y=`50%`, color=name),
+                                           size=1.5,alpha=0.6) +
+      geom_ribbon(aes(x=date,ymin=`2.5%`,ymax=`97.5%`, fill=name),
+                  alpha=0.2, size = 1.5)+
+      ylab("Prevalence") + theme_light() + theme(legend.position = "bottom",
+                                                 axis.title.x = element_blank(),
+                                                 legend.title = element_blank())
+    
+  } else {
+    return(proj) 
+  }
+}
+
+
+sveirs_evol <- function(time, state, parameters) {
+  with(as.list(c(state, parameters)), {
+    #wf=0.2 # NOTE - this was to test the impact of recovered people being more immune than 
+    # vaccinated people. i think it probably makes sense - after all they *just* recovered .
+    #c <- 1# effectiveness of NPIs, set as 1, change later to c(t)
+    c <- (1 - stngcy/(1+ exp(-1.25*(time-eff_t))))   #intervention 
+    eff_evolve = (1 + deltaeff/(1+ exp(-0.05*(time-150))))
+    epsilon_m = epsilon_m*eff_evolve # note: higher e_m is higher force of infection 
+    N <- S+Er+Em+Ir+Im+R+V+Erv+Emv+Irv+Imv+Rv+W+Erw+Emw+Irw+Imw+Rw #total population 
+    lambda_r <- c*beta_r*(Ir + Irv + Irw)
+    lambda_m <- c*beta_m*(Im + Imv + Imw) #force of infection mutant strain
+    dS <-  mu*N - (lambda_r+lambda_m)*S/N  + w1*R -(mu + nu*ve)*S
+    dEr <- lambda_r*S/N + wf* epsilon_r*lambda_r*R/N - (sigma+mu)*Er 
+    dEm <- lambda_m*S/N + wf* epsilon_m*lambda_m*R/N - (sigma+mu)*Em
+    dIr <- sigma*Er - (gamma + mu)*Ir
+    dIm <- sigma*Em - (gamma + mu)*Im
+    dR <-  gamma*(Ir + Im) - wf*(epsilon_r*lambda_r + epsilon_m*lambda_m)*R/N - (mu + w1)*R
+    dV <-  nu*ve*S + w2*Rv+w3*W - (epsilon_r*lambda_r + epsilon_m*lambda_m)*V/N - (mu + b*ve)*V 
+    dErv <- epsilon_r*lambda_r*V/N + wf*epsilon_r*lambda_r*Rv/N - (sigma+mu)*Erv 
+    dEmv <- epsilon_m*lambda_m*V/N +wf* epsilon_m*lambda_m*Rv/N - (sigma+mu)*Emv 
+    dIrv <- sigma*Erv - (gamma + mu)*Irv
+    dImv <- sigma*Emv - (gamma + mu)*Imv
+    dRv <-  gamma*(Irv + Imv) -wf* (epsilon_r*lambda_r + epsilon_m*lambda_m)*Rv/N - (mu + w2 + b*ve)*Rv
+    dW <-   b*ve*V + w2*Rw - (1-beff)*(lambda_r + lambda_m)*W/N -(mu+ w3)*W
+    dErw <-(1-beff)*lambda_r*W/N + (1-beff)*wf*lambda_r*Rw/N - (sigma+mu)*Erw 
+    dEmw <- (1-beff)*lambda_m*W/N + (1-beff)*wf*lambda_m*Rw/N - (sigma+mu)*Emw 
+    dIrw <- sigma*Erw - (gamma + mu)*Irw
+    dImw <- sigma*Emw - (gamma + mu)*Imw
+    dRw <-  b*ve*Rv + gamma*(Irw + Imw) - wf*(1-beff)*(lambda_r + lambda_m)*Rw/N - (mu + w2)*Rw
+    return(list(c(dS,dEr,dEm,dIr,dIm,dR,dV,dErv,dEmv,dIrv,dImv,dRv,dW,dErw,dEmw,dIrw,dImw,dRw)))
+  })
+}

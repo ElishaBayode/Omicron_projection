@@ -61,74 +61,42 @@ mypars <-         c(sigma=1/3, # incubation period (3 days) (to fixed)
                         epsilon_r = (1-0.8), # % this should be 1-ve 
                         epsilon_m = 1-0.3, #(1-0.25)?(1-0.6), # % escape capacity #(fixed)
                         b= 0.006, # booster rate  (fixed)
-                        beff = 0.1, # booster efficacy
-                        wf=0.15, # protection for newly recoverd #0.2
+                        beff = 0.7, # booster efficacy
+                        wf=0.15, # 1- protection for newly recovered. 
                         N=5e6,
-                        stngcy= -0.1,#0.78, #(*%(reduction)) strength of intervention (reduction in beta's)
+                        stngcy= 0.2,#0.78, #(*%(reduction)) strength of intervention (reduction in beta's)
                         eff_t = as.numeric(eff_date - intro_date)
                         
 )
 
 
-pars1=c(mypars ,beta_m=1 , p=0.5) 
+pars1=c(mypars ,beta_m=1 , p=0.5, deltaeff=0) 
 
 pars2=pars1
-pars2["wf"]=0.3
+pars2["epsilon_m"]=(1-0.25)
+pars2["beta_m"] = 0.9
+pars2["wf"]=0.25
+#pars2["deltaeff"]=0.6
+pars2["w2"]=1/(0.3*365)
 
-pars2["w1"] = 1/365
-pars2["w2"] = 1/365
-pars2["w3"] = 1/365
-
-gg = compare_two_parsets(pars1, pars2,
-                         name1="Recovery 85% protection", 
-                         name2 = "Recovery 70% projection", 
-                         numdays =600,dispar=0.05) 
+gg = compare_two_preval(pars1, pars2,
+                         name1="Baseline",  name2 = "More reinfection in vaccinated", 
+                         numdays =600,dispar=0.05, mode = "evol") 
 gg 
 
 c <- 1 - mypars["stngcy"]/(1+ exp(-1.25*(1:300-mypars["eff_t"]))) 
 plot(1:300, c)
 
-compare_two_parsets = function(pars1, pars2,name1 = "first", name2="second", 
-                               returnplot = T,numsamples = 1e3, numdays = 300, dispar=0.1) { 
-    # run the first 
-    out1 <- as.data.frame(deSolve::ode(y=init_BC,time=1:numdays,func= sveirs,
-                                       parms=pars1)) 
-    inc1 =  pars1["sigma"]*(out1$Er + out1$Erv + out1$Erw +
-                                         out1$Em + out1$Emv +
-                                         out1$Emw)
-    unc1 = raply(numsamples,rnbinom(n=length(inc1),
-                                              mu=pars1[["p"]]*inc1,
-                                              size=1/dispar))
-    
-    proj1 =  as.data.frame(aaply(unc1,2,quantile,
-                                          na.rm=TRUE,probs=c(0.025,0.5,0.975))) %>% 
-        mutate(date=seq.Date(ymd(intro_date),
-                             ymd(intro_date)-1+numdays, 1))
-    proj1$name = name1
-    # run the second 
-    out2 <- as.data.frame(deSolve::ode(y=init_BC,time=1:numdays,func= sveirs,
-                                       parms=pars2)) 
-    inc2 =  pars2["sigma"]*(out2$Er + out2$Erv + out2$Erw +
-                                 out2$Em + out2$Emv +
-                                 out2$Emw)
-    unc2 = raply(numsamples,rnbinom(n=length(inc2),
-                                   mu=pars2[["p"]]*inc2,
-                                   size=1/dispar))
-    
-    proj2 =  as.data.frame(aaply(unc2,2,quantile,
-                                 na.rm=TRUE,probs=c(0.025,0.5,0.975))) %>% 
-        mutate(date=seq.Date(ymd(intro_date),
-                             ymd(intro_date)-1+numdays, 1))
-    proj2$name = name2
-    proj = rbind(proj1, proj2)
-    if (returnplot) { 
-        gg =   ggplot(data = proj) + geom_line(aes(x=date,y=`50%`, color=name),
-                                               size=1.5,alpha=0.6) +
-                        geom_ribbon(aes(x=date,ymin=`2.5%`,ymax=`97.5%`, fill=name),
-                                    alpha=0.2, size = 1.5)+
-            ylab("Incident infections") + theme_light() + theme(legend.position = "bottom")
 
-    } else {
-        return(proj) 
-    }
-}
+# ---- get intuition about how many are vaccinated in which levels ---- 
+out1 <- as.data.frame(deSolve::ode(y=init_BC,time=1:300,func= sveirs,
+                                   parms=pars1)) 
+vo = get_vax(out1)
+ggplot(data = vo, aes(x=time, y=vaxtot))+geom_line()+
+    geom_line(aes(x=time, y=vaxtwodose),color="green")+
+    geom_line(aes(x=time, y=boosted), color="blue")+
+    geom_line(aes(x=time, y = unvax), color="grey")
+
+
+
+
