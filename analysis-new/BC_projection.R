@@ -21,7 +21,7 @@ test_prop_BC <- filter(mytest_BC, date >= intro_date)$test_prop
 
 #fit (by eyeballing) test_prop to a sigmoid function 
 #test_prop_BC1 <- c(test_prop_BC[1:length(dat_omic$value)], rep(last(test_prop_BC),forecasts_days)) #ensuring the length is consistent
-fake_test_prop_BC <- (1 - (1-0.05)/(1 + exp(-0.25*(1:(nrow(dat_omic)+forecasts_days)-35))))
+fake_test_prop_BC <- (1 - (1-0.2)/(1 + exp(-0.25*(1:(nrow(dat_omic)+forecasts_days)-45))))
 plot(fake_test_prop_BC)
 lines(test_prop_BC)
 abline(v=length(dat_omic$day)) # where it will be cut off
@@ -81,7 +81,7 @@ source("analysis-new/likelihood_func.R")
 
 # fitting any subset of parameters
 guess <- c(beta_m = 1.8, p = 0.2)
-rm(test_prop) #to check that it's being passed to LK
+#rm(test_prop) #to check that it's being passed to LK
 
 #the parameters are constrained  accordingly (lower and upper)
 
@@ -94,7 +94,7 @@ fit_BC <- optim(fn=func_loglik,  par=guess, lower=c(0, 0),
 #fit_BC <- nlm(f=func_loglik,  p=guess, typsize=guess,parameters = parameters_BC,
 #     test_prop=fake_test_prop_BC[1:nrow(dat_omic)], dat_omic=dat_omic)
 
-fit_BC 
+fit_BC$par
 
 #JS: Quick plotting likelihood surfaces
 #z <- matrix(NA, 50,50)
