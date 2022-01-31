@@ -97,18 +97,18 @@ fit_BC <- optim(fn=func_loglik,  par=guess, lower=c(0, 0),
 fit_BC 
 
 #JS: Quick plotting likelihood surfaces
-z <- matrix(NA, 50,50)
-x <- c(seq(1, 5, length.out=50))
-y <- c(seq(0.2,1 , length.out=50))
-for (i in 1:50){
- for (j in 1:50){
-  z[i,j] <- func_loglik(par=c(beta_m = x[i], p = y[j]),
-                        test_prop=fake_test_prop_BC[1:nrow(dat_omic)],dat_omic=dat_omic,
-                        parameters = parameters_BC)
- }
-}
-image(x,y,z)
-contour(x, y ,z, nlevels = 20, add=TRUE)
+#z <- matrix(NA, 50,50)
+#x <- c(seq(1, 5, length.out=50))
+#y <- c(seq(0.2,1 , length.out=50))
+#for (i in 1:50){
+# for (j in 1:50){
+#  z[i,j] <- func_loglik(par=c(beta_m = x[i], p = y[j]),
+#                        test_prop=fake_test_prop_BC[1:nrow(dat_omic)],dat_omic=dat_omic,
+#                        parameters = parameters_BC)
+# }
+#}
+#image(x,y,z)
+#contour(x, y ,z, nlevels = 20, add=TRUE)
 
 
 # beta_m <- seq(from=2.2,to=3.5,length=50)
@@ -126,13 +126,9 @@ contour(x, y ,z, nlevels = 20, add=TRUE)
 # 
 
 
-#this catches estimated parameter values from MLE 
-mle_est_BC <- c(beta_m=fit_BC$par[1], p=fit_BC$par[2], theta=0.1)
+#this catches estimated parameter values from MLE , and adds them to 'parameters' structure
+parameters[names(guess)] <- fit_BC$par
 
-#check parameter estimates 
-mle_est_BC
-
-parameters <- c(parameters_BC,mle_est_BC)
 
 #make prediction and projection with estimated parameters 
 
