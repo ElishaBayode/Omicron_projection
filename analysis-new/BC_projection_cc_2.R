@@ -72,8 +72,6 @@ incmut_in = 3
 simu_size = 1e5
 forecasts_days =30
 times = 1:nrow(dat_omic)
-init <- make_init()   #generate initial states. this function now uses the above 
-# variables for its default input. 
 
 #declaring fixed parameters 
 eff_date <-   ymd("2021-12-29")  # intervention date 
@@ -99,6 +97,7 @@ parameters <-         c(sigma=1/3, # incubation period (3 days) (to fixed)
 )
 
 parameters_BC <- parameters
+init <- make_init()   #generate initial states.
 
 # ---- run the model and compare the model to the data ----
 times <- 1:(nrow(dat_omic) + forecasts_days)
@@ -121,30 +120,27 @@ ggplot(data =inctest, aes(x=date, y = inc_reported))+geom_line() +
   ylim(c(0,50000)) + xlim(c(ymd("2021-11-20"), ymd("2022-02-28")))
 
 
-# ---- fit the model  ---- CC -have not changed from here. 
+# ---- fit the model  ---- CC -have not changed from here. JS: have updated from here (no param transforms), 
+# but it doesn't work because of '1: In (x$Er + x$Erv + x$Erw + x$Em + x$Emv + x$Emw) * test_prop :
+# longer object length is not a multiple of shorter object length' issue
 
 #fitting beta_r, beta_m, p and dispersion parameter 
 #guess <- c(log(0.7), logit(0.8),log(2.1),log(0.01))
 # JS: Switched log and logit to match likelihood_func.R
-guess <- c(log(1.8), logit(0.4))
+guess <- c(1.5, 0.1)
 
 #the parameters are constrained  accordingly (lower and upper)
 
-fit_BC <- optim(fn=func_loglik,  par=guess, lower=c(0.5, 0), 
+fit_BC <- optim(fn=func_loglik,  par=guess, lower=c(0, 0), 
                 upper = c(Inf, 1), method = "L-BFGS-B")
 
 # JS: testing out other ways to optimize:
-# Other bounds
-#fit_BC <- optim(fn=func_loglik,  par=guess, lower=c(log(1), log(0.4), 0.0001,  log(0)), 
-#                upper = c(log(2.5),log(2.5), 10, -log(0)), method = "L-BFGS-B")
 # No bounds
 #fit_BC <- optim(fn=func_loglik,  par=guess, method = "L-BFGS-B")
 #function 'nlm' instead of optim
 #fit_BC <- nlm(f=func_loglik,  p=guess, typsize=guess)
 
 fit_BC 
-c(exp(fit_BC$par[1]),  expit(fit_BC$par[2]))
-#exp(fit_BC$estimate)
 
 #JS: Quick plotting likelihood surfaces
 #z <- matrix(NA, 50,50)
@@ -174,8 +170,7 @@ c(exp(fit_BC$par[1]),  expit(fit_BC$par[2]))
 
 
 #this catches estimated parameter values from MLE 
-mle_est_BC <- c(beta_m=exp(fit_BC$par[1]), p=expit(fit_BC$par[2])
-                ,theta=0.1)
+mle_est_BC <- c(beta_m=fit_BC$par[1], p=fit_BC$par[2],theta=0.1)
 
 #check parameter estimates 
 mle_est_BC
