@@ -21,7 +21,7 @@ test_prop_BC <- filter(mytest_BC, date >= intro_date)$test_prop
 
 #fit (by eyeballing) test_prop to a sigmoid function 
 #test_prop_BC1 <- c(test_prop_BC[1:length(dat_omic$value)], rep(last(test_prop_BC),forecasts_days)) #ensuring the length is consistent
-fake_test_prop_BC <- (1 - (1-0.05)/(1 + exp(-0.25*(1:(length(test_prop_BC)+forecasts_days)-35))))
+fake_test_prop_BC <- (1 - (1-0.05)/(1 + exp(-0.25*(1:(nrow(dat_omic)+forecasts_days)-35))))
 plot(fake_test_prop_BC)
 lines(test_prop_BC)
 abline(v=length(dat_omic$day)) # where it will be cut off
@@ -131,7 +131,7 @@ parameters[names(guess)] <- fit_BC$par
 
 
 #make prediction and projection with estimated parameters 
-
+init_BC <- make_init()
 times <- 1:(nrow(dat_omic) + forecasts_days)
 out_BC <- as.data.frame(deSolve::ode(y=init_BC,time=times,func= sveirs,
                                      parms=parameters)) 
@@ -142,7 +142,7 @@ out_BC <- as.data.frame(deSolve::ode(y=init_BC,time=times,func= sveirs,
 
 
 #with test_prop 
-incidence_BC =  parameters[[1]]*(out_BC$Er + out_BC$Erv + out_BC$Erw +
+incidence_BC =  parameters[["sigma"]]*(out_BC$Er + out_BC$Erv + out_BC$Erw +
                                    out_BC$Em + out_BC$Emv +
                                    out_BC$Emw)*fake_test_prop_BC
 
