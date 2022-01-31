@@ -34,7 +34,7 @@ source("analysis-new/likelihood_func.R")
 
 forecasts_days <- 30 
 intro_date <-  ymd("2021-11-20")
-stop_date <- ymd("2022-01-24") # 
+stop_date <- ymd("2022-01-24")  
 #import data 
 #run BC_data.R (preferably line by line to check if there are 0 cases and NA's)
 dat = readRDS("data/BC-dat.rds")
@@ -47,8 +47,8 @@ test_prop_BC <- filter(mytest_BC, date >= intro_date)$test_prop
 
 
 #fit (by eyeballing) test_prop to a sigmoid function 
-test_prop_BC1 <- c(test_prop_BC[1:length(dat_omic$value)], rep(last(test_prop_BC),forecasts_days)) #ensuring the length is consistent
-fake_test_prop_BC <- (1 - (1-0.05)/(1 + exp(-0.25*(1:length(test_prop_BC1)-35))))
+#test_prop_BC1 <- c(test_prop_BC[1:length(dat_omic$value)], rep(last(test_prop_BC),forecasts_days)) #ensuring the length is consistent
+fake_test_prop_BC <- (1 - (1-0.05)/(1 + exp(-0.25*(1:(length(test_prop_BC)+forecasts_days)-35))))
 plot(fake_test_prop_BC)
 lines(test_prop_BC)
 
@@ -130,9 +130,11 @@ ggplot(data =inctest, aes(x=date, y = inc_reported))+geom_line() +
 guess <- c(1.5, 0.1)
 
 #the parameters are constrained  accordingly (lower and upper)
+rm(test_prop) #to check that it's being passed to LK
 
 fit_BC <- optim(fn=func_loglik,  par=guess, lower=c(0, 0), 
-                upper = c(Inf, 1), method = "L-BFGS-B")
+                upper = c(Inf, 1), method = "L-BFGS-B", 
+                test_prop=fake_test_prop_BC[1:nrow(dat_omic)], dat_omic=dat_omic)
 
 # JS: testing out other ways to optimize:
 # No bounds

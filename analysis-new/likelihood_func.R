@@ -1,4 +1,4 @@
-negbin.loglik <- function (params) {
+negbin.loglik <- function (params,times, test_prop) {
   x <-   as.data.frame(deSolve::ode(y=init,time=times,func= sveirs,
                                     parms= params)) 
   prediction <-  (x$Er+ x$Erv + x$Erw
@@ -8,10 +8,11 @@ negbin.loglik <- function (params) {
               log=TRUE))
 }
 
-func_loglik <- function (par,test_prop,dat_omic) {
+func_loglik <- function (par,test_prop, dat_omic) {
   #params <- c(parameters, beta_r= exp(par[1]),beta_m=exp(par[2]), p=expit(par[3]),theta=exp(par[4]))
   params <- c(parameters, beta_m=(par[1]), p=(par[2]),theta=0.1)
-  -negbin.loglik(params)
+  times <- 1:nrow(dat_omic)
+  -negbin.loglik(params, times =  times, test_prop)
 }
 
 
