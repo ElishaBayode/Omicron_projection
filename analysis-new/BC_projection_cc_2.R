@@ -127,33 +127,34 @@ ggplot(data =inctest, aes(x=date, y = inc_reported))+geom_line() +
 #fitting beta_r, beta_m, p and dispersion parameter 
 #guess <- c(log(0.7), logit(0.8),log(2.1),log(0.01))
 # JS: Switched log and logit to match likelihood_func.R
-guess <- c(1.5, 0.1)
+guess <- c(beta_m = 1.8, p = 0.2)
 
 #the parameters are constrained  accordingly (lower and upper)
 rm(test_prop) #to check that it's being passed to LK
 
 fit_BC <- optim(fn=func_loglik,  par=guess, lower=c(0, 0), 
-                upper = c(Inf, 1), method = "L-BFGS-B", 
+                upper = c(Inf, 1), method = "L-BFGS-B", parameters = parameters_BC,
                 test_prop=fake_test_prop_BC[1:nrow(dat_omic)], dat_omic=dat_omic)
 
-# JS: testing out other ways to optimize:
-# No bounds
-#fit_BC <- optim(fn=func_loglik,  par=guess, method = "L-BFGS-B")
-#function 'nlm' instead of optim
-#fit_BC <- nlm(f=func_loglik,  p=guess, typsize=guess)
+# JS: testing out other ways to optimize - function 'nlm' instead of optim
+#fit_BC <- nlm(f=func_loglik,  p=guess, typsize=guess,parameters = parameters_BC,
+#     test_prop=fake_test_prop_BC[1:nrow(dat_omic)], dat_omic=dat_omic)
 
 fit_BC 
 
 #JS: Quick plotting likelihood surfaces
-#z <- matrix(NA, 50,50)
-#x <- c(seq(0, 5, length.out=50))
-#y <- c(seq(0, 5, length.out=50))
-#for (i in 1:50){
-#  for (j in 1:50){
-#   z[i,j] <- func_loglik(par=c(log(x[i]), log(y[j]), log(0.5), log(0.1)),test_prop,dat_omic)
-#  }
-#}
-#image(x,y,z)
+# z <- matrix(NA, 50,50)
+# x <- c(seq(0, 5, length.out=50))
+# y <- c(seq(0.05,1 , length.out=50))
+# for (i in 1:50){
+#   for (j in 1:50){
+#     z[i,j] <- func_loglik(par=c(beta_m = x[i], p = y[j]),
+#                           test_prop=fake_test_prop_BC[1:nrow(dat_omic)],dat_omic=dat_omic,
+#                           parameters = parameters_BC)
+#   }
+# }
+# image(x,y,z)
+# contour(x, y ,z, nlevels = 20, add=TRUE)
 
 
 # beta_m <- seq(from=2.2,to=3.5,length=50)
