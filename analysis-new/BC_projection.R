@@ -1,7 +1,5 @@
 
-########## ___EB: moved  libraries to functions.R 
-
-
+########## Source required files
 source("analysis-new/functions.R")
 source("analysis-new/likelihood_func.R")
 #run BC_data.R line by line (if possible) :sometimes case data are incomplete, with 0's  and NA's 
@@ -72,7 +70,7 @@ extendtp <- function(n=100, test_prop=test_prop){
 N=5.07e6
 N_pop=N
 vaxlevel_in = 0.82 # portion of the pop vaccinated at start time 
-port_wane_in = 0.04 # portion boosted at start tie 
+port_wane_in = 0.04 # portion boosted at start time 
 past_infection_in = 0.1  #increased this from 0.1 to 0.18 # total in R at start time
 incres_in = 470 # resident strain (delta) incidence at start 
 incmut_in = 3 # new (omicron) inc at stat 
@@ -152,7 +150,6 @@ func_loglik(fit_BC$par, test_prop, dat_omic,parameters)
 parameters[names(guess)] <- fit_BC$par
 plot.loglik.info(parameters, 1:nrow(dat_omic), test_prop) # cc's sanity check plot 
 gg = simple_prev_plot(parameters, numdays = 190); gg  # cc's simple prevalence plot 
-
 
 
 
