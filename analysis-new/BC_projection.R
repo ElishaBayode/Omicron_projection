@@ -7,31 +7,42 @@ library(data.table)
  
 forecasts_days <- 30 
 intro_date <-  ymd("2021-11-20")
-stop_date <- ymd("2022-01-24") # make it uniform 
+stop_date <- ymd("2022-01-30")  
 #import data 
 #run BC_data.R (preferably line by line to check if there are 0 cases and NA's)
 dat = readRDS("data/BC-dat.rds")
 #include Omicron wave only
 dat <- dat %>% filter(date >= intro_date &  date <= stop_date)
 dat_omic <- dat
-dat_omic <- filter(dat_omic, date >= intro_date) %>% select(c("day", "value"))
+dat_omic <- filter(dat_omic, date >= intro_date) %>% select(c("day", "value", "date"))
 dat_omic$day <- 1:nrow(dat_omic)
-test_prop_BC <- filter(mytest_BC, date >= intro_date)$test_prop
 
 
-#fit (by eyeballing) test_prop to a sigmoid function 
-#test_prop_BC1 <- c(test_prop_BC[1:length(dat_omic$value)], rep(last(test_prop_BC),forecasts_days)) #ensuring the length is consistent
-fake_test_prop_BC <- (1 - (1-0.2)/(1 + exp(-0.25*(1:(nrow(dat_omic)+forecasts_days)-45))))
-plot(fake_test_prop_BC)
-lines(test_prop_BC)
-abline(v=length(dat_omic$day)) # where it will be cut off at the next line:
+#run BC_data.R to get mytest_BC
+#-------EB: test_prop now has dates and this ensures it starts at the right date 
+#-------
+tp_approx <- tp_approx_fit(mytest_BC=mytest_BC, dat= dat_omic, forecasts_days=forecasts_days, howlow = 0.2, 
+             slope = 0.25,  midpoint=45, intro_date= intro_date, stop_date=stop_date)
+
+plot_fit <- tp_approx[1]
+plot_fit 
+
+### test_prop for fit and projection 
+test_prop_proj <- data.frame(tp_approx[2])
+
+
+#test_prop_fit: for fitting alone (set forecasts_days to 0)
+
+
 
 #subset for fitting alone (length of data)
-test_prop_BC <- fake_test_prop_BC[1:length(dat_omic$day)]
+test_prop_BC <- test_prop_proj$tp[1:length(dat_omic$day)] #or set forecasts_days to 0 in tp_approx_fit() above 
+
 test_prop <- test_prop_BC 
 
+
 # ---- cc's function to modify test_prop ----
-# start lowring it even more when it hits the startlower value
+# start lowering it even more when it hits the startlower value
 # lower it by a linear function , ending at endfraction of its final value
 # ie if endfraction is 0.5, the final value after adjustment is 1/2 the value before
 # adjustment 
@@ -54,10 +65,11 @@ ggplot(data = data.frame(date = intro_date+1:length(test_prop),
 # --- cc's function to append values to test_prop to stop getting length errors ----
 # see changes to how test_prop is used in the likelihood functions
 # basically if test_prop does not start at the same date as the simulation, you are hooped 
-extendtp <- function(n, test_prop){
+extendtp <- function(n=100, test_prop=test_prop){
   return(c(test_prop, rep(test_prop[length(test_prop)], n-length(test_prop))))
 }
   
+ 
 #set values to generate initial conditions with make_init()
 N=5.07e6
 N_pop=N
@@ -73,7 +85,7 @@ times = 1:nrow(dat_omic)
 
 
 
-#declaring fixed parameters 
+#declaring  parameters 
 eff_date <-   ymd("2021-12-31")  # intervention date 
 parameters <-         c(sigma=1/3, # incubation period (3 days) (to fixed)
                         gamma=1/(5), #recovery rate (fixed)
@@ -166,7 +178,8 @@ out_BC <- as.data.frame(deSolve::ode(y=init,time=times,func= sveirs,
 #with test_prop 
 incidence_BC =  parameters[["p"]]*parameters[["sigma"]]*(out_BC$Er + out_BC$Erv + out_BC$Erw +
                                    out_BC$Em + out_BC$Emv +
-                                   out_BC$Emw)*extendtp( nrow(out_BC), test_prop)
+                                   out_BC$Emw)*extendtp(nrow(out_BC), test_prop)
+
 plot(1:nrow(dat_omic), incidence_BC[1:nrow(dat_omic)])
 uncert_bound_BC = raply(simu_size,rnbinom(n=length(incidence_BC),
                                           mu=incidence_BC,
