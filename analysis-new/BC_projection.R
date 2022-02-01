@@ -24,7 +24,7 @@ test_prop_BC <- filter(mytest_BC, date >= intro_date)$test_prop
 fake_test_prop_BC <- (1 - (1-0.2)/(1 + exp(-0.25*(1:(nrow(dat_omic)+forecasts_days)-45))))
 plot(fake_test_prop_BC)
 lines(test_prop_BC)
-abline(v=length(dat_omic$day)) # where it will be cut off
+abline(v=length(dat_omic$day)) # where it will be cut off at the next line:
 
 #subset for fitting alone (length of data)
 test_prop_BC <- fake_test_prop_BC[1:length(dat_omic$day)]
@@ -32,7 +32,6 @@ test_prop <- test_prop_BC
 
 
 #set values to generate initial conditions with make_init()
-
 N=5.07e6
 N_pop=N
 vaxlevel_in = 0.82 # portion of the pop vaccinated at start time 
@@ -58,17 +57,17 @@ parameters <-         c(sigma=1/3, # incubation period (3 days) (to fixed)
                         w3= 1/(0.5*365),# waning rate Rw to W (fixed)
                         ve=1, # I think this should be 1. it is not really efficacy  ( fixed)
                         beta_r=0.555, #transmission rate (to estimate) (0.35)
-                        beta_m=1.76, #transmission rate (to estimate)(*1.9)
+                        beta_m=1.1, #transmission rate (to estimate)(*1.9)
                         epsilon_r = (1-0.8), # % this should be 1-ve 
                         epsilon_m = 1-0.3, #(1-0.25)?(1-0.6), # % escape capacity #(fixed)
                         b= 0.006, # booster rate  (fixed)
                         beff = 0.7, # booster efficacy
-                        wf=0.05, # protection for newly recoverd #0.2
+                        wf=0.05, # protection for newly recovered #0.2
                         N=5e6,
                         stngcy= 0.4,#0.78, #(*%(reduction)) strength of intervention (reduction in beta's)
                         eff_t = as.numeric(eff_date - intro_date),
-                        p = 0.17,
-                        theta = 0.1
+                        p = 0.5, #negative binomial mean
+                        theta = 0.1 #negative binomial dispersion
 
 )
 init <- make_init()   #generate initial states
@@ -79,24 +78,52 @@ source("analysis-new/mod_fitting_setup.R")
 source("analysis-new/likelihood_func.R")
 
 
+
+
+# ---- run the model and compare the model to the data ----
+#      (Without fitting anything)
+times <- 1:(nrow(dat_omic) + forecasts_days)
+outtest <- as.data.frame(deSolve::ode(y=init,time=times,func= sveirs,
+                                      parms=parameters)) 
+inctest = get_total_incidence(outtest, parameters = parameters)
+inctest$date = dat$date[1]+inctest$time
+thisvec = c(test_prop, rep(test_prop[length(test_prop)], nrow(outtest)-length(test_prop))) 
+inctest$inc_reported = inctest$inc_tot*thisvec
+
+# sanity check - should have delta in a decline of about 2% /day (-0.02) and around 
+# a 0.2 to 0.25 difference between the two, so omicron at about 0.2 
+get_growth_rate(outtest, startoffset = 2, duration = 10)
+
+ggplot(data =inctest, aes(x=date, y = inc_reported))+geom_line() +
+  geom_line(aes(x=date, y= inc_res), color = "blue") +
+  geom_line(aes(x=date, y= inc_mut), color = "red") +
+  geom_point(data = dat, aes(x=date, y=cases), alpha=0.5) +
+  ylim(c(0,20000)) + xlim(c(ymd("2021-11-20"), ymd("2022-02-28")))
+
+
+
+# ---- fit the model  
 # fitting any subset of parameters
-guess <- c(beta_m = 1.8, p = 0.2)
+guess <- c(beta_m = 1.8)
 #rm(test_prop) #to check that it's being passed to LK
 
 #the parameters are constrained  accordingly (lower and upper)
 
-fit_BC <- optim(fn=func_loglik,  par=guess, lower=c(0, 0), 
-                upper = c(Inf, 1), method = "L-BFGS-B", parameters = parameters_BC,
-                test_prop=fake_test_prop_BC[1:nrow(dat_omic)], dat_omic=dat_omic)
+fit_BC <- optim(fn=func_loglik,  par=guess, lower=c(0), 
+                upper = c(Inf), method = "L-BFGS-B", parameters = parameters_BC,
+                test_prop=test_prop, dat_omic=dat_omic)
 
 
 # JS: testing out other ways to optimize - function 'nlm' instead of optim
 #fit_BC <- nlm(f=func_loglik,  p=guess, typsize=guess,parameters = parameters_BC,
-#     test_prop=fake_test_prop_BC[1:nrow(dat_omic)], dat_omic=dat_omic)
+#     test_prop=test_prop, dat_omic=dat_omic)
 
-fit_BC$par
+fit_BC
 
-#JS: Quick plotting likelihood surfaces
+##################
+#JS: Sanity checks/exploration
+# 1. are we just getting the lower or upper bounds out? Is optim taking plenty of steps? (fit_BC$counts)
+# 2. lh surface:
 #z <- matrix(NA, 50,50)
 #x <- c(seq(1, 5, length.out=50))
 #y <- c(seq(0.2,1 , length.out=50))
@@ -109,6 +136,7 @@ fit_BC$par
 #}
 #image(x,y,z)
 #contour(x, y ,z, nlevels = 20, add=TRUE)
+################
 
 
 # beta_m <- seq(from=2.2,to=3.5,length=50)
@@ -131,15 +159,14 @@ parameters[names(guess)] <- fit_BC$par
 
 
 #make prediction and projection with estimated parameters 
-init_BC <- make_init()
 times <- 1:(nrow(dat_omic) + forecasts_days)
-out_BC <- as.data.frame(deSolve::ode(y=init_BC,time=times,func= sveirs,
+out_BC <- as.data.frame(deSolve::ode(y=init,time=times,func= sveirs,
                                      parms=parameters)) 
 
 
-#test_prop is shorter than projection, so we'll use the last value of test_prop for the rest of the simulation 
-#test_prop_BC <- c(test_prop[1:length(dat_omic$value)], rep(last(test_prop),forecasts_days))
 
+# Decision here about whether to project test_prop forward (use fake_test_prop_BC) or keep same test_prop
+# as last day (use thisvec)
 
 #with test_prop 
 incidence_BC =  parameters[["sigma"]]*(out_BC$Er + out_BC$Erv + out_BC$Erw +
@@ -192,7 +219,7 @@ parameters_2 <- c(parameters_BC,mle_est_BC_2)
 
 #make prediction and projection with estimated parameters 
 
-out_BC_2 <- as.data.frame(deSolve::ode(y=init_BC,time=times,func= sveirs,
+out_BC_2 <- as.data.frame(deSolve::ode(y=init,time=times,func= sveirs,
                                      parms=parameters_2)) 
 
 
@@ -230,10 +257,10 @@ project_dat_BC_rel =readRDS(file.path("data/BC_no_constraints.rds"))
 
 
 get_true_incidence_plot(times, start_date=intro_date, 
-                        parameters_base=c(parameters_BC,mle_est_BC), init=init_BC)
+                        parameters_base=c(parameters_BC,mle_est_BC), init=init)
 
 get_true_incidence_prop_plot(times, start_date=intro_date, 
-                             parameters_base=c(parameters_BC,mle_est_BC), init=init_BC)
+                             parameters_base=c(parameters_BC,mle_est_BC), init=init)
 
 
 
