@@ -356,9 +356,9 @@ return(  ggplot(prev, aes(x=date, y=preval))+geom_line() +
     theme( axis.title.x = element_blank()))
 }
 
-compare_two_preval = function(pars1, pars2,name1 = "first", name2="second", 
+compare_two_preval = function(pars1, pars2,state0=init, name1 = "first", name2="second", 
                               returnplot = T,numsamples = 1e3, numdays = 300, dispar=0.1, 
-                              mode = "static") { 
+                              mode = "static", scale = 1) { 
   if (mode == "static") { 
     myfunction = sveirs 
   } else {
@@ -396,9 +396,9 @@ compare_two_preval = function(pars1, pars2,name1 = "first", name2="second",
   proj2$name = name2
   proj = rbind(proj1, proj2)
   if (returnplot) { 
-    gg =   ggplot(data = proj) + geom_line(aes(x=date,y=`50%`, color=name),
+    gg =   ggplot(data = proj) + geom_line(aes(x=date,y=`50%`/scale, color=name),
                                            size=1.5,alpha=0.6) +
-      geom_ribbon(aes(x=date,ymin=`2.5%`,ymax=`97.5%`, fill=name),
+      geom_ribbon(aes(x=date,ymin=`2.5%`/scale,ymax=`97.5%`/scale, fill=name),
                   alpha=0.2, size = 1.5)+
       ylab("Prevalence") + theme_light() + theme(legend.position = "bottom",
                                                  axis.title.x = element_blank(),
