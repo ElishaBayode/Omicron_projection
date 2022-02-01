@@ -15,7 +15,7 @@ func_loglik <- function (par,test_prop,dat_omic,parameters) {
   if(!all(names(par) %in% names(parameters))) stop('Names of pars to fit do not match names in parameters object')
   parameters[names(par)] <- par
   times <- 1:nrow(dat_omic)
-  -negbin.loglik(parameters, times =  times, test_prop)
+  -negbin.loglik(params = parameters, times =  times, test_prop)
 }
 
 

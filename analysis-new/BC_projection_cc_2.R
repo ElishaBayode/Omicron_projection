@@ -84,7 +84,7 @@ parameters <-         c(sigma=1/3, # incubation period (3 days) (to fixed)
                         w3= 1/(0.5*365),# waning rate Rw to W (fixed)
                         ve=1, # I think this should be 1. it is not really efficacy  ( fixed)
                         beta_r=0.555, #transmission rate (to estimate) (0.35)
-                        #beta_m=0.8*2.2, #transmission rate (to estimate)(*1.9)
+                        beta_m=1.1, #transmission rate (to estimate)(*1.9)
                         epsilon_r = (1-0.8), # % this should be 1-ve 
                         epsilon_m = 1-0.3, #(1-0.25)?(1-0.6), # % escape capacity #(fixed)
                         b= 0.006, # booster rate  (fixed)
@@ -92,8 +92,9 @@ parameters <-         c(sigma=1/3, # incubation period (3 days) (to fixed)
                         wf=0.05, # protection for newly recoverd #0.2
                         N=5e6,
                         stngcy= 0.4,#0.78, #(*%(reduction)) strength of intervention (reduction in beta's)
-                        eff_t = as.numeric(eff_date - intro_date)
-
+                        eff_t = as.numeric(eff_date - intro_date),
+                        p = 0.17,
+                        theta = 0.1
 )
 
 parameters_BC <- parameters
@@ -120,9 +121,7 @@ ggplot(data =inctest, aes(x=date, y = inc_reported))+geom_line() +
   ylim(c(0,50000)) + xlim(c(ymd("2021-11-20"), ymd("2022-02-28")))
 
 
-# ---- fit the model  ---- CC -have not changed from here. JS: have updated from here (no param transforms), 
-# but it doesn't work because of '1: In (x$Er + x$Erv + x$Erw + x$Em + x$Emv + x$Emw) * test_prop :
-# longer object length is not a multiple of shorter object length' issue
+# ---- fit the model  ---- CC -have not changed from here. JS: have updated from here
 
 #fitting beta_r, beta_m, p and dispersion parameter 
 #guess <- c(log(0.7), logit(0.8),log(2.1),log(0.01))
