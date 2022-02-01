@@ -44,7 +44,7 @@ make_init = function( N=N_pop, vaxlevel = vaxlevel_in,
                       port_wane = port_wane_in, 
                       past_infection = past_infection_in, incres = incres_in, incmut = incmut_in, 
                       pars=as.list(parameters)) {
-  ff=6/7 # fudge factor . hard to get incidence right since it depends on other pars too (2/3)
+  ff=1 # fudge factor . hard to get incidence right since it depends on other pars too (2/3)
   Vtot = vaxlevel*N*(1-port_wane) # allocate to V, Ev, Iv
   Wtot = vaxlevel*N*port_wane # allocate to W, Ew, Iw 
   # some have had covid. but they might also have been vaccinated. 
@@ -365,7 +365,7 @@ compare_two_preval = function(pars1, pars2,state0=init, name1 = "first", name2="
     myfunction = sveirs_evol
   }
   # run the first 
-  out1 <- as.data.frame(deSolve::ode(y=init_BC,time=1:numdays,func= myfunction,
+  out1 <- as.data.frame(deSolve::ode(y=state0,time=1:numdays,func= myfunction,
                                      parms=pars1)) 
   prev1 =  (out1$Ir + out1$Irv + out1$Irw +
               out1$Im + out1$Imv +
@@ -380,7 +380,7 @@ compare_two_preval = function(pars1, pars2,state0=init, name1 = "first", name2="
                          ymd(intro_date)-1+numdays, 1))
   proj1$name = name1
   # run the second 
-  out2 <- as.data.frame(deSolve::ode(y=init_BC,time=1:numdays,func= myfunction,
+  out2 <- as.data.frame(deSolve::ode(y=state0,time=1:numdays,func= myfunction,
                                      parms=pars2)) 
   prev2 =  (out2$Ir + out2$Irv + out2$Irw +
               out2$Im + out2$Imv +
