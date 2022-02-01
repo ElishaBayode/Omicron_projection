@@ -2,6 +2,7 @@
 ########## Libraries and source files
 require(deSolve)
 require(CanCovidData)
+library(plyr)
 library(tidyverse)
 library(tidyr)
 require(ggplot2)
@@ -12,10 +13,9 @@ library(data.table)
 
 set.seed(3242)
 
-source("analysis-new/BC_data.R")
 source("analysis-new/functions.R")
 source("analysis-new/likelihood_func.R")
-
+source("analysis-new/BC_data.R")
 
 
 
