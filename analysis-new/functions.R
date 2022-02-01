@@ -36,7 +36,7 @@ make_init = function( N=N_pop, vaxlevel = vaxlevel_in,
                       port_wane = port_wane_in, 
                       past_infection = past_infection_in, incres = incres_in, incmut = incmut_in, 
                       pars=as.list(parameters)) {
-  ff=6/7 # fudge factor . hard to get incidence right since it depends on other pars too (2/3)
+  ff=1 # fudge factor . hard to get incidence right since it depends on other pars too (2/3)
   Vtot = vaxlevel*N*(1-port_wane) # allocate to V, Ev, Iv
   Wtot = vaxlevel*N*port_wane # allocate to W, Ew, Iw 
   # some have had covid. but they might also have been vaccinated. 
@@ -348,16 +348,16 @@ return(  ggplot(prev, aes(x=date, y=preval))+geom_line() +
     theme( axis.title.x = element_blank()))
 }
 
-compare_two_preval = function(pars1, pars2,name1 = "first", name2="second", 
+compare_two_preval = function(pars1, pars2,state0=init, name1 = "first", name2="second", 
                               returnplot = T,numsamples = 1e3, numdays = 300, dispar=0.1, 
-                              mode = "static") { 
+                              mode = "static", scale = 1) { 
   if (mode == "static") { 
     myfunction = sveirs 
   } else {
     myfunction = sveirs_evol
   }
   # run the first 
-  out1 <- as.data.frame(deSolve::ode(y=init_BC,time=1:numdays,func= myfunction,
+  out1 <- as.data.frame(deSolve::ode(y=state0,time=1:numdays,func= myfunction,
                                      parms=pars1)) 
   prev1 =  (out1$Ir + out1$Irv + out1$Irw +
               out1$Im + out1$Imv +
@@ -372,7 +372,7 @@ compare_two_preval = function(pars1, pars2,name1 = "first", name2="second",
                          ymd(intro_date)-1+numdays, 1))
   proj1$name = name1
   # run the second 
-  out2 <- as.data.frame(deSolve::ode(y=init_BC,time=1:numdays,func= myfunction,
+  out2 <- as.data.frame(deSolve::ode(y=state0,time=1:numdays,func= myfunction,
                                      parms=pars2)) 
   prev2 =  (out2$Ir + out2$Irv + out2$Irw +
               out2$Im + out2$Imv +
@@ -388,9 +388,9 @@ compare_two_preval = function(pars1, pars2,name1 = "first", name2="second",
   proj2$name = name2
   proj = rbind(proj1, proj2)
   if (returnplot) { 
-    gg =   ggplot(data = proj) + geom_line(aes(x=date,y=`50%`, color=name),
+    gg =   ggplot(data = proj) + geom_line(aes(x=date,y=`50%`/scale, color=name),
                                            size=1.5,alpha=0.6) +
-      geom_ribbon(aes(x=date,ymin=`2.5%`,ymax=`97.5%`, fill=name),
+      geom_ribbon(aes(x=date,ymin=`2.5%`/scale,ymax=`97.5%`/scale, fill=name),
                   alpha=0.2, size = 1.5)+
       ylab("Prevalence") + theme_light() + theme(legend.position = "bottom",
                                                  axis.title.x = element_blank(),
