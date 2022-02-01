@@ -67,7 +67,7 @@ test_BCspline  <- make_case_splines(mydat_BC)
 
 mytest_BC = get_testprop(changedate = ymd("2021-12-21"), 
                          mysplines = test_BCspline, 
-                         halftime = 35, steepness = 0.15)
+                         halftime = 60, steepness = 0.05)
 glimpse(mytest_BC)
 ggplot(mytest_BC, aes(x=date, y=test_prop)) + geom_line()
 

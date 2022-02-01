@@ -104,13 +104,13 @@ ggplot(data =inctest, aes(x=date, y = inc_reported))+geom_line() +
 
 # ---- fit the model  
 # fitting any subset of parameters
-guess <- c(beta_m = 1.8)
+guess <- c(beta_m = 1.8, stngcy = 0.2)
 #rm(test_prop) #to check that it's being passed to LK
 
 #the parameters are constrained  accordingly (lower and upper)
 
-fit_BC <- optim(fn=func_loglik,  par=guess, lower=c(0), 
-                upper = c(Inf), method = "L-BFGS-B", parameters = parameters_BC,
+fit_BC <- optim(fn=func_loglik,  par=guess, lower=c(0, 0), 
+                upper = c(Inf, 1), method = "L-BFGS-B", parameters = parameters_BC,
                 test_prop=test_prop, dat_omic=dat_omic)
 
 
@@ -119,6 +119,43 @@ fit_BC <- optim(fn=func_loglik,  par=guess, lower=c(0),
 #     test_prop=test_prop, dat_omic=dat_omic)
 
 fit_BC
+
+func_loglik(fit_BC$par, test_prop, dat_omic,parameters)
+func_loglik(c(beta_m=0.845, stngcy = 0.359), test_prop, dat_omic, parameters)
+
+
+#this catches estimated parameter values from MLE , and adds them to 'parameters' structure
+parameters[names(guess)] <- fit_BC$par
+
+# --- check fit: make prediction and projection with estimated parameters  ---- 
+times <- 1:(nrow(dat_omic) + forecasts_days)
+out_BC <- as.data.frame(deSolve::ode(y=init,time=times,func= sveirs,
+                                     parms=parameters)) 
+#with test_prop 
+incidence_BC =  parameters[["sigma"]]*(out_BC$Er + out_BC$Erv + out_BC$Erw +
+                                   out_BC$Em + out_BC$Emv +
+                                   out_BC$Emw)*fake_test_prop_BC
+uncert_bound_BC = raply(simu_size,rnbinom(n=length(incidence_BC),
+                                          mu=parameters[["p"]]*incidence_BC,
+                                          size=1/parameters[["theta"]]))
+project_dat_BC =  as.data.frame(aaply(uncert_bound_BC 
+                                      ,2,quantile,na.rm=TRUE,probs=c(0.025,0.5,0.975))) %>% 
+  mutate(date=seq.Date(ymd(intro_date),
+                       ymd(intro_date)-1+length(times), 1))
+#add dat to data for plotting 
+dat_reported <- dat_omic  %>% mutate(date=seq.Date(ymd(intro_date),
+                                                   ymd(intro_date)-1+length(dat_omic$day), 1))
+
+ggplot() + geom_line(data=project_dat_BC,aes(x=date,y=`50%`), col="green",size=1.5,alpha=0.4) +
+  geom_ribbon(data=project_dat_BC,aes(x=date,ymin=`2.5%`,ymax=`97.5%`),fill='darkgreen',alpha=0.1, size = 1.5)+
+  geom_point(data=dat_reported,aes(x=date, y=value),color='grey48', alpha=0.8, size = 1.5)
+
+# ---- end check fit ---- 
+
+
+
+# ---- do not worry about anything below here ---- 
+
 
 ##################
 #JS: Sanity checks/exploration
@@ -152,76 +189,6 @@ fit_BC
 # ggplot(grid,aes(x=x,y=y,z=loglik,fill=loglik))+
 #   geom_tile()+geom_contour(binwidth=1)
 # 
-
-
-#this catches estimated parameter values from MLE , and adds them to 'parameters' structure
-parameters[names(guess)] <- fit_BC$par
-
-
-#make prediction and projection with estimated parameters 
-times <- 1:(nrow(dat_omic) + forecasts_days)
-out_BC <- as.data.frame(deSolve::ode(y=init,time=times,func= sveirs,
-                                     parms=parameters)) 
-
-
-
-# Decision here about whether to project test_prop forward (use fake_test_prop_BC) or keep same test_prop
-# as last day (use thisvec)
-
-#with test_prop 
-incidence_BC =  parameters[["sigma"]]*(out_BC$Er + out_BC$Erv + out_BC$Erw +
-                                   out_BC$Em + out_BC$Emv +
-                                   out_BC$Emw)*fake_test_prop_BC
-
-
-
-uncert_bound_BC = raply(simu_size,rnbinom(n=length(incidence_BC),
-                                          mu=parameters[["p"]]*incidence_BC,
-                                          size=1/parameters[["theta"]]))
-
-project_dat_BC =  as.data.frame(aaply(uncert_bound_BC 
-                                      ,2,quantile,na.rm=TRUE,probs=c(0.025,0.5,0.975))) %>% 
-  mutate(date=seq.Date(ymd(intro_date),
-                       ymd(intro_date)-1+length(times), 1))
-
-#####################check fit ######################
-
-#add dat to data for plotting 
-dat_reported <- dat_omic  %>% mutate(date=seq.Date(ymd(intro_date),
-                                                   ymd(intro_date)-1+length(dat_omic$day), 1))
-
-ggplot() + geom_line(data=project_dat_BC,aes(x=date,y=`50%`), col="green",size=1.5,alpha=0.4) +
-  geom_ribbon(data=project_dat_BC,aes(x=date,ymin=`2.5%`,ymax=`97.5%`),fill='darkgreen',alpha=0.1, size = 1.5)+
-  geom_point(data=dat_reported,aes(x=date, y=value),color='grey48', alpha=0.8, size = 1.5)
-
-
-
-##########################
-
-#re-estimate parameters without test_prop 
-
-guess_2  <- c(log(0.81), logit(0.8),log(2.1),log(0.01))
-
-#the parameters are constrained  accordingly (lower and upper)
-
-fit_BC_2 <- optim(fn=func_loglik_2,  par=guess_2, lower=c(log(0.6), log(2), 0.0001,  log(0.1)), 
-                upper = c(log(0.8),log(2.5), 0.001,  log(0)), method = "L-BFGS-B")
-
-
-#this catches estimated parameter values from MLE 
-mle_est_BC_2 <- c(beta_r=exp(fit_BC$par[1]),beta_m=exp(fit_BC$par[2]), p=expit(fit_BC$par[3])
-                ,theta=exp(fit_BC$par[4]))
-
-#check parameter estimates 
-mle_est_BC_2
-
-parameters_2 <- c(parameters_BC,mle_est_BC_2)
-
-#make prediction and projection with estimated parameters 
-
-out_BC_2 <- as.data.frame(deSolve::ode(y=init,time=times,func= sveirs,
-                                     parms=parameters_2)) 
-
 
 
 

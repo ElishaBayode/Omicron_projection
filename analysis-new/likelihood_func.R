@@ -9,6 +9,18 @@ negbin.loglik <- function (params,times, test_prop) {
 }
 
 
+plot.loglik.info <- function(params,times, test_prop) { 
+  x <-   as.data.frame(deSolve::ode(y=init,time=times,func= sveirs,
+                                    parms= params)) 
+  prediction <-  (x$Er+ x$Erv + x$Erw
+                  + x$Em+ x$Emv + x$Emw)*test_prop[1:nrow(x)]
+  tmp = data.frame(time =x$time[1:nrow(dat_omic)], model = params["p"]*prediction[1:nrow(dat_omic)], data = dat_omic$value)
+  return(ggplot(data = tmp, aes(x=time, y=model))+geom_line() + geom_point(aes(x=time, y=data), alpha=0.5))
+#  sum(dnbinom(x=dat_omic$value,
+#              mu=params["p"]*prediction,size=1/params["theta"],
+#              log=TRUE))
+}
+
 func_loglik <- function (par,test_prop,dat_omic,parameters) {
   #params <- c(parameters, beta_m=(par[1]), p=(par[2]),theta=0.1)
   # 'par' contains the parameters to be fit. Replace their default value in 'parameters'

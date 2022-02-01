@@ -81,7 +81,7 @@ pars2["w2"]=1/(0.3*365)
 
 gg = compare_two_preval(pars1, pars2,
                          name1="Baseline",  name2 = "More reinfection in vaccinated", 
-                         numdays =600,dispar=0.05, mode = "evol") 
+                         numdays =600,dispar=0.05, mode = "evol", scale = 5.07e6) 
 gg 
 
 c <- 1 - mypars["stngcy"]/(1+ exp(-1.25*(1:300-mypars["eff_t"]))) 
