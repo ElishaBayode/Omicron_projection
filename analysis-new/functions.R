@@ -304,11 +304,11 @@ compare_two_incid = function(pars1, pars2,name1 = "first", name2="second",
   # run the first 
   out1 <- as.data.frame(deSolve::ode(y=init_BC,time=1:numdays,func= myfunction,
                                      parms=pars1)) 
-  inc1 =  pars1["sigma"]*(out1$Er + out1$Erv + out1$Erw +
+  inc1 =  pars1[["p"]]*pars1["sigma"]*(out1$Er + out1$Erv + out1$Erw +
                             out1$Em + out1$Emv +
                             out1$Emw)
   unc1 = raply(numsamples,rnbinom(n=length(inc1),
-                                  mu=pars1[["p"]]*inc1,
+                                  mu=inc1,
                                   size=1/dispar))
   
   proj1 =  as.data.frame(aaply(unc1,2,quantile,
@@ -319,11 +319,11 @@ compare_two_incid = function(pars1, pars2,name1 = "first", name2="second",
   # run the second 
   out2 <- as.data.frame(deSolve::ode(y=init_BC,time=1:numdays,func= myfunction,
                                      parms=pars2)) 
-  inc2 =  pars2["sigma"]*(out2$Er + out2$Erv + out2$Erw +
+  inc2 =  pars2[["p"]]*pars2["sigma"]*(out2$Er + out2$Erv + out2$Erw +
                             out2$Em + out2$Emv +
                             out2$Emw)
   unc2 = raply(numsamples,rnbinom(n=length(inc2),
-                                  mu=pars2[["p"]]*inc2,
+                                  mu=inc2,
                                   size=1/dispar))
   
   proj2 =  as.data.frame(aaply(unc2,2,quantile,
@@ -346,6 +346,15 @@ compare_two_incid = function(pars1, pars2,name1 = "first", name2="second",
   }
 }
 
+simple_prev_plot = function(pars1, numdays = 90){
+  out1 <- as.data.frame(deSolve::ode(y=init_BC,time=1:numdays,func= sveirs,
+                                     parms=pars1)) 
+  prev1 =  (out1$Ir + out1$Irv + out1$Irw + out1$Im + out1$Imv +out1$Imw)
+  prev= data.frame(date = seq.Date(ymd(intro_date),ymd(intro_date)-1+numdays, 1),
+                   preval = prev1)
+return(  ggplot(prev, aes(x=date, y=preval))+geom_line() + 
+    theme( axis.title.x = element_blank()))
+}
 
 compare_two_preval = function(pars1, pars2,name1 = "first", name2="second", 
                               returnplot = T,numsamples = 1e3, numdays = 300, dispar=0.1, 

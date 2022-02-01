@@ -30,6 +30,30 @@ abline(v=length(dat_omic$day)) # where it will be cut off at the next line:
 test_prop_BC <- fake_test_prop_BC[1:length(dat_omic$day)]
 test_prop <- test_prop_BC 
 
+# ---- cc's function to modify test_prop ----
+# start lowring it even more when it hits the startlower value
+# lower it by a linear function , ending at endfraction of its final value
+# ie if endfraction is 0.5, the final value after adjustment is 1/2 the value before
+# adjustment 
+modifytp = function(startlower=0.6, endfraction=0.5, test_prop) {
+  tt = min(which(test_prop < startlower))
+  myline = seq(1, endfraction, length.out = length(test_prop)-tt)
+  myfrac = c(rep(1, tt), myline)
+  return(test_prop*myfrac)
+}
+
+mytp = modifytp(startlower = 0.5, endfraction = 0.4, test_prop)
+ggplot(data = data.frame(date = intro_date+1:length(test_prop), 
+                         test_prop=test_prop, 
+                         mytp = mytp), 
+       aes(x=date, y=test_prop))+geom_line() + 
+  geom_line(aes(x=date, y=mytp), color="blue") + ylim(c(0,1))
+
+ test_prop = mytp
+
+# --- cc's function to append values to test_prop to stop getting length errors ----
+# see changes to how test_prop is used in the likelihood functions
+# basically if test_prop does not start at the same date as the simulation, you are hooped 
 extendtp <- function(n, test_prop){
   return(c(test_prop, rep(test_prop[length(test_prop)], n-length(test_prop))))
 }
@@ -50,12 +74,12 @@ times = 1:nrow(dat_omic)
 
 
 #declaring fixed parameters 
-eff_date <-   ymd("2021-12-29")  # intervention date 
+eff_date <-   ymd("2021-12-31")  # intervention date 
 parameters <-         c(sigma=1/3, # incubation period (3 days) (to fixed)
                         gamma=1/(5), #recovery rate (fixed)
                         nu =0.007, #vax rate: 0.7% per day (fixed)
                         mu=1/(82*365), # 1/life expectancy (fixed)
-                        w1= 1/(0.5*365),# waning rate from R to S (fixed)
+                        w1= 1/(0.25*365),# waning rate from R to S (fixed)
                         w2= 1/(0.5*365), # waning rate from Rv to V (fixed)
                         w3= 1/(0.5*365),# waning rate Rw to W (fixed)
                         ve=1, # I think this should be 1. it is not really efficacy  ( fixed)
@@ -65,7 +89,7 @@ parameters <-         c(sigma=1/3, # incubation period (3 days) (to fixed)
                         epsilon_m = 1-0.3, #(1-0.25)?(1-0.6), # % escape capacity #(fixed)
                         b= 0.006, # booster rate  (fixed)
                         beff = 0.7, # booster efficacy
-                        wf=0.05, # protection for newly recovered #0.2
+                        wf=0.1, # protection for newly recovered #0.2
                         N=5e6,
                         stngcy= 0.4,#0.78, #(*%(reduction)) strength of intervention (reduction in beta's)
                         eff_t = as.numeric(eff_date - intro_date),
@@ -107,13 +131,17 @@ ggplot(data =inctest, aes(x=date, y = inc_reported))+geom_line() +
 
 # ---- fit the model  
 # fitting any subset of parameters
-guess <- c(beta_m = 1.8)
+guess <- c(beta_m = 0.6, stngcy=0.2,beta_r=0.9) # bad guesses, to check what we end up with 
+# cc: i learned that the same likelihood can be achieved with higher efficacy 
+# (lower eps_m) and higher beta_m, vs the other way around. good! 
+# however, this will all depend on the (somewhat strong) assumption re: test_prop
+# and the modification of test_prop 
 #rm(test_prop) #to check that it's being passed to LK
 
 #the parameters are constrained  accordingly (lower and upper)
 
-fit_BC <- optim(fn=func_loglik,  par=guess, lower=c(0), 
-                upper = c(Inf), method = "L-BFGS-B", parameters = parameters_BC,
+fit_BC <- optim(fn=func_loglik,  par=guess, lower=c(0,0), 
+                upper = c(Inf,1), method = "L-BFGS-B", parameters = parameters_BC,
                 test_prop=test_prop, dat_omic=dat_omic)
 
 
@@ -123,14 +151,13 @@ fit_BC <- optim(fn=func_loglik,  par=guess, lower=c(0),
 
 fit_BC
 
-func_loglik(fit_BC$par, test_prop, dat_omic,parameters)
-func_loglik(c(beta_m=0.855), test_prop, dat_omic, parameters)
-
+func_loglik(fit_BC$par, test_prop, dat_omic,parameters) # check the value
 
 #this catches estimated parameter values from MLE , and adds them to 'parameters' structure
 parameters[names(guess)] <- fit_BC$par
+plot.loglik.info(parameters, 1:nrow(dat_omic), test_prop) # cc's sanity check plot 
+gg = simple_prev_plot(parameters); gg  # cc's simple prevalence plot 
 
-plot.loglik.info(parameters, 1:nrow(dat_omic), test_prop)
 
 # --- check fit: make prediction and projection with estimated parameters  ---- 
 times <- 1:(nrow(dat_omic) + forecasts_days)
