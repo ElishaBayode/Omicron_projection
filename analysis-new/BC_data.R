@@ -74,7 +74,7 @@ ggplot(mytest_BC, aes(x=date, y=test_prop)) + geom_line()
 
 
 -------#EB: fits test_prop and add dates   
-tp_approx_fit = function(mytest_BC, forecasts_days=forecasts_days, howlow = howlow, 
+tp_approx_fit <- function(mytest_BC, forecasts_days=forecasts_days, howlow = howlow, 
    slope = slope, dat= dat_omic, midpoint=midpoint, intro_date= intro_date, stop_date=stop_date){
    
   dat <- dat %>% filter(date >= intro_date &  date <= stop_date)

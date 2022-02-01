@@ -347,7 +347,7 @@ compare_two_incid = function(pars1, pars2,name1 = "first", name2="second",
 }
 
 simple_prev_plot = function(pars1, numdays = 90){
-  out1 <- as.data.frame(deSolve::ode(y=init_BC,time=1:numdays,func= sveirs,
+  out1 <- as.data.frame(deSolve::ode(y=init,time=1:numdays,func= sveirs,
                                      parms=pars1)) 
   prev1 =  (out1$Ir + out1$Irv + out1$Irw + out1$Im + out1$Imv +out1$Imw)
   prev= data.frame(date = seq.Date(ymd(intro_date),ymd(intro_date)-1+numdays, 1),
