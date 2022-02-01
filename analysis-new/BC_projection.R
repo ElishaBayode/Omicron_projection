@@ -36,7 +36,7 @@ dat_omic$day <- 1:nrow(dat_omic)
 
 ########## Test_prop set up
 #-------EB: test_prop now has dates and this ensures it starts at the right date 
-tp_approx <- tp_approx_fit(mytest_BC=mytest_BC, dat= dat_omic, forecasts_days=forecasts_days, howlow = 0.2, 
+tp_approx <- tp_approx_fit(mytest=mytest_BC, dat= dat_omic, forecasts_days=forecasts_days, howlow = 0.2, 
              slope = 0.25,  midpoint=45, intro_date= intro_date, stop_date=stop_date)
 plot_fit <- tp_approx[1]
 plot_fit 
