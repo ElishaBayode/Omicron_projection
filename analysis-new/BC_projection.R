@@ -1,21 +1,11 @@
 
-########## Libraries and source files
-require(deSolve)
-require(CanCovidData)
-library(plyr)
-library(tidyverse)
-library(tidyr)
-require(ggplot2)
-require(reshape2)
-library(lubridate)
-library(dplyr)
-library(data.table)
+########## ___EB: moved  libraries to functions.R 
 
-set.seed(3242)
 
 source("analysis-new/functions.R")
 source("analysis-new/likelihood_func.R")
-source("analysis-new/BC_data.R")
+#run BC_data.R line by line (if possible) :sometimes case data are incomplete, with 0's  and NA's 
+source("analysis-new/BC_data.R") 
 
 
 
