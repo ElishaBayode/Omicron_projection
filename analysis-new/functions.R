@@ -1,3 +1,16 @@
+########## Libraries and source files
+require(deSolve)
+require(CanCovidData)
+library(plyr)
+library(tidyverse)
+library(tidyr)
+require(ggplot2)
+require(reshape2)
+library(lubridate)
+library(dplyr)
+library(data.table)
+set.seed(3242)
+
 sveirs <- function(time, state, parameters) {
   with(as.list(c(state, parameters)), {
     #wf=0.2 # NOTE - this was to test the impact of recovered people being more immune than 
