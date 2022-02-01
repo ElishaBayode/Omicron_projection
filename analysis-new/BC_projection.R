@@ -30,11 +30,6 @@ plot_fit
 ### test_prop for fit and projection 
 test_prop_proj <- data.frame(tp_approx[2])
 
-
-#test_prop_fit: for fitting alone (set forecasts_days to 0)
-
-
-
 #subset for fitting alone (length of data)
 test_prop_BC <- test_prop_proj$tp[1:length(dat_omic$day)] #or set forecasts_days to 0 in tp_approx_fit() above 
 
@@ -142,23 +137,23 @@ ggplot(data =inctest, aes(x=date, y = inc_reported))+geom_line() +
 
 
 # ---- fit the model  
-# fitting any subset of parameters
+# fitting any subset of parameters. 
+# REMEMBER: params must be named and need to ensure there's an upper and lower bound for each in optim
 guess <- c(beta_m = 0.6, stngcy=0.2,beta_r=0.9) # bad guesses, to check what we end up with 
 # cc: i learned that the same likelihood can be achieved with higher efficacy 
 # (lower eps_m) and higher beta_m, vs the other way around. good! 
 # however, this will all depend on the (somewhat strong) assumption re: test_prop
 # and the modification of test_prop 
-#rm(test_prop) #to check that it's being passed to LK
 
 #the parameters are constrained  accordingly (lower and upper)
 
 fit_BC <- optim(fn=func_loglik,  par=guess, lower=c(0,0), 
-                upper = c(Inf,1), method = "L-BFGS-B", parameters = parameters_BC,
+                upper = c(Inf,1), method = "L-BFGS-B", parameters = parameters,
                 test_prop=test_prop, dat_omic=dat_omic)
 
 
 # JS: testing out other ways to optimize - function 'nlm' instead of optim
-#fit_BC <- nlm(f=func_loglik,  p=guess, typsize=guess,parameters = parameters_BC,
+#fit_BC <- nlm(f=func_loglik,  p=guess, typsize=guess,parameters = parameters,
 #     test_prop=test_prop, dat_omic=dat_omic)
 
 fit_BC
@@ -214,7 +209,7 @@ ggplot() + geom_line(data=project_dat_BC,aes(x=date,y=`50%`), col="green",size=1
 # for (j in 1:50){
 #  z[i,j] <- func_loglik(par=c(beta_m = x[i], p = y[j]),
 #                        test_prop=fake_test_prop_BC[1:nrow(dat_omic)],dat_omic=dat_omic,
-#                        parameters = parameters_BC)
+#                        parameters = parameters)
 # }
 #}
 #image(x,y,z)
