@@ -1,13 +1,8 @@
 library(CanCovidData)
-library(lubridate)
-library(tidyverse)
-library(tidyr)
-library(dplyr)
-source("analysis-new/mod_fitting_setup.R")
+#source("analysis-new/mod_fitting_setup.R")
 
--------#gets updated data 
-
-bcpub <-get_british_columbia_case_data() #readr::read_csv("data-raw/BCCDC_COVID19_Dashboard_Case_Details.csv")
+#gets updated data 
+bcpub <- get_british_columbia_case_data() #readr::read_csv("data-raw/BCCDC_COVID19_Dashboard_Case_Details.csv")
 #bcpub <- readr::read_rds("bcpub-2020-09-29.rds")
 
 bcpub$Reported_Date <- lubridate::ymd(bcpub$`Reported Date`)
@@ -73,7 +68,7 @@ glimpse(mytest_BC)
 ggplot(mytest_BC, aes(x=date, y=test_prop)) + geom_line()
 
 
--------#EB: fits test_prop and add dates   
+#-------#EB: fits test_prop and add dates   
 tp_approx_fit <- function(mytest_BC, forecasts_days=forecasts_days, howlow = howlow, 
    slope = slope, dat= dat_omic, midpoint=midpoint, intro_date= intro_date, stop_date=stop_date){
    

@@ -24,7 +24,6 @@ plot.loglik.info <- function(params,times, test_prop) {
 }
 
 func_loglik <- function (par,test_prop,dat_omic,parameters) {
-  #params <- c(parameters, beta_m=(par[1]), p=(par[2]),theta=0.1)
   # 'par' contains the parameters to be fit. Replace their default value in 'parameters'
   if(!all(names(par) %in% names(parameters))) stop('Names of pars to fit do not match names in parameters object')
   parameters[names(par)] <- par
@@ -44,7 +43,6 @@ negbin.loglik_2 <- function (params) {
 }
 
 func_loglik_2 <- function (par,dat_omic,parameters) {
-  #params <- c(parameters, beta_r= exp(par[1]),beta_m=exp(par[2]), p=expit(par[3]),theta=exp(par[4]))
   # 'par' contains the parameters to be fit. Replace their default value in 'parameters'
   if(!all(names(par) %in% names(parameters))) stop('Names of pars to fit do not match names in parameters object')
   parameters[names(par)] <- par
