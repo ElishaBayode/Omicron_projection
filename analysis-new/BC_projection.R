@@ -30,7 +30,10 @@ abline(v=length(dat_omic$day)) # where it will be cut off at the next line:
 test_prop_BC <- fake_test_prop_BC[1:length(dat_omic$day)]
 test_prop <- test_prop_BC 
 
-
+extendtp <- function(n, test_prop){
+  return(c(test_prop, rep(test_prop[length(test_prop)], n-length(test_prop))))
+}
+  
 #set values to generate initial conditions with make_init()
 N=5.07e6
 N_pop=N
@@ -86,8 +89,8 @@ times <- 1:(nrow(dat_omic) + forecasts_days)
 outtest <- as.data.frame(deSolve::ode(y=init,time=times,func= sveirs,
                                       parms=parameters)) 
 inctest = get_total_incidence(outtest, parameters = parameters)
-inctest$date = dat$date[1]+inctest$time
-thisvec = c(test_prop, rep(test_prop[length(test_prop)], nrow(outtest)-length(test_prop))) 
+inctest$date = intro_date-1+1:nrow(inctest)
+thisvec=extendtp(nrow(inctest), test_prop)
 inctest$inc_reported = inctest$inc_tot*thisvec
 
 # sanity check - should have delta in a decline of about 2% /day (-0.02) and around 
@@ -104,13 +107,13 @@ ggplot(data =inctest, aes(x=date, y = inc_reported))+geom_line() +
 
 # ---- fit the model  
 # fitting any subset of parameters
-guess <- c(beta_m = 1.8, stngcy = 0.2)
+guess <- c(beta_m = 1.8)
 #rm(test_prop) #to check that it's being passed to LK
 
 #the parameters are constrained  accordingly (lower and upper)
 
-fit_BC <- optim(fn=func_loglik,  par=guess, lower=c(0, 0), 
-                upper = c(Inf, 1), method = "L-BFGS-B", parameters = parameters_BC,
+fit_BC <- optim(fn=func_loglik,  par=guess, lower=c(0), 
+                upper = c(Inf), method = "L-BFGS-B", parameters = parameters_BC,
                 test_prop=test_prop, dat_omic=dat_omic)
 
 
@@ -121,22 +124,25 @@ fit_BC <- optim(fn=func_loglik,  par=guess, lower=c(0, 0),
 fit_BC
 
 func_loglik(fit_BC$par, test_prop, dat_omic,parameters)
-func_loglik(c(beta_m=0.845, stngcy = 0.359), test_prop, dat_omic, parameters)
+func_loglik(c(beta_m=0.855), test_prop, dat_omic, parameters)
 
 
 #this catches estimated parameter values from MLE , and adds them to 'parameters' structure
 parameters[names(guess)] <- fit_BC$par
+
+plot.loglik.info(parameters, 1:nrow(dat_omic), test_prop)
 
 # --- check fit: make prediction and projection with estimated parameters  ---- 
 times <- 1:(nrow(dat_omic) + forecasts_days)
 out_BC <- as.data.frame(deSolve::ode(y=init,time=times,func= sveirs,
                                      parms=parameters)) 
 #with test_prop 
-incidence_BC =  parameters[["sigma"]]*(out_BC$Er + out_BC$Erv + out_BC$Erw +
+incidence_BC =  parameters[["p"]]*parameters[["sigma"]]*(out_BC$Er + out_BC$Erv + out_BC$Erw +
                                    out_BC$Em + out_BC$Emv +
-                                   out_BC$Emw)*fake_test_prop_BC
+                                   out_BC$Emw)*extendtp( nrow(out_BC), test_prop)
+plot(1:nrow(dat_omic), incidence_BC[1:nrow(dat_omic)])
 uncert_bound_BC = raply(simu_size,rnbinom(n=length(incidence_BC),
-                                          mu=parameters[["p"]]*incidence_BC,
+                                          mu=incidence_BC,
                                           size=1/parameters[["theta"]]))
 project_dat_BC =  as.data.frame(aaply(uncert_bound_BC 
                                       ,2,quantile,na.rm=TRUE,probs=c(0.025,0.5,0.975))) %>% 
