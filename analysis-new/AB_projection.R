@@ -9,10 +9,10 @@ source("analysis-new/AB_data.R")
 #data     https://www.alberta.ca/stats/covid-19-alberta-statistics.htm#vaccinations
 
 
-dat %>% filter(date == ymd("2021-11-30"))
+#dat %>% filter(`Date reported` == ymd("2021-11-30"))
 ########## Data set up
 forecasts_days <- 30 
-intro_date <-  ymd("2021-11-20")
+intro_date <-  ymd("2021-11-30")
 stop_date <- ymd("2022-01-30")  
 #import data 
 dat = readRDS("data/AB-dat.rds")
@@ -27,7 +27,7 @@ dat_omic$day <- 1:nrow(dat_omic)
 ########## Test_prop set up
 #-------EB: test_prop now has dates and this ensures it starts at the right date 
 tp_approx <- tp_approx_fit(mytest=mytest_AB, dat= dat_omic, forecasts_days=forecasts_days, howlow = 0.2, 
-                           slope = 0.1,  midpoint=56, intro_date= intro_date, stop_date=stop_date)
+                           slope = 0.14,  midpoint=46, intro_date= intro_date, stop_date=stop_date)
 plot_fit <- tp_approx[1]
 plot_fit 
 
@@ -36,14 +36,6 @@ test_prop_proj <- data.frame(tp_approx[2])
 
 #subset for fitting alone (length of data)
  #or set forecasts_days to 0 in tp_approx_fit() above 
-
-
-# ---- cc's function to modify test_prop ----
-# start lowering it even more when it hits the startlower value
-# lower it by a linear function , ending at endfraction of its final value
-# ie if endfraction is 0.5, the final value after adjustment is 1/2 the value before
-# adjustment 
-
 
 modifytp = function(startlower=0.6, endfraction=0.5, test_prop=test_prop_proj$tp[1:length(dat_omic$day)]) {
   tt = min(which(test_prop < startlower))
@@ -64,8 +56,7 @@ ggplot(data = data.frame(date = intro_date+1:length(test_prop),
 test_prop = mytp
 
 # --- cc's function to append values to test_prop to stop getting length errors ----
-# see changes to how test_prop is used in the likelihood functions
-# basically if test_prop does not start at the same date as the simulation, you are hooped 
+
 extendtp <- function(n=100, test_prop=test_prop){
   return(c(test_prop, rep(test_prop[length(test_prop)], n-length(test_prop))))
 }
@@ -76,27 +67,27 @@ extendtp <- function(n=100, test_prop=test_prop){
 
 N=4.37e6
 N_pop=N
-vaxlevel_in = 0.75 # portion of the pop vaccinated at start time () on Nov 30, 72% double vaxed 76% single dose
+vaxlevel_in = 0.76 # portion of the pop vaccinated at start time () on Nov 30, 72% double vaxed 76% single dose
 port_wane_in = 0.086 # portion boosted at start time 8.6% on Nov 30
 past_infection_in = 0.15  #increased this from 0.1 to 0.18 # total in R at start time (336K so far, with 50% asc rate)
-incres_in = 866 *(1-0.4) #(made up factor) # resident strain (delta) incidence at start (433, reported cases) 
-incmut_in = 5 # new (omicron) inc at stat (presumably very low)
+incres_in = 433#866#(made up factor) # resident strain (delta) incidence at start (433, reported cases) 
+incmut_in = 10 # new (omicron) inc at stat (presumably very low)
 simu_size = 1e5 # number of times to resample the negative binom (for ribbons)
 forecasts_days =30 # how long to forecast for 
 times = 1:nrow(dat_omic)
 
 #declaring  parameters 
-eff_date <-   ymd("2022-01-01")  # intervention date # restrictions were updated on 24 December 
+eff_date <-   ymd("2022-01-07")  # intervention date # restrictions were updated on 24 December 
 parameters <-         c(sigma=1/3, # incubation period (days) 
                         gamma=1/(5), #recovery rate 
                         nu =0.007, #vax rate: 0.7% per day 
                         mu=1/(82*365), # 1/life expectancy 
-                        w1= 1/(0.25*365),# waning rate from R to S 
+                        w1= 1/(0.5*365),# waning rate from R to S 
                         w2= 1/(0.5*365), # waning rate from Rv to V 
                         w3= 1/(0.5*365),# waning rate Rw to W 
                         ve=1, # I think this should be 1. it is not really efficacy  
-                        beta_r=0.555, #transmission rate 
-                        beta_m=1.1, #transmission rate 
+                        beta_r=0.5, #transmission rate 
+                        beta_m=1.05, #transmission rate 
                         epsilon_r = (1-0.8), # % this should be 1-ve 
                         epsilon_m = 1-0.3, # % escape capacity 
                         b= 0.006, # booster rate
@@ -132,18 +123,15 @@ ggplot(data =inctest, aes(x=date, y = inc_reported))+geom_line() +
   geom_line(aes(x=date, y= inc_res), color = "blue") +
   geom_line(aes(x=date, y= inc_mut), color = "red") +
   geom_point(data = dat, aes(x=date, y=cases), alpha=0.5) +
-  ylim(c(0,20000)) + xlim(c(ymd("2021-11-20"), ymd("2022-02-28")))
+  ylim(c(0,30000)) + xlim(c(ymd("2021-11-20"), ymd("2022-02-28")))
 
 
 
 ########## Fit the model
 # fitting any subset of parameters. 
 # REMEMBER: params must be named and need to ensure there's an upper and lower bound for each in optim
-guess <- c(beta_m = 0.6, stngcy=0.2, beta_r=0.9) 
-# cc: i learned that the same likelihood can be achieved with higher efficacy 
-# (lower eps_m) and higher beta_m, vs the other way around. good! 
-# however, this will all depend on the (somewhat strong) assumption re: test_prop
-# and the modification of test_prop 
+guess <- c(beta_m = 1.1, stngcy=0.5, beta_r=0.6) 
+
 
 #the parameters are constrained  accordingly (lower and upper)
 fit_AB <- optim(fn=func_loglik,  par=guess, lower=c(0,0,0), 
@@ -156,13 +144,14 @@ func_loglik(fit_AB$par, test_prop, dat_omic,parameters)
 #this catches estimated parameter values from MLE , and adds them to 'parameters' structure
 parameters[names(guess)] <- fit_AB$par
 plot.loglik.info(parameters, 1:nrow(dat_omic), test_prop) # cc's sanity check plot 
-gg = simple_prev_plot(parameters, numdays = 190); gg  # cc's simple prevalence plot 
-
-
+gg_ab = simple_prev_plot(parameters, numdays = 190) + ylab("Prevalence")  + 
+labs(title="AB"); gg_ab  # cc's simple prevalence plot 
+ggsave(file="figs/AB_proj.png", gg_ab, width = 8, height = 8)
 
 #----------- use fitted test_prop instead of extendtp()
 
-mytp = mytp = modifytp(startlower = 0.5, endfraction = 0.4, test_prop = test_prop_proj$tp[1:(length(dat_omic$day)+forecasts_days)])
+mytp = mytp = modifytp(startlower = 0.5, endfraction = 0.4, 
+              test_prop = test_prop_proj$tp[1:(length(dat_omic$day)+forecasts_days)])
 test_prop <- mytp
 
 
@@ -187,19 +176,45 @@ project_dat_AB =  as.data.frame(aaply(uncert_bound_AB
                        ymd(intro_date)-1+length(times), 1))
 #add dat to data for plotting 
 dat_reported <- dat_omic  %>% mutate(date=seq.Date(ymd(intro_date),
-                                                   ymd(intro_date)-1+length(dat_omic$day), 1))
+                             ymd(intro_date)-1+length(dat_omic$day), 1))
+
+
 
 ggplot() + geom_line(data=project_dat_AB,aes(x=date,y=`50%`), col="green",size=1.5,alpha=0.4) +
-  geom_ribbon(data=project_dat_AB,aes(x=date,ymin=`2.5%`,ymax=`97.5%`),fill='darkgreen',alpha=0.1, size = 1.5)+
-  geom_point(data=dat_reported,aes(x=date, y=value),color='grey48', alpha=0.8, size = 1.5)
+geom_ribbon(data=project_dat_AB,aes(x=date,ymin=`2.5%`,ymax=`97.5%`),fill='darkgreen',alpha=0.1, size = 1.5)+
+geom_point(data=dat_reported,aes(x=date, y=value),color='grey48', alpha=0.8, size = 1.5)
 
 
 
 
+#####____ fit and make projections without test_prop 
 
-###EB _____________ stop here 
+guess <- c(beta_m = 1.1, stngcy=0.5, beta_r=0.6) 
 
-#_____________use for forecasts? 
+
+fit_AB_rel <- optim(fn=func_loglik,  par=guess, lower=c(0,0,0), 
+                upper = c(Inf,1,Inf), method = "L-BFGS-B", parameters = parameters,
+                test_prop=rep(1,nrow(dat_omic)), dat_omic=dat_omic) #set test_prop=1
+# check the values:
+ 
+parameters[names(guess)] <- fit_AB_rel$par
+
+times <- 1:(nrow(dat_omic) + forecasts_days)
+out_AB_rel <- as.data.frame(deSolve::ode(y=init,time=times,func= sveirs,
+                                     parms=parameters)) 
+
+incidence_AB_rel =  parameters[["p"]]*parameters[["sigma"]]*(out_AB$Er + out_AB$Erv + out_AB$Erw +
+                                                           out_AB$Em + out_AB$Emv +
+                                                           out_AB$Emw)
+
+uncert_bound_AB_rel = raply(simu_size,rnbinom(n=length(incidence_AB_rel),
+                                          mu=incidence_AB_rel,
+                                          size=1/parameters[["theta"]]))
+project_dat_AB_rel =  as.data.frame(aaply(uncert_bound_AB_rel 
+                                      ,2,quantile,na.rm=TRUE,probs=c(0.025,0.5,0.975))) %>% 
+                                       mutate(date=seq.Date(ymd(intro_date),
+                                      ymd(intro_date)-1+length(times), 1))
+
 
 
 saveRDS(project_dat_AB, file.path("data/AB_test_constraints.rds"))
@@ -218,9 +233,9 @@ gg_AB <- ggplot() + geom_line(data=project_dat_AB,aes(x=date,y=`50%`, colour = "
   geom_ribbon(data=project_dat_AB,aes(x=date,ymin=`2.5%`,ymax=`97.5%`),fill='darkgreen',alpha=0.1)+
   geom_line(data=project_dat_AB_rel,aes(x=date,y=`50%`, color="Without testing constraints"),size=1.2,alpha=0.4) +
   geom_ribbon(data=project_dat_AB_rel,aes(x=date,ymin=`2.5%`,ymax=`97.5%`),fill='orange',alpha=0.1)+
-  geom_point(data=dat_sim,aes(x=date, y=value),color='grey48', alpha=0.8) + 
+  geom_point(data=dat_reported,aes(x=date, y=value),color='grey48', alpha=0.8) + 
   #geom_line(aes(y=typical),color='blue') +
-  labs(y="Reported cases",x="Date") + ylim(c(0,40000)) + 
+  labs(y="Reported cases",x="Date") + ylim(c(0,20000)) + 
   scale_x_date(date_breaks = "8 days", date_labels = "%b-%d-%y") +theme_light() +
   scale_color_manual(values = cols) +  theme(axis.text=element_text(size=15),
                                              plot.title = element_text(size=15, face="bold"),
