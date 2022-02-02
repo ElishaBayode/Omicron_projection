@@ -1,7 +1,5 @@
 
-########## ___EB: moved  libraries to functions.R 
-
-
+########## Source required files
 source("analysis-new/functions.R")
 source("analysis-new/likelihood_func.R")
 #run BC_data.R line by line (if possible) :sometimes case data are incomplete, with 0's  and NA's 
@@ -159,7 +157,6 @@ func_loglik(fit_BC$par, test_prop, dat_omic,parameters)
 parameters[names(guess)] <- fit_BC$par
 plot.loglik.info(parameters, 1:nrow(dat_omic), test_prop) # cc's sanity check plot 
 gg = simple_prev_plot(parameters, numdays = 190, mode = "both"); gg  # cc's simple prevalence plot 
-
 
 
 
