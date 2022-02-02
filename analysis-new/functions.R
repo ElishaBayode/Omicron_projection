@@ -365,13 +365,17 @@ compare_two_incid = function(pars1, pars2,name1 = "first", name2="second",
   }
 }
 
-simple_prev_plot = function(pars1, numdays = 90){
-  out1 <- as.data.frame(deSolve::ode(y=init,time=1:numdays,func= sveirs,
+simple_prev_plot = function(pars1, numdays = 90,state0=init, mode = "both"){
+  out1 <- as.data.frame(deSolve::ode(y=state0,time=1:numdays,func= sveirs,
                                      parms=pars1)) 
   prev1 =  (out1$Ir + out1$Irv + out1$Irw + out1$Im + out1$Imv +out1$Imw)
+  if (mode == "both") {
+  prev1 = prev1 + out1$Er + out1$Erv +  out1$Erw + out1$Em + out1$Emv +out1$Emw
+}
   prev= data.frame(date = seq.Date(ymd(intro_date),ymd(intro_date)-1+numdays, 1),
                    preval = prev1)
 return(  ggplot(prev, aes(x=date, y=preval))+geom_line() + 
+           scale_x_date(date_breaks="1 month", date_labels="%b-%Y")+
     theme( axis.title.x = element_blank()))
 }
 

@@ -24,8 +24,13 @@ dat_omic$day <- 1:nrow(dat_omic)
 
 ########## Test_prop set up
 #-------EB: test_prop now has dates and this ensures it starts at the right date 
-tp_approx <- tp_approx_fit(mytest=mytest_BC, dat= dat_omic, forecasts_days=forecasts_days, howlow = 0.2, 
-             slope = 0.25,  midpoint=45, intro_date= intro_date, stop_date=stop_date)
+
+#tp_approx <- tp_approx_fit(mytest_BC=mytest_BC, dat= dat_omic, forecasts_days=forecasts_days,
+ #                          howlow = 0.2, 
+
+tp_approx <- tp_approx_fit(mytest=mytest_BC, dat= dat_omic, 
+                           forecasts_days=forecasts_days, howlow = 0.1, 
+             slope = 0.2,  midpoint=45, intro_date= intro_date, stop_date=stop_date)
 plot_fit <- tp_approx[1]
 plot_fit 
 
@@ -41,21 +46,23 @@ test_prop <- test_prop_proj$tp[1:length(dat_omic$day)] #or set forecasts_days to
 # lower it by a linear function , ending at endfraction of its final value
 # ie if endfraction is 0.5, the final value after adjustment is 1/2 the value before
 # adjustment 
-modifytp = function(startlower=0.6, endfraction=0.5, test_prop) {
+modifytp = function(startlower=0.6, endfraction=0.55, test_prop) {
   tt = min(which(test_prop < startlower))
   myline = seq(1, endfraction, length.out = length(test_prop)-tt)
   myfrac = c(rep(1, tt), myline)
   return(test_prop*myfrac)
 }
 
-mytp = modifytp(startlower = 0.5, endfraction = 0.4, test_prop)
+mytp = modifytp(startlower = 0.5, endfraction = 0.35, test_prop)
 ggplot(data = data.frame(date = intro_date+1:length(test_prop), 
                          test_prop=test_prop, 
                          mytp = mytp), 
        aes(x=date, y=test_prop))+geom_line() + 
   geom_line(aes(x=date, y=mytp), color="blue") + ylim(c(0,1))
 
- test_prop = mytp
+   test_prop = mytp 
+# NOTE leaving as is for now 
+
 
 # --- cc's function to append values to test_prop to stop getting length errors ----
 # see changes to how test_prop is used in the likelihood functions
@@ -69,11 +76,11 @@ extendtp <- function(n=100, test_prop=test_prop){
 #set values to generate initial conditions with make_init()
 N=5.07e6
 N_pop=N
-vaxlevel_in = 0.82 # portion of the pop vaccinated at start time 
-port_wane_in = 0.04 # portion boosted at start time 
-past_infection_in = 0.1  #increased this from 0.1 to 0.18 # total in R at start time
+vaxlevel_in = 0.88 # portion of the pop vaccinated at start time 
+port_wane_in = 0.04 # portion boosted at start tie 
+past_infection_in = 0.18  #increased this from 0.1 to 0.18 # total in R at start time
 incres_in = 470 # resident strain (delta) incidence at start 
-incmut_in = 3 # new (omicron) inc at stat 
+incmut_in = 6# new (omicron) inc at stat 
 simu_size = 1e5 # number of times to resample the negative binom (for ribbons)
 forecasts_days =30 # how long to forecast for 
 times = 1:nrow(dat_omic)
@@ -81,20 +88,20 @@ times = 1:nrow(dat_omic)
 #declaring  parameters 
 eff_date <-   ymd("2021-12-31")  # intervention date 
 parameters <-         c(sigma=1/3, # incubation period (days) 
-                        gamma=1/(5), #recovery rate 
+                        gamma=1/5, #recovery rate 
                         nu =0.007, #vax rate: 0.7% per day 
                         mu=1/(82*365), # 1/life expectancy 
-                        w1= 1/(0.25*365),# waning rate from R to S 
+                        w1= 1/(0.5*365),# waning rate from R to S 
                         w2= 1/(0.5*365), # waning rate from Rv to V 
                         w3= 1/(0.5*365),# waning rate Rw to W 
                         ve=1, # I think this should be 1. it is not really efficacy  
-                        beta_r=0.555, #transmission rate 
-                        beta_m=1.1, #transmission rate 
+                        beta_r=0.6, #transmission rate 
+                        beta_m=1, #transmission rate 
                         epsilon_r = (1-0.8), # % this should be 1-ve 
-                        epsilon_m = 1-0.3, # % escape capacity 
+                        epsilon_m = 1-0.3, # % 1-ve omicron 
                         b= 0.006, # booster rate
                         beff = 0.7, # booster efficacy
-                        wf=0.1, # protection for newly recovered
+                        wf=0.05, # protection for newly recovered
                         N=5e6,
                         stngcy= 0.4, #(*%(reduction)) strength of intervention (reduction in beta's)
                         eff_t = as.numeric(eff_date - intro_date),
@@ -112,7 +119,7 @@ init <- make_init()   #generate initial states
 times <- 1:(nrow(dat_omic) + forecasts_days)
 outtest <- as.data.frame(deSolve::ode(y=init,time=times,func= sveirs,
                                       parms=parameters)) 
-inctest = get_total_incidence(outtest, parameters = parameters)
+inctest = get_total_incidence(outtest, parameters = parameters) # has p but not test_prop! 
 inctest$date = intro_date-1+1:nrow(inctest)
 thisvec=extendtp(nrow(inctest), test_prop)
 inctest$inc_reported = inctest$inc_tot*thisvec
@@ -125,14 +132,14 @@ ggplot(data =inctest, aes(x=date, y = inc_reported))+geom_line() +
   geom_line(aes(x=date, y= inc_res), color = "blue") +
   geom_line(aes(x=date, y= inc_mut), color = "red") +
   geom_point(data = dat, aes(x=date, y=cases), alpha=0.5) +
-  ylim(c(0,20000)) + xlim(c(ymd("2021-11-20"), ymd("2022-02-28")))
+  ylim(c(0,5000)) + xlim(c(ymd("2021-11-20"), ymd("2022-02-28")))
 
 
 
 ########## Fit the model
 # fitting any subset of parameters. 
 # REMEMBER: params must be named and need to ensure there's an upper and lower bound for each in optim
-guess <- c(beta_m = 0.6, stngcy=0.2,beta_r=0.9) 
+guess <- c( beta_m=1, stngcy=0.4,beta_r=0.6) 
 # cc: i learned that the same likelihood can be achieved with higher efficacy 
 # (lower eps_m) and higher beta_m, vs the other way around. good! 
 # however, this will all depend on the (somewhat strong) assumption re: test_prop
@@ -149,7 +156,7 @@ func_loglik(fit_BC$par, test_prop, dat_omic,parameters)
 #this catches estimated parameter values from MLE , and adds them to 'parameters' structure
 parameters[names(guess)] <- fit_BC$par
 plot.loglik.info(parameters, 1:nrow(dat_omic), test_prop) # cc's sanity check plot 
-gg = simple_prev_plot(parameters, numdays = 190); gg  # cc's simple prevalence plot 
+gg = simple_prev_plot(parameters, numdays = 190, mode = "both"); gg  # cc's simple prevalence plot 
 
 
 
@@ -166,11 +173,13 @@ plot(1:nrow(dat_omic), incidence_BC[1:nrow(dat_omic)])
 uncert_bound_BC = raply(simu_size,rnbinom(n=length(incidence_BC),
                                           mu=incidence_BC,
                                           size=1/parameters[["theta"]]))
+
 project_dat_BC =  as.data.frame(aaply(uncert_bound_BC 
                                       ,2,quantile,na.rm=TRUE,probs=c(0.025,0.5,0.975))) %>% 
   mutate(date=seq.Date(ymd(intro_date),
                        ymd(intro_date)-1+length(times), 1))
 #add dat to data for plotting 
+
 dat_reported <- dat_omic  %>% mutate(date=seq.Date(ymd(intro_date),
                                                    ymd(intro_date)-1+length(dat_omic$day), 1))
 
