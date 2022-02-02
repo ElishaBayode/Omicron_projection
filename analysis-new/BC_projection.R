@@ -30,8 +30,9 @@ dat_omic$day <- 1:nrow(dat_omic)
 #tp_approx <- tp_approx_fit(mytest_BC=mytest_BC, dat= dat_omic, forecasts_days=forecasts_days,
  #                          howlow = 0.2, 
 
-tp_approx <- tp_approx_fit(mytest=mytest_BC, dat= dat_omic, forecasts_days=forecasts_days, howlow = 0.2, 
-             slope = 0.25,  midpoint=45, intro_date= intro_date, stop_date=stop_date)
+tp_approx <- tp_approx_fit(mytest=mytest_BC, dat= dat_omic, 
+                           forecasts_days=forecasts_days, howlow = 0.1, 
+             slope = 0.2,  midpoint=45, intro_date= intro_date, stop_date=stop_date)
 plot_fit <- tp_approx[1]
 plot_fit 
 
@@ -54,7 +55,7 @@ modifytp = function(startlower=0.6, endfraction=0.55, test_prop) {
   return(test_prop*myfrac)
 }
 
-mytp = modifytp(startlower = 0.5, endfraction = 0.25, test_prop)
+mytp = modifytp(startlower = 0.5, endfraction = 0.35, test_prop)
 ggplot(data = data.frame(date = intro_date+1:length(test_prop), 
                          test_prop=test_prop, 
                          mytp = mytp), 
@@ -77,11 +78,11 @@ extendtp <- function(n=100, test_prop=test_prop){
 #set values to generate initial conditions with make_init()
 N=5.07e6
 N_pop=N
-vaxlevel_in = 0.82 # portion of the pop vaccinated at start time 
+vaxlevel_in = 0.88 # portion of the pop vaccinated at start time 
 port_wane_in = 0.04 # portion boosted at start tie 
-past_infection_in = 0.13  #increased this from 0.1 to 0.18 # total in R at start time
+past_infection_in = 0.18  #increased this from 0.1 to 0.18 # total in R at start time
 incres_in = 470 # resident strain (delta) incidence at start 
-incmut_in = 2# new (omicron) inc at stat 
+incmut_in = 6# new (omicron) inc at stat 
 simu_size = 1e5 # number of times to resample the negative binom (for ribbons)
 forecasts_days =30 # how long to forecast for 
 times = 1:nrow(dat_omic)
@@ -102,7 +103,7 @@ parameters <-         c(sigma=1/3, # incubation period (days)
                         epsilon_m = 1-0.3, # % 1-ve omicron 
                         b= 0.006, # booster rate
                         beff = 0.7, # booster efficacy
-                        wf=0.1, # protection for newly recovered
+                        wf=0.05, # protection for newly recovered
                         N=5e6,
                         stngcy= 0.4, #(*%(reduction)) strength of intervention (reduction in beta's)
                         eff_t = as.numeric(eff_date - intro_date),
@@ -127,7 +128,7 @@ inctest$inc_reported = inctest$inc_tot*thisvec
 
 # sanity check - should have delta in a decline of about 2% /day (-0.02) and around 
 # a 0.2 to 0.25 difference between the two, so omicron at about 0.2 
-get_growth_rate(outtest, startoffset = 5, duration = 10)
+get_growth_rate(outtest, startoffset = 2, duration = 10)
 
 ggplot(data =inctest, aes(x=date, y = inc_reported))+geom_line() +
   geom_line(aes(x=date, y= inc_res), color = "blue") +
@@ -157,7 +158,7 @@ func_loglik(fit_BC$par, test_prop, dat_omic,parameters)
 #this catches estimated parameter values from MLE , and adds them to 'parameters' structure
 parameters[names(guess)] <- fit_BC$par
 plot.loglik.info(parameters, 1:nrow(dat_omic), test_prop) # cc's sanity check plot 
-gg = simple_prev_plot(parameters, numdays = 190, mode = "ic"); gg  # cc's simple prevalence plot 
+gg = simple_prev_plot(parameters, numdays = 190, mode = "both"); gg  # cc's simple prevalence plot 
 
 
 
@@ -175,11 +176,13 @@ plot(1:nrow(dat_omic), incidence_BC[1:nrow(dat_omic)])
 uncert_bound_BC = raply(simu_size,rnbinom(n=length(incidence_BC),
                                           mu=incidence_BC,
                                           size=1/parameters[["theta"]]))
+
 project_dat_BC =  as.data.frame(aaply(uncert_bound_BC 
                                       ,2,quantile,na.rm=TRUE,probs=c(0.025,0.5,0.975))) %>% 
   mutate(date=seq.Date(ymd(intro_date),
                        ymd(intro_date)-1+length(times), 1))
 #add dat to data for plotting 
+
 dat_reported <- dat_omic  %>% mutate(date=seq.Date(ymd(intro_date),
                                                    ymd(intro_date)-1+length(dat_omic$day), 1))
 
