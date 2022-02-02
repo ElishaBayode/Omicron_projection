@@ -3,6 +3,10 @@ source("analysis-new/likelihood_func.R")
 #run AB_data.R line by line (if possible) :sometimes case data are incomplete, with 0's  and NA's 
 source("analysis-new/AB_data.R") 
 
+#sources
+#restrictions https://www.alberta.ca/covid-19-public-health-actions.aspx
+#wastewater data https://covid-tracker.chi-csm.ca
+#data     https://www.alberta.ca/stats/covid-19-alberta-statistics.htm#vaccinations
 
 
 dat %>% filter(date == ymd("2021-11-30"))
@@ -69,20 +73,20 @@ extendtp <- function(n=100, test_prop=test_prop){
 
 ########## Parameters set up 
 #set values to generate initial conditions with make_init()
-#data     https://www.alberta.ca/stats/covid-19-alberta-statistics.htm#vaccinations
+
 N=4.37e6
 N_pop=N
 vaxlevel_in = 0.75 # portion of the pop vaccinated at start time () on Nov 30, 72% double vaxed 76% single dose
 port_wane_in = 0.086 # portion boosted at start time 8.6% on Nov 30
 past_infection_in = 0.15  #increased this from 0.1 to 0.18 # total in R at start time (336K so far, with 50% asc rate)
-incres_in = 866 # resident strain (delta) incidence at start (433, reported cases) 
+incres_in = 866 *(1-0.4) #(made up factor) # resident strain (delta) incidence at start (433, reported cases) 
 incmut_in = 5 # new (omicron) inc at stat (presumably very low)
 simu_size = 1e5 # number of times to resample the negative binom (for ribbons)
 forecasts_days =30 # how long to forecast for 
 times = 1:nrow(dat_omic)
 
 #declaring  parameters 
-eff_date <-   ymd("2021-12-31")  # intervention date 
+eff_date <-   ymd("2022-01-01")  # intervention date # restrictions were updated on 24 December 
 parameters <-         c(sigma=1/3, # incubation period (days) 
                         gamma=1/(5), #recovery rate 
                         nu =0.007, #vax rate: 0.7% per day 
@@ -135,7 +139,7 @@ ggplot(data =inctest, aes(x=date, y = inc_reported))+geom_line() +
 ########## Fit the model
 # fitting any subset of parameters. 
 # REMEMBER: params must be named and need to ensure there's an upper and lower bound for each in optim
-guess <- c(beta_m = 0.6, stngcy=0.2,beta_r=0.9) 
+guess <- c(beta_m = 0.6, stngcy=0.2, beta_r=0.9) 
 # cc: i learned that the same likelihood can be achieved with higher efficacy 
 # (lower eps_m) and higher beta_m, vs the other way around. good! 
 # however, this will all depend on the (somewhat strong) assumption re: test_prop
