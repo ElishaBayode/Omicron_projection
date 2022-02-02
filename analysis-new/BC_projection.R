@@ -1,21 +1,11 @@
 
-########## Libraries and source files
-require(deSolve)
-require(CanCovidData)
-library(plyr)
-library(tidyverse)
-library(tidyr)
-require(ggplot2)
-require(reshape2)
-library(lubridate)
-library(dplyr)
-library(data.table)
+########## ___EB: moved  libraries to functions.R 
 
-set.seed(3242)
 
 source("analysis-new/functions.R")
 source("analysis-new/likelihood_func.R")
-source("analysis-new/BC_data.R")
+#run BC_data.R line by line (if possible) :sometimes case data are incomplete, with 0's  and NA's 
+source("analysis-new/BC_data.R") 
 
 
 
@@ -36,8 +26,11 @@ dat_omic$day <- 1:nrow(dat_omic)
 
 ########## Test_prop set up
 #-------EB: test_prop now has dates and this ensures it starts at the right date 
-tp_approx <- tp_approx_fit(mytest_BC=mytest_BC, dat= dat_omic, forecasts_days=forecasts_days,
-                           howlow = 0.2, 
+
+#tp_approx <- tp_approx_fit(mytest_BC=mytest_BC, dat= dat_omic, forecasts_days=forecasts_days,
+ #                          howlow = 0.2, 
+
+tp_approx <- tp_approx_fit(mytest=mytest_BC, dat= dat_omic, forecasts_days=forecasts_days, howlow = 0.2, 
              slope = 0.25,  midpoint=45, intro_date= intro_date, stop_date=stop_date)
 plot_fit <- tp_approx[1]
 plot_fit 

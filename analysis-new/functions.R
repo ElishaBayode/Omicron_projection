@@ -1,3 +1,16 @@
+########## Libraries and source files
+require(deSolve)
+require(CanCovidData)
+library(plyr)
+library(tidyverse)
+library(tidyr)
+require(ggplot2)
+require(reshape2)
+library(lubridate)
+library(dplyr)
+library(data.table)
+set.seed(3242)
+
 sveirs <- function(time, state, parameters) {
   with(as.list(c(state, parameters)), {
     #wf=0.2 # NOTE - this was to test the impact of recovered people being more immune than 
@@ -269,7 +282,20 @@ get_testprop = function(changedate, mysplines, halftime, steepness) {
 }
 
 
-
+#-------#EB: fits test_prop and add dates   
+tp_approx_fit <- function(mytest = mytest, forecasts_days=forecasts_days, howlow = howlow, 
+                          slope = slope, dat= dat_omic, midpoint=midpoint, intro_date= intro_date, stop_date=stop_date){
+  
+  dat <- dat %>% filter(date >= intro_date &  date <= stop_date)
+  mytest <- mytest %>% filter(date >= intro_date &  date <= stop_date)
+  
+  fake_tp = data.frame(tp=(1 - (1-howlow)/(1 + exp(-slope*(1:(nrow(dat)+forecasts_days)-midpoint)))))
+  fake_tp  = fake_tp %>% mutate(date=seq.Date(ymd(intro_date), ymd(intro_date)-1+(nrow(dat)+forecasts_days), 1))
+  
+  return(list(ggplot() + geom_line(data= fake_tp, aes(x=date, y=tp, colour="fit")) +
+                geom_point(data= mytest, aes(x=date, y=test_prop, colour="tp")) + 
+                scale_x_date(date_breaks = "20 days", date_labels = "%b-%d-%y"),fake_tp))
+}
 
 #function to get incidence by vaccination status 
 
