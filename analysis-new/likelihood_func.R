@@ -9,7 +9,7 @@ negbin.loglik <- function (params,times, test_prop) {
 }
 
 
-plot.loglik.info <- function(params,times, test_prop) { 
+plot.loglik.info <- function(params,times, test_prop, init) { 
   x <-   as.data.frame(deSolve::ode(y=init,time=times,func= sveirs,
                                     parms= params)) 
   prediction <-  params["p"]*params["sigma"]*(x$Er+ x$Erv + x$Erw
@@ -23,7 +23,7 @@ plot.loglik.info <- function(params,times, test_prop) {
 #              log=TRUE))
 }
 
-func_loglik <- function (par,test_prop,dat_omic,parameters) {
+func_loglik <- function (par,test_prop,dat_omic,parameters,init) {
   # 'par' contains the parameters to be fit. Replace their default value in 'parameters'
   if(!all(names(par) %in% names(parameters))) stop('Names of pars to fit do not match names in parameters object')
   parameters[names(par)] <- par
