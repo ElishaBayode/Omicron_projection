@@ -86,6 +86,7 @@ times = 1:nrow(dat_omic)
 
 #declaring  parameters 
 eff_date <-   ymd("2021-12-31")  # intervention date 
+intv_date <-  ymd("2022-02-10")
 parameters <-         c(sigma=1/3, # incubation period (days) 
                         gamma=1/5, #recovery rate 
                         nu =0.007, #vax rate: 0.7% per day 
@@ -104,6 +105,8 @@ parameters <-         c(sigma=1/3, # incubation period (days)
                         N=5e6,
                         stngcy= 0.4, #(*%(reduction)) strength of intervention (reduction in beta's)
                         eff_t = as.numeric(eff_date - intro_date),
+                        relx_level = 0,
+                        rlx_t = as.numeric(intv_date - intro_date),
                         p = 0.5, #negative binomial mean
                         theta = 0.1 #negative binomial dispersion
                         
