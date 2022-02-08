@@ -158,7 +158,7 @@ func_loglik(fit_BC$par, test_prop, dat_omic,parameters)
 #this catches estimated parameter values from MLE , and adds them to 'parameters' structure
 parameters[names(guess)] <- fit_BC$par
 plot.loglik.info(parameters, 1:nrow(dat_omic), test_prop) # cc's sanity check plot 
-gg = simple_prev_plot(parameters, numdays = 190, mode = "both"); gg  # cc's simple prevalence plot 
+gg = simple_prev_plot(parameters, numdays = 190, mode = "both", init); gg  # cc's simple prevalence plot 
 
 
 
