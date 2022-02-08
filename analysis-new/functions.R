@@ -18,9 +18,11 @@ sveirs <- function(time, state, parameters) {
     # vaccinated people. i think it probably makes sense - after all they *just* recovered .
     #c <- 1# effectiveness of NPIs, set as 1, change later to c(t)
     c <- (1 - stngcy/(1+ exp(-1.25*(time-eff_t))))   #intervention 
+    rlx <- (1 + relx_level/(1+ exp(-1.25*(time-rlx_t)))) # relaxation 
+    
     N <- S+Er+Em+Ir+Im+R+V+Erv+Emv+Irv+Imv+Rv+W+Erw+Emw+Irw+Imw+Rw #total population 
-    lambda_r <- c*beta_r*(Ir + Irv + Irw)
-    lambda_m <- c*beta_m*(Im + Imv + Imw) #force of infection mutant strain
+    lambda_r <- c*rlx*beta_r*(Ir + Irv + Irw)
+    lambda_m <- c*rlx*beta_m*(Im + Imv + Imw) #force of infection mutant strain
     dS <-  mu*N - (lambda_r+lambda_m)*S/N  + w1*R -(mu + nu*ve)*S
     dEr <- lambda_r*S/N + wf* epsilon_r*lambda_r*R/N - (sigma+mu)*Er 
     dEm <- lambda_m*S/N + wf* epsilon_m*lambda_m*R/N - (sigma+mu)*Em
