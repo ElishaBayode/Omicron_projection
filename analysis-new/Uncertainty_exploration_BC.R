@@ -20,7 +20,7 @@ dat = readRDS("data/BC-dat.rds")
 #include Omicron wave only
 dat <- dat %>% filter(date >= intro_date &  date <= stop_date)
 dat_omic <- dat
-dat_omic <- filter(dat_omic, date >= intro_date) %>% select(c("day", "value", "date"))
+dat_omic <- filter(dat_omic, date >= intro_date) %>% dplyr::select(c("day", "value", "date"))
 dat_omic$day <- 1:nrow(dat_omic)
 
 
@@ -89,6 +89,7 @@ forecasts_days =30 # how long to forecast for
 times = 1:nrow(dat_omic)
 
 #declaring  parameters 
+intv_date <-  ymd("2022-02-10")
 eff_date <-   ymd("2021-12-31")  # intervention date 
 parameters <-         c(sigma=1/3, # incubation period (days) 
                         gamma=1/5, #recovery rate 
@@ -108,6 +109,8 @@ parameters <-         c(sigma=1/3, # incubation period (days)
                         N=5e6,
                         stngcy= 0.4, #(*%(reduction)) strength of intervention (reduction in beta's)
                         eff_t = as.numeric(eff_date - intro_date),
+                        relx_level = 0,
+                        rlx_t = as.numeric(intv_date - intro_date),
                         p = 0.5, #negative binomial mean
                         theta = 0.1 #negative binomial dispersion
                         
@@ -158,8 +161,8 @@ func_loglik(fit_BC$par, test_prop, dat_omic,parameters)
 
 #this catches estimated parameter values from MLE , and adds them to 'parameters' structure
 parameters[names(guess)] <- fit_BC$par
-plot.loglik.info(parameters, 1:nrow(dat_omic), test_prop) # cc's sanity check plot 
-gg = simple_prev_plot(parameters, numdays = 190, mode = "both"); gg  # cc's simple prevalence plot 
+plot.loglik.info(parameters, 1:nrow(dat_omic), test_prop,init) # cc's sanity check plot 
+gg = simple_prev_plot(parameters, numdays = 190, mode = "both", init); gg  # cc's simple prevalence plot 
 
 
 
@@ -233,9 +236,9 @@ p1
 
 
 ## Third ribbon calculation approach: add nbinom resampling ON TOP OF mle resampling 
-bound_mlesample<-apply(incidence_resampled, 2, function(x){raply(simu_size/100,rnbinom(n=length(x),
+bound_mlesample<-lapply(incidence_resampled,  function(x){raply(simu_size/100,rnbinom(n=length(x),
                                                                  mu=x,
-                                                                 size=1/parameters[["theta"]]))} , simplify=FALSE)
+                                                                 size=1/parameters[["theta"]]))}, simplify=FALSE)
 bound_mlesample <- do.call(rbind, bound_mlesample)
 # For each of the 100 MLE resamples in 'incidence_resampled', we do the nbinom resampling simu_size/100 times
 
