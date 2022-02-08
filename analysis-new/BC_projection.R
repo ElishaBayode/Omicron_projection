@@ -142,10 +142,6 @@ ggplot(data =inctest, aes(x=date, y = inc_reported))+geom_line() +
 # fitting any subset of parameters. 
 # REMEMBER: params must be named and need to ensure there's an upper and lower bound for each in optim
 guess <- c( beta_m=1, stngcy=0.4,beta_r=0.6) 
-# cc: i learned that the same likelihood can be achieved with higher efficacy 
-# (lower eps_m) and higher beta_m, vs the other way around. good! 
-# however, this will all depend on the (somewhat strong) assumption re: test_prop
-# and the modification of test_prop 
 
 #the parameters are constrained  accordingly (lower and upper)
 fit_BC <- optim(fn=func_loglik,  par=guess, lower=c(0,0,0), 
@@ -154,6 +150,34 @@ fit_BC <- optim(fn=func_loglik,  par=guess, lower=c(0,0,0),
 # check the values:
 fit_BC
 func_loglik(fit_BC$par, test_prop, dat_omic,parameters) 
+
+
+#################### Alternative: penalized log likelihood
+# Penalize loglh by (a) distance of %residentstrain from 50% on Dec 12th and
+#                   (b) distance of mutant relative growth advantage from 0.2 during December 5th-15th
+# according to penalty weight, pen.weight (a new input)
+
+# Establish what the penalties are
+# 1. 50/50 resident vs mutant on Dec 12th
+known_prop <- 0.5
+date_known_prop <- "2021-12-12"
+# 2. growth advantage of mutant strain
+known_growth <- 0.2
+period_known_growth <- c("2021-12-05", "2021-12-15")
+penalties <- list(known_prop = known_prop, date_known_prop = date_known_prop, 
+               known_growth = known_growth, period_known_growth = period_known_growth)
+
+# Determine weight of penalty. 
+# Qu: how strong should penalty be on scale of 0-1? 0 = no penalty. 1 = relatively as impactful as the likelihood
+pen.size <- 0.6
+
+guess <- c( beta_m=1, stngcy=0.4,beta_r=0.6) 
+pen.fit_BC <- optim(fn=func_penloglik,  par=guess, lower=c(0,0,0), upper = c(Inf,1,Inf), 
+                   method = "L-BFGS-B", 
+                   parameters = parameters, test_prop=test_prop, 
+                   pen.size=pen.size, penalties = penalties, dat_omic=dat_omic)
+pen.fit_BC
+####################
 
 #this catches estimated parameter values from MLE , and adds them to 'parameters' structure
 parameters[names(guess)] <- fit_BC$par
