@@ -168,7 +168,7 @@ penalties <- list(known_prop = known_prop, date_known_prop = date_known_prop,
                known_growth = known_growth, period_known_growth = period_known_growth)
 
 # Determine weight of penalty. 
-# Qu: how strong should penalty be on scale of 0-1? 0 = no penalty. 1 = relatively as impactful as the likelihood
+# Qu: how strong should the penalty be? 0 = no penalty. 1 = relatively as impactful as the likelihood. 
 pen.size <- 0.6
 
 guess <- c( beta_m=1, stngcy=0.4,beta_r=0.6) 
