@@ -16,7 +16,7 @@ ggplot(data = ondat, aes(x = Case_Reported_Date, y = cases)) +
 tail(ondat) # last row NA?
 #ondat$cases[nrow(ondat)] <- 1525 #delete this...
 
-dat <- ondat[-c(nrow(ondat), nrow(ondat)), ] # FIX THIS NEXT TIME
+dat <- ondat#[-c(nrow(ondat), nrow(ondat)), ] # FIX THIS NEXT TIME
 dat <- dplyr::filter(dat, Case_Reported_Date >= lubridate::ymd("2020-02-29"))
 dat$date <- dat$Case_Reported_Date
 dat$date[1:2] <- c(ymd("2020-03-01"), ymd("2020-03-02"))

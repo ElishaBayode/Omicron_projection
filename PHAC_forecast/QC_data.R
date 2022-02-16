@@ -1,3 +1,14 @@
+library(lubridate)
+library(tidyverse)
+library(tidyr)
+library(dplyr)
+location <- "CAN.csv"
+linkRaw <- "https://raw.githubusercontent.com/ishaberry/Covid19Canada/master/timeseries_prov/cases_timeseries_prov.csv"
+data <- readr::read_csv(linkRaw)
+readr::write_csv(data, file.path("data", location))
+
+
+
 #soureces of hospital data: https://resources-covid19canada.hub.arcgis.com/datasets/provincial-daily-totals/explore  
 
 dat <- readr::read_csv(file.path("data/CAN.csv"))
@@ -97,6 +108,11 @@ ii_jul1 <- which(dat$date == ymd("2022-01-04"))
 tot2d <- dat$adjust_cases[ii_jul1 + 1]
 dat$adjust_cases[c(ii_jul1, ii_jul1 + 1)] <- realloc(tot2d, 2)
 
+ii_jul1 <- which(dat$date == ymd("2022-02-11"))
+tot2d <- dat$adjust_cases[ii_jul1 + 1]
+dat$adjust_cases[c(ii_jul1, ii_jul1 + 1)] <- realloc(tot2d, 2)
+
+
 # fix other weekends
 isStartWeekend <- (dat$adjust_cases == 0 &
                      dat$adjust_cases[c(2:nrow(dat), 1)] == 0
@@ -162,8 +178,8 @@ dat_qc$Reported_Date <-  dat_qc$`Date de déclaration`
 dat_qc$totat_under70 <- totat_under70
 dat_qc$totalover70   <-   totalover70
 
-dat_qc_pt1 <- select(dat_qc, c("Reported_Date", "totat_under70"))
-dat_qc_pt2 <- select(dat_qc, c("Reported_Date", "totalover70"))
+dat_qc_pt1 <- dplyr::select(dat_qc, c("Reported_Date", "totat_under70"))
+dat_qc_pt2 <- dplyr::select(dat_qc, c("Reported_Date", "totalover70"))
 
 dat_qc_pt1$totcases <- dat_qc_pt1$totat_under70
 dat_qc_pt1$under70 <- "Yes"
@@ -172,8 +188,8 @@ dat_qc_pt2$under70 <- "No"
 
 
 
-dat_qc_pt1 <-  select(dat_qc_pt1, c("Reported_Date", "totcases", "under70"))
-dat_qc_pt2 <-  select(dat_qc_pt2, c("Reported_Date", "totcases", "under70"))
+dat_qc_pt1 <-  dplyr::select(dat_qc_pt1, c("Reported_Date", "totcases", "under70"))
+dat_qc_pt2 <-  dplyr::select(dat_qc_pt2, c("Reported_Date", "totcases", "under70"))
 
 mydat_QC <- rbind(dat_qc_pt1,dat_qc_pt2)
 

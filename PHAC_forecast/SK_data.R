@@ -103,7 +103,9 @@ ii_jul1 <- which(dat$date == ymd("2022-01-01"))
 tot2d <- dat$adjust_cases[ii_jul1 + 1]
 dat$adjust_cases[c(ii_jul1, ii_jul1 + 1)] <- realloc(tot2d, 2)
 
-
+ii_jul1 <- which(dat$date == ymd("2022-02-07"))
+tot2d <- dat$adjust_cases[ii_jul1 + 1]
+dat$adjust_cases[c(ii_jul1, ii_jul1 + 1)] <- realloc(tot2d, 2)
 
 ggplot(dat, aes(date, adjust_cases)) +
   geom_point() +
@@ -112,14 +114,17 @@ ggplot(dat, aes(date, adjust_cases)) +
   scale_x_date(date_breaks = "2 weeks", date_labels = "%Y-%m-%d") +
   theme(axis.text.x = element_text(angle = 35, hjust = 1), panel.grid.major = element_line(color = "grey"))
 
-
+#
+#dat$adjust_cases[nrow(dat)-1] <- round(dat$adjust_cases[nrow(dat)-2]/1.2,0)
+#dat$adjust_cases[nrow(dat)-2] <- dat$adjust_cases[nrow(dat)-2]/2
 tail(dat,20)
 #dat$value <- dat$cases
 dat$value <- dat$adjust_cases
-dat <- dat[-c(nrow(dat)-1, nrow(dat)), ]
+dat <-dat[-nrow(dat)]  #dat[-c(nrow(dat)-1, nrow(dat)), ]
 
 dat <- filter(dat, date >= "2020-09-22")
-#dat <- filter(dat, date <= "2021-12-23")
+#dat <- filter(dat, date <= "2022-02-07")
+##dat <- filter(dat, date <= "2021-12-23")
 dat$day <- 1:length(dat$cases)
 saveRDS(dat, file.path("data/SK-dat.rds"))
 dat =readRDS(file.path("data/SK-dat.rds"))

@@ -1,7 +1,7 @@
 source("analysis-new/functions.R")
 source("analysis-new/likelihood_func.R")
 #run ON_data.R line by line (if possible) :sometimes case data are incomplete, with 0's  and NA's 
-source("analysis-new/ON_data.R") 
+source("PHAC_forecast/ON_data.R") 
 
 #sources
 #https://covid19-sciencetable.ca/ontario-dashboard/#wastewatersignal 
@@ -11,31 +11,33 @@ source("analysis-new/ON_data.R")
 ########## Data set up
 forecasts_days <- 30 
 intro_date <-  ymd("2021-11-30")
-stop_date <- ymd("2022-01-30")  
+stop_date <- ymd("2022-02-12")  
 #import data 
 dat = readRDS("data/ON-dat.rds")
 #include Omicron wave only
 dat <- dat %>% filter(date >= intro_date &  date <= stop_date)
 dat_omic <- dat
-dat_omic <- filter(dat_omic, date >= intro_date) %>% select(c("day", "value", "date"))
+dat_omic <- filter(dat_omic, date >= intro_date) %>% dplyr::select(c("day", "value", "date"))
 dat_omic$day <- 1:nrow(dat_omic)
 
 
 
 ########## Test_prop set up
 #-------EB: test_prop now has dates and this ensures it starts at the right date 
-tp_approx <- tp_approx_fit(mytest=mytest_ON, dat= dat_omic, forecasts_days=forecasts_days, howlow = 0.13, 
-                           slope = 0.2,  midpoint=40, intro_date= intro_date, stop_date=stop_date)
+tp_approx <- tp_approx_fit(mytest=mytest_ON, dat= dat_omic, forecasts_days=forecasts_days, howlow = 0.1, 
+                           slope = 0.18,  midpoint=35, intro_date= intro_date, stop_date=stop_date)
 plot_fit <- tp_approx[1]
 plot_fit 
 
 # test_prop for fit and projection 
-test_prop_proj <- data.frame(tp_approx[2])
+test_prop_proj_ON <- data.frame(tp_approx[2])
+
+test_prop <- test_prop_proj_ON$tp[1:length(dat_omic$day)]
 
 #subset for fitting alone (length of data)
 #or set forecasts_days to 0 in tp_approx_fit() above 
 
-modifytp = function(startlower=0.6, endfraction=0.5, test_prop=test_prop_proj$tp[1:length(dat_omic$day)]) {
+modifytp = function(startlower=1, endfraction=1, test_prop=test_prop_proj_ON$tp[1:length(dat_omic$day)]) {
   tt = min(which(test_prop < startlower))
   myline = seq(1, endfraction, length.out = length(test_prop)-tt)
   myfrac = c(rep(1, tt), myline)
@@ -44,7 +46,7 @@ modifytp = function(startlower=0.6, endfraction=0.5, test_prop=test_prop_proj$tp
 
 ### EB____ we should modify test_prop within modifytp()
 
-mytp = modifytp(startlower = 0.5, endfraction = 0.4, test_prop)
+mytp = modifytp(startlower = 1, endfraction = 1, test_prop)
 ggplot(data = data.frame(date = intro_date+1:length(test_prop), 
                          test_prop=test_prop, 
                          mytp = mytp), 
@@ -68,15 +70,16 @@ N=14.57e6
 N_pop=N
 vaxlevel_in =  0.75 # 
 port_wane_in = 0.05 # portion boosted at start time .... on Nov 30
-past_infection_in = 0.2  #increased this from 0.1 to 0.18 # total in R at start time (620K so far, with 50% asc rate(guess it's lower in ON))
-incres_in = 938*2 #866#(made up factor) # resident strain (delta) incidence at start (938, reported cases) 
-incmut_in = 60 # new (omicron) inc at stat (presumably very low)
+past_infection_in = 0.22  #increased this from 0.1 to 0.18 # total in R at start time (620K so far, with 50% asc rate(guess it's lower in ON))
+incres_in = 938*2.2 #866#(made up factor) # resident strain (delta) incidence at start (938, reported cases) 
+incmut_in = 50 # new (omicron) inc at stat (presumably very low)
 simu_size = 1e5 # number of times to resample the negative binom (for ribbons)
 forecasts_days =30 # how long to forecast for 
 times = 1:nrow(dat_omic)
 
 #declaring  parameters 
-eff_date <-   ymd("2022-01-01")  # intervention date # restrictions were updated on 24 December 
+eff_date <-   ymd("2021-12-30")  # intervention date # restrictions were updated on 24 December 
+intv_date <-  ymd("2022-02-10") 
 parameters <-         c(sigma=1/3, # incubation period (days) 
                         gamma=1/(5), #recovery rate 
                         nu =0.007, #vax rate: 0.7% per day 
@@ -88,18 +91,21 @@ parameters <-         c(sigma=1/3, # incubation period (days)
                         beta_r=0.3, #transmission rate 
                         beta_m=1.2, #transmission rate 
                         epsilon_r = (1-0.8), # % this should be 1-ve 
-                        epsilon_m = 1-0.3, # % escape capacity 
+                        epsilon_m = 1-0.15, # % escape capacity 
                         b= 0.006, # booster rate
                         beff = 0.7, # booster efficacy
                         wf=0.1, # protection for newly recovered
                         N=14.57e6,
                         stngcy= 0.4, #(*%(reduction)) strength of intervention (reduction in beta's)
                         eff_t = as.numeric(eff_date - intro_date),
-                        p = 0.25, #negative binomial mean
+                        relx_level = 0,
+                        rlx_t = as.numeric(intv_date - intro_date),
+                        p = 0.2, #negative binomial mean
                         theta = 0.1 #negative binomial dispersion
                         
 )
 init <- make_init()   #generate initial states
+
 
 
 
@@ -109,7 +115,7 @@ init <- make_init()   #generate initial states
 times <- 1:(nrow(dat_omic) + forecasts_days)
 outtest <- as.data.frame(deSolve::ode(y=init,time=times,func= sveirs,
                                       parms=parameters)) 
-inctest = get_total_incidence(outtest, parameters = parameters)
+inctest = get_total_incidence(outtest, parameters = parameters) # has p but not test_prop! 
 inctest$date = intro_date-1+1:nrow(inctest)
 thisvec=extendtp(nrow(inctest), test_prop)
 inctest$inc_reported = inctest$inc_tot*thisvec
@@ -122,89 +128,110 @@ ggplot(data =inctest, aes(x=date, y = inc_reported))+geom_line() +
   geom_line(aes(x=date, y= inc_res), color = "blue") +
   geom_line(aes(x=date, y= inc_mut), color = "red") +
   geom_point(data = dat, aes(x=date, y=cases), alpha=0.5) +
-  ylim(c(0,30000)) + xlim(c(ymd("2021-11-20"), ymd("2022-02-28")))
+  ylim(c(0,5000)) + xlim(c(ymd("2021-11-30"), ymd("2022-02-28")))
 
 
+#################### Alternative: penalized log likelihood
+# Penalize loglh by (a) distance of %residentstrain from 50% on Dec 12th and
+#                   (b) distance of mutant relative growth advantage from 0.2 during December 5th-15th
+# according to penalty weight, pen.weight (a new input)
 
-########## Fit the model
-# fitting any subset of parameters. 
-# REMEMBER: params must be named and need to ensure there's an upper and lower bound for each in optim
-guess <- c(beta_m = 1.1, stngcy=0.5, beta_r=0.6) 
+# Establish what the penalties are
+# 1. 50/50 resident vs mutant on Dec 12th
+known_prop <- 0.55
+date_known_prop <- "2021-12-12"
+# 2. growth advantage of mutant strain
+known_growth <- 0.2
+period_known_growth <- c("2021-12-05", "2021-12-15")
+penalties <- list(known_prop = known_prop, date_known_prop = date_known_prop, 
+                  known_growth = known_growth, period_known_growth = period_known_growth)
+
+# Determine weight of penalty. 
+# Qu: how strong should penalty be on scale of 0-1? 0 = no penalty. 1 = relatively as impactful as the likelihood
+pen.size <- 1
+
+guess <- c( beta_m=1, stngcy=0.4,beta_r=0.6, theta=0.1) 
+pen.fit_ON <- optim(fn=func_penloglik,  par=guess, lower=c(0,0,0,0.001), upper = c(Inf,1,Inf,Inf), 
+                    method = "L-BFGS-B", 
+                    parameters = parameters, test_prop=test_prop, 
+                    pen.size=pen.size, penalties = penalties, dat_omic=dat_omic, hessian=T)
+pen.fit_ON
+####################
+func_loglik(pen.fit_ON$par, test_prop, dat_omic,parameters) 
+parameters[names(guess)] <- pen.fit_ON$par
 
 
-#the parameters are constrained  accordingly (lower and upper)
-fit_ON <- optim(fn=func_loglik,  par=guess, lower=c(0,0,0), 
-                upper = c(Inf,1,Inf), method = "L-BFGS-B", parameters = parameters,
-                test_prop=test_prop, dat_omic=dat_omic)
-# check the values:
-fit_ON
-func_loglik(fit_ON$par, test_prop, dat_omic,parameters) 
+gg = simple_prev_plot(parameters, numdays = 190, mode = "both"); gg  # cc's simple prevalence plot 
 
-#this catches estimated parameter values from MLE , and adds them to 'parameters' structure
-parameters[names(guess)] <- fit_ON$par
-plot.loglik.info(parameters, 1:nrow(dat_omic), test_prop) # cc's sanity check plot 
-gg_ON = simple_prev_plot(parameters, numdays = 190) + ylab("Prevalence")  + 
-  labs(title="ON"); gg_ON  # cc's simple prevalence plot 
-ggsave(file="figs/ON_prev.png", gg_ON, width = 8, height = 8)
-
-#----------- use fitted test_prop instead of extendtp()
-
-mytp = mytp = modifytp(startlower = 0.5, endfraction = 0.4, 
-                       test_prop = test_prop_proj$tp[1:(length(dat_omic$day)+forecasts_days)])
-test_prop <- mytp
 
 
 
 
 ########## Check fit: make prediction and projection with estimated parameters
-times <- 1:(nrow(dat_omic) + forecasts_days)
-out_ON <- as.data.frame(deSolve::ode(y=init,time=times,func= sveirs,
-                                     parms=parameters)) 
-#with test_prop 
-incidence_ON =  parameters[["p"]]*parameters[["sigma"]]*(out_ON$Er + out_ON$Erv + out_ON$Erw +
-                                                           out_ON$Em + out_ON$Emv +
-                                                           out_ON$Emw)*test_prop #extendtp(nrow(out_ON), test_prop)
 
-plot(1:nrow(dat_omic), incidence_ON[1:nrow(dat_omic)])
-uncert_bound_ON = raply(simu_size,rnbinom(n=length(incidence_ON),
-                                          mu=incidence_ON,
-                                          size=1/parameters[["theta"]]))
-project_dat_ON =  as.data.frame(aaply(uncert_bound_ON 
-                                      ,2,quantile,na.rm=TRUE,probs=c(0.025,0.5,0.975))) %>% 
+#NOTE
+#EB----------- use fitted test_prop instead of extendtp() for PHAC forecats 
+
+mytp = mytp = modifytp(startlower = 1, endfraction = 1, 
+                       test_prop = test_prop_proj_ON$tp[1:(length(dat_omic$day)+forecasts_days)])
+test_prop <- mytp
+
+
+################################# re-sampling CI
+
+library(MASS)
+times <- 1:(nrow(dat_omic) + forecasts_days)
+# Sample from asymptotic distribution of MLEs, 100 times
+resampled <- mvrnorm(n = 100, mu = pen.fit_ON$par, Sigma = (1/nrow(dat_omic))*solve(pen.fit_ON$hessian)) # don't need -ve because we MINimised NEGloglike
+
+resample_incidence <- function(x, parameters){
+  # For each set of resampled MLEs, do a model simulation and output the daily incident reported cases
+  parameters[names(guess)] <- x
+  out_samp <- as.data.frame(deSolve::ode(y=init,time=times,func=sveirs,
+                                         parms=parameters)) 
+  incidence_samp =  parameters[["p"]]*parameters[["sigma"]]*(out_samp$Er + out_samp$Erv + out_samp$Erw +
+                                                               out_samp$Em + out_samp$Emv +
+                                                               out_samp$Emw)*test_prop#extendtp(nrow(out_samp), test_prop)
+}
+incidence_resampled <- apply(resampled, 1, resample_incidence, parameters=parameters)
+
+
+bound_mlesample_ON <-apply(incidence_resampled,2,  function(x){raply(simu_size/100,rnbinom(n=length(x),
+                                                                                           mu=x, size=1/parameters[["theta"]]))}, simplify=FALSE)
+bound_mlesample_ON <- do.call(rbind, bound_mlesample_ON)
+
+project_dat_ON  =  as.data.frame(aaply(bound_mlesample_ON 
+                                       ,2,quantile,na.rm=TRUE,probs=c(0.025,0.5,0.975))) %>% 
   mutate(date=seq.Date(ymd(intro_date),
                        ymd(intro_date)-1+length(times), 1))
+
+
 #add dat to data for plotting 
+
 dat_reported <- dat_omic  %>% mutate(date=seq.Date(ymd(intro_date),
                                                    ymd(intro_date)-1+length(dat_omic$day), 1))
-
-
 
 ggplot() + geom_line(data=project_dat_ON,aes(x=date,y=`50%`), col="green",size=1.5,alpha=0.4) +
   geom_ribbon(data=project_dat_ON,aes(x=date,ymin=`2.5%`,ymax=`97.5%`),fill='darkgreen',alpha=0.1, size = 1.5)+
   geom_point(data=dat_reported,aes(x=date, y=value),color='grey48', alpha=0.8, size = 1.5)
 
+# ---- end check fit ---- 
 
 
+mu1 <- mean(dat_omic$value)
+mu2 <- mu1/last(test_prop)
 
-#####____ fit and make projections without test_prop 
+theta_2 = 1 / ( 1/mu1 - 1/mu2 + 1/parameters[["theta"]])  #m1 / end of test_prop
 
-guess <- c(beta_m = 1.1, stngcy=0.5, beta_r=0.6) 
-
-
-fit_ON_rel <- optim(fn=func_loglik,  par=guess, lower=c(0,0,0), 
-                    upper = c(Inf,1,Inf), method = "L-BFGS-B", parameters = parameters,
-                    test_prop=rep(1,nrow(dat_omic)), dat_omic=dat_omic) #set test_prop=1
-# check the values:
-
-parameters[names(guess)] <- fit_ON_rel$par
+parameters[["theta"]] <- theta_2 
 
 times <- 1:(nrow(dat_omic) + forecasts_days)
 out_ON_rel <- as.data.frame(deSolve::ode(y=init,time=times,func= sveirs,
                                          parms=parameters)) 
 
-incidence_ON_rel =  parameters[["p"]]*parameters[["sigma"]]*(out_ON$Er + out_ON$Erv + out_ON$Erw +
-                                                               out_ON$Em + out_ON$Emv +
-                                                               out_ON$Emw)
+incidence_ON_rel =  parameters[["p"]]*parameters[["sigma"]]*(out_ON_rel$Er + out_ON_rel$Erv + out_ON_rel$Erw +
+                                                               out_ON_rel$Em + out_ON_rel$Emv +
+                                                               out_ON_rel$Emw)
 
 uncert_bound_ON_rel = raply(simu_size,rnbinom(n=length(incidence_ON_rel),
                                               mu=incidence_ON_rel,
@@ -214,6 +241,55 @@ project_dat_ON_rel =  as.data.frame(aaply(uncert_bound_ON_rel
   mutate(date=seq.Date(ymd(intro_date),
                        ymd(intro_date)-1+length(times), 1))
 
+plot(project_dat_ON_rel$`50%`)
+
+
+#########################################vary parameters  ##########
+#issues--- can't re-estimate without tests prop... parameters become unreasonable 
+
+relx_level = data.frame(relx_level=c(0.4,0.8))
+
+vary_parameter <- function(x, parameters,init1=init){
+  parameters["relx_level"] <- x
+  out_var <- as.data.frame(deSolve::ode(y=init1,time=times,func=sveirs,
+                                        parms=parameters)) 
+  incidence_var =  parameters[["p"]]*parameters[["sigma"]]*(out_var$Er + out_var$Erv + out_var$Erw +
+                                                              out_var$Em + out_var$Emv +
+                                                              out_var$Emw)
+}
+incidence_var <- data.frame(apply(relx_level, 1, vary_parameter, parameters=parameters))
+plot(NA,NA, xlim=c(0,100), ylim=c(0,50000))
+lines(incidence_ON_rel)
+lines(incidence_var$X1)
+lines(incidence_var$X2)
+
+
+
+uncert_bound_ON_rel_1 = raply(simu_size,rnbinom(n=length(incidence_var$X1),
+                                                mu=incidence_var$X1,
+                                                size=1/parameters[["theta"]]))
+
+project_dat_ON_rel_1 =  as.data.frame(aaply(uncert_bound_ON_rel_1 
+                                            ,2,quantile,na.rm=TRUE,probs=c(0.025,0.5,0.975))) %>% 
+  mutate(date=seq.Date(ymd(intro_date),
+                       ymd(intro_date)-1+length(times), 1))
+
+
+
+uncert_bound_ON_rel_2 = raply(simu_size,rnbinom(n=length(incidence_var$X2),
+                                                mu=incidence_var$X2,
+                                                size=1/parameters[["theta"]]))
+
+project_dat_ON_rel_2 =  as.data.frame(aaply(uncert_bound_ON_rel_2 
+                                            ,2,quantile,na.rm=TRUE,probs=c(0.025,0.5,0.975))) %>% 
+  mutate(date=seq.Date(ymd(intro_date),
+                       ymd(intro_date)-1+length(times), 1))
+
+
+
+
+
+##################
 
 
 saveRDS(project_dat_ON, file.path("data/ON_test_constraints.rds"))
@@ -222,19 +298,33 @@ project_dat_ON =readRDS(file.path("data/ON_test_constraints.rds"))
 saveRDS(project_dat_ON_rel, file.path("data/ON_no_constraints.rds"))
 project_dat_ON_rel =readRDS(file.path("data/ON_no_constraints.rds"))
 
+saveRDS(project_dat_ON_rel_1, file.path("data/ON_40percent_inc.rds"))
+project_dat_ON_rel_1 = readRDS(file.path("data/ON_40percent_inc.rds"))
 
-
+saveRDS(project_dat_ON_rel_2, file.path("data/ON_80percent_inc.rds"))
+project_dat_ON_rel_2 = readRDS(file.path("data/ON_80percent_inc.rds"))
+# "#", 
 #make figures 
 
-cols <- c("Current, with testing constraints" = "darkgreen", "Without testing constraints"="orange")
+cols <- c("Current, TC" = "darkgreen",
+          "NTC"="orange", "40% increase"="#0072B2", "80% increase"= "#CC79A7")
 
-gg_ON <- ggplot() + geom_line(data=project_dat_ON,aes(x=date,y=`50%`, colour = "Current, with testing constraints"),size=1.2,alpha=0.4) +
+gg_ON <- ggplot() + geom_line(data=project_dat_ON,aes(x=date,y=`50%`, colour = "Current, TC"),size=1.2,alpha=0.4) +
   geom_ribbon(data=project_dat_ON,aes(x=date,ymin=`2.5%`,ymax=`97.5%`),fill='darkgreen',alpha=0.1)+
-  geom_line(data=project_dat_ON_rel,aes(x=date,y=`50%`, color="Without testing constraints"),size=1.2,alpha=0.4) +
+  geom_line(data=project_dat_ON_rel,aes(x=date,y=`50%`, color="NTC"),size=1.2,alpha=0.4) +
   geom_ribbon(data=project_dat_ON_rel,aes(x=date,ymin=`2.5%`,ymax=`97.5%`),fill='orange',alpha=0.1)+
+  geom_line(data=project_dat_ON_rel_1,aes(x=date,y=`50%`, color="Without testing constraints"),size=1.2,alpha=0.4) +
+  geom_ribbon(data=project_dat_ON_rel_1,aes(x=date,ymin=`2.5%`,ymax=`97.5%`),fill='yellow',alpha=0.1)+
   geom_point(data=dat_reported,aes(x=date, y=value),color='grey48', alpha=0.8) + 
+  
+  geom_line(data=project_dat_ON_rel_1,aes(x=date,y=`50%`, color="40% increase"),size=1.2,alpha=0.4) +
+  geom_ribbon(data=project_dat_ON_rel_1,aes(x=date,ymin=`2.5%`,ymax=`97.5%`),fill="purple",alpha=0.1)+
+  
+  geom_line(data=project_dat_ON_rel_2,aes(x=date,y=`50%`, color="80% increase"),size=1.2,alpha=0.4) +
+  geom_ribbon(data=project_dat_ON_rel_2,aes(x=date,ymin=`2.5%`,ymax=`97.5%`),fill="#D55E00",alpha=0.1)+
+  
   #geom_line(aes(y=typical),color='blue') +
-  labs(y="Reported cases",x="Date") + ylim(c(0,70000)) + 
+  labs(y="Reported cases",x="Date") + ylim(c(0,80000)) + 
   scale_x_date(date_breaks = "8 days", date_labels = "%b-%d-%y") +theme_light() +
   scale_color_manual(values = cols) +  theme(axis.text=element_text(size=15),
                                              plot.title = element_text(size=15, face="bold"),
@@ -249,6 +339,10 @@ gg_ON <- ggplot() + geom_line(data=project_dat_ON,aes(x=date,y=`50%`, colour = "
 
 gg_ON
 
-ggsave(file="figs/ON_proj.png", gg_ON, width = 10, height = 8)
+ggsave(file="figs/ON_proj.png", gg_ON, width = 14, height = 8)
 saveRDS(gg_ON, file.path("figs/ON-fig.rds"))
+
+
+
+
 
