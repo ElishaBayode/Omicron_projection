@@ -86,7 +86,7 @@ times = 1:nrow(dat_omic)
 
 #declaring  parameters 
 eff_date <-   ymd("2021-12-31")  # intervention date 
-intv_date <-  ymd("2022-02-10")
+intv_date <-  ymd("2022-01-10")
 parameters <-         c(sigma=1/3, # incubation period (days) 
                         gamma=1/5, #recovery rate 
                         nu =0.007, #vax rate: 0.7% per day 
