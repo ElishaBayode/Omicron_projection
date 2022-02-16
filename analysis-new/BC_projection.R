@@ -86,7 +86,7 @@ times = 1:nrow(dat_omic)
 
 #declaring  parameters 
 eff_date <-   ymd("2021-12-31")  # intervention date 
-intv_date <-  ymd("2022-01-10")
+intv_date <-  ymd("2022-02-10")
 parameters <-         c(sigma=1/3, # incubation period (days) 
                         gamma=1/5, #recovery rate 
                         nu =0.007, #vax rate: 0.7% per day 
@@ -165,17 +165,17 @@ date_known_prop <- "2021-12-12"
 known_growth <- 0.2
 period_known_growth <- c("2021-12-05", "2021-12-15")
 penalties <- list(known_prop = known_prop, date_known_prop = date_known_prop, 
-               known_growth = known_growth, period_known_growth = period_known_growth)
+                  known_growth = known_growth, period_known_growth = period_known_growth)
 
 # Determine weight of penalty. 
-# Qu: how strong should penalty be on scale of 0-1? 0 = no penalty. 1 = relatively as impactful as the likelihood
+# Qu: how strong should the penalty be? 0 = no penalty. 1 = relatively as impactful as the likelihood. 
 pen.size <- 0.6
 
 guess <- c( beta_m=1, stngcy=0.4,beta_r=0.6) 
 pen.fit_BC <- optim(fn=func_penloglik,  par=guess, lower=c(0,0,0), upper = c(Inf,1,Inf), 
-                   method = "L-BFGS-B", 
-                   parameters = parameters, test_prop=test_prop, 
-                   pen.size=pen.size, penalties = penalties, dat_omic=dat_omic)
+                    method = "L-BFGS-B", 
+                    parameters = parameters, test_prop=test_prop, 
+                    pen.size=pen.size, penalties = penalties, dat_omic=dat_omic)
 pen.fit_BC
 ####################
 
@@ -214,115 +214,3 @@ ggplot() + geom_line(data=project_dat_BC,aes(x=date,y=`50%`), col="green",size=1
   geom_point(data=dat_reported,aes(x=date, y=value),color='grey48', alpha=0.8, size = 1.5)
 
 # ---- end check fit ---- 
-
-
-
-# ---- do not worry about anything below here ---- 
-
-
-##################
-#JS: Sanity checks/exploration
-# 1. are we just getting the lower or upper bounds out? Is optim taking plenty of steps? (fit_BC$counts)
-# 2. lh surface:
-#z <- matrix(NA, 50,50)
-#x <- c(seq(1, 5, length.out=50))
-#y <- c(seq(0.2,1 , length.out=50))
-#for (i in 1:50){
-# for (j in 1:50){
-#  z[i,j] <- func_loglik(par=c(beta_m = x[i], p = y[j]),
-#                        test_prop=fake_test_prop[1:nrow(dat_omic)],dat_omic=dat_omic,
-#                        parameters = parameters)
-# }
-#}
-#image(x,y,z)
-#contour(x, y ,z, nlevels = 20, add=TRUE)
-################
-
-
-# beta_m <- seq(from=2.2,to=3.5,length=50)
-# beta_r <- seq(0.9,3,length=50)
-# grid <- expand.grid(x=beta_r,y=beta_m)
-# 
-# 
-# grid <- ddply(grid,~x+y,mutate,loglik=func_loglik(par=c(x, y, logit(0.5),
-#                                                 log(0.1)),test_prop,dat_omic))
-# 
-# 
-# grid <- subset(grid,is.finite(loglik))
-# ggplot(grid,aes(x=x,y=y,z=loglik,fill=loglik))+
-#   geom_tile()+geom_contour(binwidth=1)
-# 
-
-
-
-#without test_prop 
-# incidence_BC_rel =  parameters[[1]]*(out_BC_2$Er + out_BC_2$Erv + out_BC_2$Erw +
-#                                        out_BC_2$Em + out_BC_2$Emv +
-#                                        out_BC_2$Emw)
-# 
-# uncert_bound_BC_rel = raply(simu_size,rnbinom(n=length(incidence_BC_rel),
-#                                               mu=parameters[["p"]]*incidence_BC_rel,
-#                                               size=1/parameters[["theta"]]))
-# 
-# project_dat_BC_rel <- as.data.frame(aaply(uncert_bound_BC_rel,2
-#                                           ,quantile,na.rm=TRUE,probs=c(0.025,0.5,0.975))) %>% 
-#   mutate(date=seq.Date(ymd(intro_date),
-#                        ymd(intro_date)-1+length(times), 1))
-# 
-# 
-# 
-# #add dat to data for plotting 
-# dat_reported <- dat_omic  %>% mutate(date=seq.Date(ymd(intro_date),
-#                               ymd(intro_date)-1+length(dat_omic$day), 1))
-# 
-# 
-# 
-# 
-# 
-# saveRDS(project_dat_BC, file.path("data/BC_test_constraints.rds"))
-# project_dat_BC =readRDS(file.path("data/BC_test_constraints.rds"))
-# 
-# saveRDS(project_dat_BC_rel, file.path("data/BC_no_constraints.rds"))
-# project_dat_BC_rel =readRDS(file.path("data/BC_no_constraints.rds"))
-# 
-# 
-# get_true_incidence_plot(times, start_date=intro_date, 
-#                         parameters_base=c(parameters,mle_est_BC), init=init)
-# 
-# get_true_incidence_prop_plot(times, start_date=intro_date, 
-#                              parameters_base=c(parameters,mle_est_BC), init=init)
-# 
-# 
-# 
-# 
-# cols <- c("Current, with testing constraints" = "darkgreen", "Without testing constraints"="orange")
-# 
-# gg_BC <- ggplot() + geom_line(data=project_dat_BC,aes(x=date,y=`50%`, colour = "Current, with testing constraints"),size=1.2,alpha=0.4) +
-#   geom_ribbon(data=project_dat_BC,aes(x=date,ymin=`2.5%`,ymax=`97.5%`),fill='darkgreen',alpha=0.1)+
-#   geom_line(data=project_dat_BC_rel,aes(x=date,y=`50%`, color="Without testing constraints"),size=1.2,alpha=0.4) +
-#   geom_ribbon(data=project_dat_BC_rel,aes(x=date,ymin=`2.5%`,ymax=`97.5%`),fill='orange',alpha=0.1)+
-#   geom_point(data=dat_reported,aes(x=date, y=value),color='grey48', alpha=0.8) + 
-#   #geom_line(aes(y=typical),color='blue') +
-#   labs(y="Reported cases",x="Date") + ylim(c(0,35000)) + 
-#   scale_x_date(date_breaks = "8 days", date_labels = "%b-%d-%y") +theme_light() +
-#   scale_color_manual(values = cols) +  theme(axis.text=element_text(size=15),
-#                                              plot.title = element_text(size=15, face="bold"),
-#                                              axis.text.x = element_text(angle = 45, hjust = 1),
-#                                              legend.position = "bottom", legend.title = element_text(size=15),
-#                                              legend.text = element_text(size=15),
-#                                              axis.title=element_text(size=15,face="bold")) +
-#   
-#   labs(color = " ",title="BC") +  geom_vline(xintercept=eff_date, linetype="dashed", 
-#                                              color = "grey", size=1)
-# 
-# 
-# gg_BC
-# 
-# ggsave(file="figs/BC_proj.png", gg_BC, width = 10, height = 8)
-# saveRDS(gg_BC, file.path("figs/BC-fig.rds"))
-# 
-# #things to try  
-# # fix beta_r and probably p 
-# # estimate beta_m alone 
-# #reduce population immunity and increase duration 
-# 
