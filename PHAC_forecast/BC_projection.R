@@ -8,9 +8,9 @@ source("analysis-new/BC_data.R")
 
 
 ########## Data set up
-forecasts_days <- 30 
+forecasts_days <- 120 
 intro_date <-  ymd("2021-11-30") #NOTE: now starting on Nov 30, for PHAC forecasts (it was 2021-11-20 )
-stop_date <- ymd("2022-02-12")  
+stop_date <- ymd("2022-03-20")  
 #import data 
 dat = readRDS("data/BC-dat.rds")
 #include Omicron wave only
@@ -35,6 +35,8 @@ plot_fit
 
 # test_prop for fit and projection 
 test_prop_proj_BC <- data.frame(tp_approx[2])
+#saveRDS(test_prop_proj_BC,file.path("data/test_prop_proj_BC.rds"))
+
 
 #subset for fitting alone (length of data)
 test_prop <- test_prop_proj_BC$tp[1:length(dat_omic$day)] #or set forecasts_days to 0 in tp_approx_fit() above 
@@ -82,41 +84,45 @@ N_pop=N
 vaxlevel_in = 0.88 # portion of the pop vaccinated at start time 
 port_wane_in = 0.04 # portion boosted at start tie 
 past_infection_in = 0.2 #  #increased this from 0.1 to 0.18 # total in R at start time
-incres_in = 433*2 #( 389, reported cases on Nov 30) # resident strain (delta) incidence at start 
-incmut_in = 6# new (omicron) inc at stat (#first cases of Omicron reported on 30 Nov)
+incres_in = 433*3 #( 389, reported cases on Nov 30) # resident strain (delta) incidence at start 
+incmut_in = 12# new (omicron) inc at stat (#first cases of Omicron reported on 30 Nov)
 simu_size = 1e5 # number of times to resample the negative binom (for ribbons)
-forecasts_days =30 # how long to forecast for 
+#forecasts_days =30 # how long to forecast for 
 times = 1:nrow(dat_omic)
 
 #declaring  parameters 
 eff_date <-   ymd("2021-12-31")  # intervention date 
-intv_date <-  ymd("2022-02-10")
+intv_date <-  ymd("2022-03-18") # increase due to BA.2
+fur_intv_date <- ymd("2022-04-04") #increase due to reopening (accounting for delay)
+
+
 parameters <-         c(sigma=1/3, # incubation period (days) 
                         gamma=1/5, #recovery rate 
                         nu =0.007, #vax rate: 0.7% per day 
                         mu=1/(82*365), # 1/life expectancy 
-                        w1= 1/(0.5*365),# waning rate from R to S 
-                        w2= 1/(0.5*365), # waning rate from Rv to V 
-                        w3= 1/(0.5*365),# waning rate Rw to W 
+                        w1= 1/(0.33*365),# waning rate from R to S 
+                        w2= 1/(0.33*365), # waning rate from Rv to V 
+                        w3= 1/(0.33*365),# waning rate Rw to W 
                         ve=1, # I think this should be 1. it is not really efficacy  
                         beta_r=0.6, #transmission rate 
                         beta_m=1, #transmission rate 
                         epsilon_r = (1-0.8), # % this should be 1-ve 
                         epsilon_m = 1-0.15, # % 1-ve omicron 
-                        b= 0.006, # booster rate
+                        b= 0.012, # booster rate
                         beff = 0.7, # booster efficacy
                         wf=0.1, # protection for newly recovered
                         N=5.07e6,
                         stngcy= 0.4, #(*%(reduction)) strength of intervention (reduction in beta's)
                         eff_t = as.numeric(eff_date - intro_date),
-                        relx_level = 0,
+                        relx_level = 0.4,
+                        fur_relx_level = 0,
                         rlx_t = as.numeric(intv_date - intro_date),
-                        p = 0.25, #negative binomial mean
+                        fur_rlx_t = as.numeric(fur_intv_date - intro_date),
+                        p = 0.45, #negative binomial mean
                         theta = 0.1 #negative binomial dispersion
                         
 )
 init <- make_init()   #generate initial states
-
 
 
 
@@ -158,9 +164,9 @@ penalties <- list(known_prop = known_prop, date_known_prop = date_known_prop,
 
 # Determine weight of penalty. 
 # Qu: how strong should penalty be on scale of 0-1? 0 = no penalty. 1 = relatively as impactful as the likelihood
-pen.size <- 0.6
+pen.size <- 0.1
 
-guess <- c( beta_m=1, stngcy=0.4,beta_r=0.6, theta=0.1, p=0.2) 
+guess <- c( beta_m=1, stngcy=0.4,beta_r=0.6, theta=0.1,p=0.4) 
 pen.fit_BC <- optim(fn=func_penloglik,  par=guess, lower=c(0,0,0,0.001,0), upper = c(Inf,1,Inf,Inf,1), 
                     method = "L-BFGS-B", 
                     parameters = parameters, test_prop=test_prop, 
@@ -176,6 +182,23 @@ gg = simple_prev_plot(parameters, numdays = 190, mode = "both"); gg  # cc's simp
 
 
 
+######check growth rate and booster rate, 50% boosted as at Feb 22, adjust b accordingly  #########
+#https://globalnews.ca/news/8492863/covid-19-vaccine-and-booster-tracker-coronavirus-canada/
+#global news has a tracker 
+
+times <- 1:(nrow(dat_omic) + forecasts_days)
+out_check <- as.data.frame(deSolve::ode(y=init,time=times,func= sveirs,
+                                        parms=parameters)) 
+get_growth_rate(out_check, startoffset = 2, duration = 10)
+
+
+##boosted_pop <- cumsum(parameters[["b"]]*parameters[["ve"]]*out_check$V +
+ #                       parameters[["b"]]*parameters[["ve"]]*out_check$Rv)/N_pop
+#
+#ggplot() + geom_line(aes(x=1:(nrow(dat_omic)+5), y=boosted_pop[1:(nrow(dat_omic)+5)]/parameters[["N"]]))
+
+
+#####################
 
 ########## Check fit: make prediction and projection with estimated parameters
 
@@ -237,8 +260,9 @@ parameters[["theta"]] <- theta_2
 
 times <- 1:(nrow(dat_omic) + forecasts_days)
 out_BC_rel <- as.data.frame(deSolve::ode(y=init,time=times,func= sveirs,
-                                         parms=parameters)) 
-
+                                         parms=parameters)) %>%
+  mutate(date=seq.Date(ymd(intro_date),ymd(intro_date)-1+length(times), 1))
+      #parameters[["p"]]*
 incidence_BC_rel =  parameters[["p"]]*parameters[["sigma"]]*(out_BC_rel$Er + out_BC_rel$Erv + out_BC_rel$Erw +
                                                                out_BC_rel$Em + out_BC_rel$Emv +
                                                                out_BC_rel$Emw)
@@ -254,25 +278,63 @@ mutate(date=seq.Date(ymd(intro_date),
 plot(project_dat_BC_rel$`50%`)
 
 
+
+
+## Sanity checks - how well are the penalty criteria and other reasonable assumptions met?
+
+# 1. Date with 'known' proportion of resident vs mutant strain - how well does fitted proportion match penalty known_prop?
+known_prop # penalty
+((out_BC_rel$Er+out_BC_rel$Erv+out_BC_rel$Erw)/(out_BC_rel$Er+out_BC_rel$Erv+out_BC_rel$Erw + 
+                                                  out_BC_rel$Em+out_BC_rel$Emv+out_BC_rel$Emw))[which(dat_omic$date==date_known_prop)] # actual fitted
+
+
+# 2. Growth advantage of mutant strain - how well does fitted growth rate match penalty known_growth?
+known_growth # penalty
+get_growth_rate(out_BC_rel, startoffset = which(dat_omic$date==period_known_growth[1]), duration = 
+                  which(dat_omic$date==period_known_growth[2])-which(dat_omic$date==period_known_growth[1]))$mutrate # actual fitted
+
+
+# 3. How many people are boosted at start date and end date?
+# Start: 
+((out_BC_rel$W + out_BC_rel$Erw + out_BC_rel$Emw + out_BC_rel$Irw + out_BC_rel$Imw + out_BC_rel$Rw)/N_pop)[1]
+# End (of period with data)
+((out_BC_rel$W + out_BC_rel$Erw + out_BC_rel$Emw + out_BC_rel$Irw + out_BC_rel$Imw + out_BC_rel$Rw)/N_pop)[nrow(dat_omic)]
+# End (of projection period)
+tail((out_BC_rel$W + out_BC_rel$Erw + out_BC_rel$Emw + out_BC_rel$Irw + out_BC_rel$Imw + out_BC_rel$Rw)/N_pop, n=1)
+
+
+# ---- end check fit --
+
+#check total incident cases within a specified period 
+
+get_total_infection(output = out_BC_rel, from_date = ymd("2021-12-01"), 
+                    to_date = ymd("2022-01-30"), parameters = parameters)
+
+
+
+
 #########################################vary parameters  ##########
 #issues--- can't re-estimate without tests prop... parameters become unreasonable 
 
-relx_level = data.frame(relx_level=c(0.4,0.8))
+#relx_level = data.frame(relx_level=c(0.1,0.2))
+fur_relx_level = data.frame(fur_relx_level=c(0.15,0.3))
 
 vary_parameter <- function(x, parameters,init1=init){
-  parameters["relx_level"] <- x
+  parameters["fur_relx_level"] <- x
   out_var <- as.data.frame(deSolve::ode(y=init1,time=times,func=sveirs,
-                                         parms=parameters)) 
-  incidence_var =  parameters[["p"]]*parameters[["sigma"]]*(out_var$Er + out_var$Erv + out_var$Erw +
+                                         parms=parameters)) # parameters[["p"]]*
+  incidence_var = parameters[["p"]]*parameters[["sigma"]]*(out_var$Er + out_var$Erv + out_var$Erw +
                                                                out_var$Em + out_var$Emv +
-                                                               out_var$Emw)
+                                                               out_var$Emw)*test_prop
 }
-incidence_var <- data.frame(apply(relx_level, 1, vary_parameter, parameters=parameters))
-plot(NA,NA, xlim=c(0,100), ylim=c(0,50000))
+incidence_var <- data.frame(apply(fur_relx_level, 1, vary_parameter, parameters=parameters))
+plot(NA,NA, xlim=c(0,250), ylim=c(0,100000))
 lines(incidence_BC_rel)
 lines(incidence_var$X1)
 lines(incidence_var$X2)
 
+comp_1 <- incidence_var
+incidence_var
 
 
 uncert_bound_BC_rel_1 = raply(simu_size,rnbinom(n=length(incidence_var$X1),
@@ -316,25 +378,25 @@ project_dat_BC_rel_2 = readRDS(file.path("data/BC_80percent_inc.rds"))
 # "#", 
 #make figures 
 
-cols <- c("Current, TC" = "darkgreen",
-          "NTC"="orange", "40% increase"="#0072B2", "80% increase"= "#CC79A7")
+cols <- c("Current: with testing constraint" = "darkgreen",
+       "NTC"="orange", "15% increase"="#0072B2", "30% increase"= "#CC79A7")
 
-gg_BC <- ggplot() + geom_line(data=project_dat_BC,aes(x=date,y=`50%`, colour = "Current, TC"),size=1.2,alpha=0.4) +
+gg_BC <- ggplot() + geom_line(data=project_dat_BC,aes(x=date,y=`50%`, colour = "Current: with testing constraint"),size=1.2,alpha=0.4) +
   geom_ribbon(data=project_dat_BC,aes(x=date,ymin=`2.5%`,ymax=`97.5%`),fill='darkgreen',alpha=0.1)+
-  geom_line(data=project_dat_BC_rel,aes(x=date,y=`50%`, color="NTC"),size=1.2,alpha=0.4) +
+ 
   geom_ribbon(data=project_dat_BC_rel,aes(x=date,ymin=`2.5%`,ymax=`97.5%`),fill='orange',alpha=0.1)+
   geom_line(data=project_dat_BC_rel_1,aes(x=date,y=`50%`, color="Without testing constraints"),size=1.2,alpha=0.4) +
   geom_ribbon(data=project_dat_BC_rel_1,aes(x=date,ymin=`2.5%`,ymax=`97.5%`),fill='yellow',alpha=0.1)+
   geom_point(data=dat_reported,aes(x=date, y=value),color='grey48', alpha=0.8) + 
   
-  geom_line(data=project_dat_BC_rel_1,aes(x=date,y=`50%`, color="40% increase"),size=1.2,alpha=0.4) +
+  geom_line(data=project_dat_BC_rel_1,aes(x=date,y=`50%`, color="15% increase"),size=1.2,alpha=0.4) +
   geom_ribbon(data=project_dat_BC_rel_1,aes(x=date,ymin=`2.5%`,ymax=`97.5%`),fill="purple",alpha=0.1)+
   
-  geom_line(data=project_dat_BC_rel_2,aes(x=date,y=`50%`, color="80% increase"),size=1.2,alpha=0.4) +
+  geom_line(data=project_dat_BC_rel_2,aes(x=date,y=`50%`, color="30% increase"),size=1.2,alpha=0.4) +
   geom_ribbon(data=project_dat_BC_rel_2,aes(x=date,ymin=`2.5%`,ymax=`97.5%`),fill="#D55E00",alpha=0.1)+
-  
-  #geom_line(aes(y=typical),color='blue') +
-  labs(y="Reported cases",x="Date") + ylim(c(0,30000)) + 
+  geom_line(data=project_dat_BC_rel,aes(x=date,y=`50%`, color="NTC"),size=1.2,alpha=0.4) +
+ # geom_line(aes(y=typical),color='blue') +
+  labs(y="Reported cases",x="Date") + ylim(c(0,25000)) + #30000
   scale_x_date(date_breaks = "8 days", date_labels = "%b-%d-%y") +theme_light() +
   scale_color_manual(values = cols) +  theme(axis.text=element_text(size=15),
                                              plot.title = element_text(size=15, face="bold"),
@@ -343,17 +405,24 @@ gg_BC <- ggplot() + geom_line(data=project_dat_BC,aes(x=date,y=`50%`, colour = "
                                              legend.text = element_text(size=15),
                                              axis.title=element_text(size=15,face="bold")) +
   
-  labs(color = " ",title="BC") +  geom_vline(xintercept=eff_date, linetype="dashed", 
-                                             color = "grey", size=1)
+  labs(color = " ",title="BC") #+  geom_vline(xintercept=eff_date, linetype="dashed", 
+                                          #   color = "grey", size=1)
 
 
 gg_BC
 
-ggsave(file="figs/BC_proj.png", gg_BC, width = 14, height = 8)
+
+
+ggsave(file="figs/BC_proj.png", gg_BC, width = 13, height = 12)
 saveRDS(gg_BC, file.path("figs/BC-fig.rds"))
 
 
 
+
+BC_p <- parameters[["p"]]
+saveRDS(BC_p, file.path("data/BC_p.rds"))
+BC_test_p <- test_prop
+saveRDS(BC_test_p, file.path("data/BC_test_p.rds"))
 
 
 

@@ -1,4 +1,5 @@
 ########## Libraries 
+#remotes::install_github("mountainmath/CanCovidData")
 require(deSolve)
 require(CanCovidData)
 library(plyr)
@@ -9,6 +10,7 @@ require(reshape2)
 library(lubridate)
 library(dplyr)
 library(data.table)
+library(cowplot)
 set.seed(3242)
 ##########
 
@@ -19,10 +21,11 @@ sveirs <- function(time, state, parameters) {
     #c <- 1# effectiveness of NPIs, set as 1, change later to c(t)
     c <- (1 - stngcy/(1+ exp(-1.25*(time-eff_t))))   #intervention 
     rlx <- (1 + relx_level/(1+ exp(-1.25*(time-rlx_t)))) # relaxation 
+    further_rlx <- (1 + fur_relx_level/(1+ exp(-1.25*(time-fur_rlx_t))))
     
     N <- S+Er+Em+Ir+Im+R+V+Erv+Emv+Irv+Imv+Rv+W+Erw+Emw+Irw+Imw+Rw #total population 
-    lambda_r <- c*rlx*beta_r*(Ir + Irv + Irw)
-    lambda_m <- c*rlx*beta_m*(Im + Imv + Imw) #force of infection mutant strain
+    lambda_r <- c*rlx*further_rlx*beta_r*(Ir + Irv + Irw)
+    lambda_m <- c*rlx*further_rlx*beta_m*(Im + Imv + Imw) #force of infection mutant strain
     dS <-  mu*N - (lambda_r+lambda_m)*S/N  + w1*R -(mu + nu*ve)*S
     dEr <- lambda_r*S/N + wf* epsilon_r*lambda_r*R/N - (sigma+mu)*Er 
     dEm <- lambda_m*S/N + wf* epsilon_m*lambda_m*R/N - (sigma+mu)*Em
@@ -119,7 +122,7 @@ get_total_incidence = function(output, parameters, lag = 0 ) {
                                inc_tot = ascFrac*sigma*lag_func(Er+Erv+Erw+Em +Emv +Emw, k=lag), 
                                inc_vax = ascFrac*sigma*lag_func(Erv+Erw + Emv +Emw, k=lag), 
                                inc_nonvax = ascFrac*sigma*lag_func(Er+Em), k=lag) %>% 
-      select(time, inc_res, inc_mut, 
+      dplyr::select(time, inc_res, inc_mut, 
              inc_tot, inc_vax, inc_nonvax)
     return(incid)})
 }
@@ -138,12 +141,12 @@ get_true_incidence_plot = function(times, start_date, parameters_base,init) {
                                inc_tot = ascFrac*sigma*lag_func(Er+Erv+Erw+Em +Emv +Emw, k=lag), 
                                inc_vax = ascFrac*sigma*lag_func(Erv+Erw + Emv +Emw, k=lag), 
                                inc_nonvax = ascFrac*sigma*lag_func(Er+Em), k=lag) %>% 
-      select(time, inc_res, inc_mut, inc_tot, inc_vax, inc_nonvax) %>% 
+      dplyr::select(time, inc_res, inc_mut, inc_tot, inc_vax, inc_nonvax) %>% 
       mutate(date=seq.Date(ymd(start_date),
       ymd(start_date)-1+length(time), 1))
   
       
-     cols = c("total" = "orange", "incidence_vax" = "blue","incidence_nonvax" = "darkgreen" )
+     cols = c("total" = "orange", "incidence_vax" = "blue","inci dence_nonvax" = "darkgreen" )
      plot = ggplot() + geom_line(data=incid,aes(x=date,y=inc_tot, colour="total"),size=1.2,alpha=0.4) +
        geom_line(data=incid,aes(x=date,y=inc_vax, colour = "incidence_vax" ),size=1.2,alpha=0.4) +
             geom_line(data=incid,aes(x=date,y=inc_nonvax, colour="incidence_nonvax"),size=1.2,alpha=0.4) +
@@ -169,7 +172,7 @@ get_true_incidence_prop_plot = function(times, start_date, parameters_base,init)
                   inc_totvax_prop = ascFrac*sigma*lag_func((Erw+ Emw +Erv+ Emv)/(W+Erw+Emw+Irw+Imw+Rw+V+Erv + 
                                                                                 Emv+Irv+Imv +Rv), k=lag),
                                inc_nonvax_prop = ascFrac*sigma*lag_func((Er+Em)/(S+R+Er+Em), k=lag)) %>% 
-      select(time, inc_vax_prop, inc_boost_prop, inc_totvax_prop, inc_nonvax_prop) %>% 
+      dplyr::select(time, inc_vax_prop, inc_boost_prop, inc_totvax_prop, inc_nonvax_prop) %>% 
       mutate(date=seq.Date(ymd(start_date),
                            ymd(start_date)-1+length(time), 1))
     
@@ -199,13 +202,13 @@ get_vax = function(output) {
                             Irv+ Imv+ Rv+ W +Erw+Emw+ Irw+ Imw+ Rw,
                           vaxtwodose = V+ Erv + Emv+ 
                             Irv+ Imv+ Rv, boosted = W +Erw+Emw+ Irw+ Imw+ Rw) %>% 
-    select(time,unvax, vaxtot, vaxtwodose, boosted) 
+    dplyr::select(time,unvax, vaxtot, vaxtwodose, boosted) 
   return(vax) 
 }
 
 get_growth_rate = function(output, startoffset = 7, duration = 20) {
   tots = output %>% mutate( res = Er +Erv + Erw, 
-                            mut = Em + Emv + Emw) %>% select(time, res, mut) %>% 
+                            mut = Em + Emv + Emw) %>% dplyr::select(time, res, mut) %>% 
     filter(time > min(time) + startoffset & time < min(time)+startoffset+duration)
   return(list( resrate =  lm(log(tots$res) ~ tots$time)$coefficients[2], 
                mutrate = lm(log(tots$mut) ~ tots$time)$coefficients[2]))
@@ -234,14 +237,14 @@ get_selection_coef = function(growth_rate){
 # mydat is a data frame with Reported_Date, under70 ("Yes" or "No") and the cases in that group on that day (totcases)
 make_case_splines = function(mydat) {
   over70 = filter(mydat, under70=="No")
-  logover70 = over70 %>% mutate(lcases = log(totcases)) %>% select(Reported_Date, lcases)
+  logover70 = over70 %>% mutate(lcases = log(totcases)) %>% dplyr::select(Reported_Date, lcases)
   ospline = smooth.spline(logover70$Reported_Date, logover70$lcases, df=15)
   pred = data.frame( predlcases = ospline$y,
                      cases = over70$totcases, lcases = log(over70$totcases),
                      Reported_Date = logover70$Reported_Date)
   # (2) under 70 
   under70 = filter(mydat, under70=="Yes")
-  logunder70 = under70 %>% mutate(lcases = log(totcases)) %>% select(Reported_Date, lcases)
+  logunder70 = under70 %>% mutate(lcases = log(totcases)) %>% dplyr::select(Reported_Date, lcases)
   uspline = smooth.spline(logunder70$Reported_Date, logunder70$lcases, df=15)
   upred = data.frame( predlcases = uspline$y, 
                       cases = under70$totcases, lcases = log(under70$totcases),
@@ -467,3 +470,17 @@ sveirs_evol <- function(time, state, parameters) {
     return(list(c(dS,dEr,dEm,dIr,dIm,dR,dV,dErv,dEmv,dIrv,dImv,dRv,dW,dErw,dEmw,dIrw,dImw,dRw)))
   })
 }
+
+#------- This function gets total incident infection during a specified period 
+#-------Output must have a date colunm 
+get_total_infection <- function(output=output, from_date=from_date, to_date=to_date,parameters=parameters){
+  if(is.null(output$date)) stop('output must contain date column')
+  output_subset =  filter(output, date >= from_date & date <= to_date)
+  incid_subset =    parameters[["sigma"]]*(output_subset$Er + output_subset$Erv + output_subset$Erw +
+                                             output_subset$Em + output_subset$Emv +
+                                             output_subset$Emw)
+  total_incid = sum(incid_subset)
+  return(total_incid)
+}
+
+
