@@ -35,7 +35,7 @@ func_loglik <- function (par,test_prop,dat_omic,parameters,init) {
 negbin.loglik_2 <- function (params) {
   x <-   as.data.frame(deSolve::ode(y=init,time=times,func= sveirs,
                                     parms= params)) 
-  prediction <-  (x$Er+ x$Erv + x$Erw
+  prediction <-  params["p"]*params["sigma"]*(x$Er+ x$Erv + x$Erw
                   + x$Em+ x$Emv + x$Emw)
   sum(dnbinom(x=dat_omic$value,
               mu=params["p"]*prediction,size=1/params["theta"],

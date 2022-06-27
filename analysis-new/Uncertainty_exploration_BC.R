@@ -236,7 +236,7 @@ p1
 
 
 ## Third ribbon calculation approach: add nbinom resampling ON TOP OF mle resampling 
-bound_mlesample<-lapply(incidence_resampled,  function(x){raply(simu_size/100,rnbinom(n=length(x),
+bound_mlesample<-apply(incidence_resampled,2,  function(x){raply(simu_size/100,rnbinom(n=length(x),
                                                                  mu=x,
                                                                  size=1/parameters[["theta"]]))}, simplify=FALSE)
 bound_mlesample <- do.call(rbind, bound_mlesample)

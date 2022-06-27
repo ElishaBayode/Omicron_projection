@@ -1,10 +1,14 @@
 # got ON hosp from here, there is a download link
 # https://data.ontario.ca/en/dataset/covid-19-cases-in-hospital-and-icu-by-ontario-health-region
-onhosp = readr::read_csv("data/region_hospital_icu_covid_data_ON.csv")
+
+
+onhosp = readr::read_csv("https://data.ontario.ca/dataset/8f3a449b-bde5-4631-ada6-8bd94dbc7d15/resource/e760480e-1f95-4634-a923-98161cfb02fa/download/region_hospital_icu_covid_data.csv")
+#onhosp = readr::read_csv("data/region_hospital_icu_covid_data_ON.csv")
 
 ggplot(onhosp, aes(x=date, y = hospitalizations, color=oh_region))+geom_point()
 
 tothosp <- onhosp %>% group_by(date) %>% dplyr::summarise(hosp = sum(hospitalizations))
+
 ggplot(tothosp, aes(x=date, y = hosp))+geom_point()
 
 
@@ -24,10 +28,10 @@ ggplot(data = oncases, aes(x = Case_Reported_Date, y = cases)) +
 oncases$date = oncases$Case_Reported_Date
 # now just fiddle 
 
-cashos = merge( oncases, tothosp, by = "date") %>% select(date, cases, hosp) %>% 
+cashos = merge(oncases, tothosp, by = "date") %>% select(date, cases, hosp) %>% 
   mutate(scaledcases = lag(cases, n=9)*0.55) %>%
      pivot_longer(c(3,4), names_to = "type", values_to = "number")
-ggplot(cashos, aes(x=date, y = number, color=type))+geom_line() +
+ggplot(cashos, aes(x=date, y = number, color=type)) + geom_line() +
   scale_x_date(date_breaks = "2 weeks", date_labels = "%Y-%m-%d") +
   theme_light() +
   theme(axis.text.x = element_text(angle = 35, hjust = 1))
@@ -60,6 +64,7 @@ dat_omic$day <- 1:nrow(dat_omic)
 
 
 
+
 ########## Test_prop set up
 #-------EB: test_prop now has dates and this ensures it starts at the right date 
 # note - the fit at line 30 with tp_approx looks terrible so I need to use the 
@@ -68,7 +73,7 @@ dat_omic$day <- 1:nrow(dat_omic)
 # Elisha had: test_prop_proj_ON <- data.frame(tp_approx[2]) # should have date and tp and 
 # should start at the start date and end at in this case April 13?) 
 # I will use: 
-test_prop_proj_ON <- mytest_ON %>% select(date, test_prop) %>% rename(tp=test_prop)
+test_prop_proj_ON <- mytest_ON %>% select(date, test_prop) %>% dplyr::rename(tp=test_prop)
 test_prop <- test_prop_proj_ON$tp[1:length(dat_omic$day)]
 
 # am going to do something even dumber. test_prop from 1 to about 0.3 over dec 15-about 25
@@ -91,6 +96,7 @@ times = 1:nrow(dat_omic)
 #declaring  parameters 
 eff_date <-   ymd("2021-12-30")  # intervention date # restrictions were updated on 24 December 
 intv_date <-  ymd("2022-02-10") 
+fur_intv_date <- ymd("2022-05-10") 
 parameters <-         c(sigma=1/3, # incubation period (days) 
                         gamma=1/(5), #recovery rate 
                         nu =0.007, #vax rate: 0.7% per day 
@@ -183,11 +189,13 @@ gg = simple_prev_plot(parameters, numdays = 190, mode = "both"); gg  # cc's simp
 
 out_samp <- as.data.frame(deSolve::ode(y=init,time=times,func=sveirs,
                                        parms=parameters)) 
+
 reportable = parameters[["p"]]*parameters[["sigma"]]*(out_samp$Er + out_samp$Erv + out_samp$Erw +
                                                         out_samp$Em + out_samp$Emv +
                                                         out_samp$Emw)
-incidence = test_prop*reportable
-incid= data.frame(date = intro_date+out_samp$time, 
+incidence = test_prop*reportable #(length differs)
+
+incid = data.frame(date = intro_date+out_samp$time, 
                   inc = incidence, reportable = reportable)
 tmp =  merge(dat, incid, by="date") %>% select(date, cases, inc, reportable) %>% 
   pivot_longer(c(2,3,4), names_to = "type", values_to = "number")
@@ -206,9 +214,15 @@ ggplot(tmp, aes(x=date, y=number, color=type))+geom_line()
 # pars_good1 = parameters; # had test_prop going down to 0.3. changing to 0.15
 # pars_good2 = parameters; # had test_prop going down to 0.15 
 
+tptest = 1 -0.7/(1+exp(-0.2*as.numeric((x - ymd("2021-12-18")))))
+plot(x,tptest)
+
+#test_prop1= tptest #set 1 and 2 with 0.7 and 0.85 
+
 tptest = 1 -0.85/(1+exp(-0.2*as.numeric((x - ymd("2021-12-18")))))
 plot(x,tptest)
-# test_prop2= tptest set 1 and 2 with 0.7 and 0.85 
+
+test_prop2= tptest #set 1 and 2 with 0.7 and 0.85 
 
 intv_date <-  ymd("2022-03-07") 
 fur_intv_date = ymd("2022-04-05")
@@ -222,7 +236,7 @@ projpar2 = projpar + pars_good2-pars_good1
 
 end_proj = ymd("2022-07-01")
 times = 1:(end_proj - intro_date)
-tpproj1=extendtp(n=length(times), test_prop1)
+tpproj1=extendtp(n=length(times), test_prop1)  #test_prop1 not defined 
 tpproj2=extendtp(n=length(times), test_prop2)
 out1 <- as.data.frame(deSolve::ode(y=init,time=times,func=sveirs,
                                        parms=projpar)) 
@@ -239,7 +253,7 @@ reportable2 = projpar[["p"]]*projpar[["sigma"]]*(out2$Er + out2$Erv + out2$Erw +
 incidence1 = tpproj1*reportable1
 incidence2 = tpproj2*reportable2
 
-incid= data.frame(date = intro_date+out_samp$time, 
+incid= data.frame(date = intro_date+out2$time-1,#intro_date+out_samp$time, 
                   model1 = incidence1, reportable1 = reportable1,
                   model2=incidence2, reportable2=reportable2)
 incid$modelhosp1 = lag(incid$model1, n=9)*0.55

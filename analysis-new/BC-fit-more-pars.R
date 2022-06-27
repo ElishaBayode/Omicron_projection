@@ -10,7 +10,7 @@ source("analysis-new/BC_data.R")
 ########## Data set up
 forecasts_days <- 30 
 intro_date <-  ymd("2021-11-20")
-stop_date <- ymd("2022-01-30")  
+stop_date <- ymd("2022-02-03")  
 #import data 
 dat = readRDS("data/BC-dat.rds")
 #include Omicron wave only
@@ -18,6 +18,9 @@ dat <- dat %>% filter(date >= intro_date &  date <= stop_date)
 dat_omic <- dat
 dat_omic <- filter(dat_omic, date >= intro_date) %>% select(c("day", "value", "date"))
 dat_omic$day <- 1:nrow(dat_omic)
+
+
+
 
 
 
@@ -76,6 +79,7 @@ times = 1:nrow(dat_omic)
 
 #declaring  parameters 
 eff_date <-   ymd("2021-12-31")  # intervention date 
+intv_date <-  ymd("2022-02-10")
 parameters <-         c(sigma=1/3, # incubation period (days) 
                         gamma=1/5, #recovery rate 
                         nu =0.007, #vax rate: 0.7% per day 
@@ -94,6 +98,8 @@ parameters <-         c(sigma=1/3, # incubation period (days)
                         N=5e6,
                         stngcy= 0.4, #(*%(reduction)) strength of intervention (reduction in beta's)
                         eff_t = as.numeric(eff_date - intro_date),
+                        relx_level = 0.4,
+                        rlx_t = as.numeric(intv_date - intro_date),
                         p = 0.5, #negative binomial mean
                         theta = 0.1 #negative binomial dispersion
                         
@@ -112,7 +118,6 @@ init <- make_init(N=5.07e6, vaxlevel = 0.88,
 guess <- c( beta_m=1.2, beta_r=0.6, epsilon_m=0.7, epsilon_r =0.2,  sigma=1/3, stngcy =0.4) 
 #guess <- c( beta_m=1.2, beta_r=0.6, epsilon_m=0.7,
 #            epsilon_r =0.2,  sigma=0.3) ,sigma estimated to be 0.197, add p=0.3 (p estimated as 1)
-
 #beta_m    beta_r epsilon_m epsilon_r     sigma     gamma    stngcy 
 #1.0101158 0.5433433 0.5221261 0.1608351 0.3107221 0.1295124 0.3426588  
 

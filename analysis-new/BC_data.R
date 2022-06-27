@@ -1,5 +1,5 @@
 library(CanCovidData)
-#source("analysis-new/mod_fitting_setup.R")
+source("analysis-new/functions.R")
 
 #gets updated data 
 bcpub <- get_british_columbia_case_data() #readr::read_csv("data-raw/BCCDC_COVID19_Dashboard_Case_Details.csv")
@@ -66,6 +66,9 @@ mytest_BC = get_testprop(changedate = ymd("2021-12-21"),
                          halftime = 60, steepness = 0.05)
 glimpse(mytest_BC)
 ggplot(mytest_BC, aes(x=date, y=test_prop)) + geom_line()
+
+
+
 
 
 

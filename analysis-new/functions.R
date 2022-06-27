@@ -11,6 +11,7 @@ library(lubridate)
 library(dplyr)
 library(data.table)
 library(cowplot)
+library(MASS)
 set.seed(3242)
 ##########
 
@@ -483,4 +484,7 @@ get_total_infection <- function(output=output, from_date=from_date, to_date=to_d
   return(total_incid)
 }
 
+extendtp <- function(n=100, test_prop=test_prop){
+  return(c(test_prop, rep(test_prop[length(test_prop)], n-length(test_prop))))
+}
 
