@@ -7,6 +7,9 @@ source("analysis-new/likelihood_func.R") # likelihood function
 #import data 
 dat = readRDS("data/BC-dat.rds")
 
+#resize data to include Omicron wave only---stoping in March to
+#enable sensible comparison between model output and seroprevalence data
+
 forecasts_days <- 1 
 intro_date <-  ymd("2021-11-30")
 stop_date <- ymd("2022-03-31")#last(dat$date)# #last date of data   
@@ -47,8 +50,8 @@ times = 1:nrow(dat_omic)
 
 #declaring  parameters 
 eff_date <-   ymd("2021-12-31")  # intervention date 
-intv_date <-  ymd("2022-07-18") # increase due to BA.2
-fur_intv_date <- ymd("2022-07-04") #increase due to reopening (accounting for delay)
+intv_date <-  ymd("2022-07-18") #  increase due to BA.2 (not needed here)
+fur_intv_date <- ymd("2022-07-04") #increase due to reopening (not needed here)
 
 
 parameters <-         c(sigma=1/3, # incubation period (days) 
@@ -163,19 +166,13 @@ tot_true <- sum(true_incidence)
 tot_reported <- sum(dat_omic$value)
 
 #from model
-tot_true/N #(24% infection from Nov 30, 2021 to April 1, 2022)
-tot_reported/tot_true #(11.2% ascertainment from Nov 30, 2021 to April 1, 2022)
+tot_true/N #(27% infection from Nov 30, 2021 to March 30, 2022)
+tot_reported/tot_true #(9% ascertainment from Nov 30, 2021 to March 30, 2022)
 
 tot_inf_vax <- (out_samp$V+ out_samp$Erv+ out_samp$Emv+out_samp$Irv + out_samp$Imv+  out_samp$Rv + out_samp$R + 
 out_samp$W+out_samp$Erw+out_samp$Emw+out_samp$Irw + out_samp$Imw + out_samp$Rw)
+
 last(tot_inf_vax/N) #(95.5%, consistent)
-
-
-
-
-
-
-
 
 
 
@@ -200,6 +197,7 @@ resample_incidence <- function(x, parameters){
                                                                out_samp$Em + out_samp$Emv +
                                                                out_samp$Emw)*test_prop#extendtp(nrow(out_samp), test_prop)
 }
+
 incidence_resampled <- apply(resampled, 1, resample_incidence, parameters=parameters)
 
 
