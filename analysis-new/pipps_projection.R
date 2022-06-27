@@ -1,4 +1,5 @@
 #add dat to data for plotting 
+#here I match model output to the remaining data point (i.e. from March 31, 2022 onward)
 dat_full = readRDS("data/BC-dat.rds")
 
 forecasts_days <- 1 
@@ -12,6 +13,7 @@ dat_full$day <- 1:nrow(dat_full)
 
 plot(dat_rem$value)
 
+#initiating with the last point on fit from pipps_simulation.R script 
 init_rem <-  c(S=last(out_samp$S),
                 Er=last(out_samp$Er),Em=last(out_samp$Em),
                 Ir=last(out_samp$Ir),Im=last(out_samp$Im),
@@ -43,7 +45,7 @@ rem_outtest <- rem_outtest %>% mutate(incid=last(test_prop)*rem_parameters[["p"]
                              mutate(date=seq.Date(ymd(intro_date),ymd(intro_date)-1+length(times), 1))
 
 ggplot(data =rem_outtest, aes(x=date, y = incid))+geom_line() +
-geom_line(data=dat_rem, aes(x=date, y= value), color = "blue") 
+geom_line(data=dat_rem, aes(x=date, y= value), color = "blue") #a bit off at the onset 
 
 
 
