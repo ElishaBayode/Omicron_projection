@@ -29,6 +29,7 @@ tail(dat)
 # check if this is required 
 # dat <- dat[-nrow(dat), ]
 
+
 # ---- HOSPITAL STUFF ---- 
 
 # Hospital admissions for Health Authorities scraped from dashboard. 
@@ -67,6 +68,7 @@ colnames(rdhosp) = colnames(rdcases)
 
 # ---- WASTEWATER ---- 
 
+# ---- jens ww data ---- 
 # from Jens in the data_sources channel in a thread 
 # Actually, script to get the data is at the bottom of this helper script file, function called “get_data_for_plant”. https://github.com/mountainMath/BCCovidSnippets/blob/main/R/helpers.R
 library(CanCovidData) # jens 
@@ -81,8 +83,19 @@ ggplot(wwd, aes(x=Date, y=Value,color=Plant)) + geom_point() + geom_line() +
     facet_grid(~Plant)
 
 
+# ---- case data by health authority ---- # 
+bcpub <- get_british_columbia_case_data() #readr::read_csv("data-raw/BCCDC_COVID19_Dashboard_Case_Details.csv")
+bcpub$date <- lubridate::ymd(bcpub$`Reported Date`)
+bcpub <- group_by(bcpub, date,`Health Authority`) %>%
+    dplyr::summarise(cases = n()) %>%
+    filter(date >= ymd("2020-02-27"))
+
+vch = bcpub %>% filter(`Health Authority` == "Vancouver Coastal")
+
 ######### BEGIN SECTION FOR ADJUSTING REPORTED CASES 
 # ---- adjust for under-reporting based on continued testing in the 70+s ----
+# below -- boring scripty stuff that eventually got incorporated into the 
+# main method (spline etc ) 
 
 
 dat = get_british_columbia_case_data()

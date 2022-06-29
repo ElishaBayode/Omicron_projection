@@ -52,36 +52,37 @@ mypars <-         c(sigma=1/3, # incubation period (3 days) (to fixed)
                         gamma=1/(5), #recovery rate (fixed)
                         nu =0.007, #vax rate: 0.7% per day (fixed)
                         mu=1/(82*365), # 1/life expectancy (fixed)
-                        w1= 1/(0.5*365),# waning rate from R to S (fixed)
+                        w1= 1/(0.25*365),# waning rate from R to S (fixed)
                         w2= 1/(0.5*365), # waning rate from Rv to V and Rw to W (fixed)
                         w3= 1/(0.5*365),# waning rate from boosted back to unboosted vax
                         ve=1, # I think this should be 1. it is not really efficacy  ( fixed)
-                        beta_r=0.555, #transmission rate (to estimate) (0.35)
-                        #beta_m=0.8*2.2, #transmission rate (to estimate)(*1.9)
+                        beta_r=0.621, #fitted at one point
+                        beta_m=0.9588956, # fitted at one point
                         epsilon_r = (1-0.8), # % this should be 1-ve 
                         epsilon_m = 1-0.3, #(1-0.25)?(1-0.6), # % escape capacity #(fixed)
                         b= 0.006, # booster rate  (fixed)
                         beff = 0.7, # booster efficacy
-                        wf=0.15, # 1- protection for newly recovered. 
+                        wf=0.1, # 1- protection for newly recovered. 
                         N=5e6,
-                        stngcy= 0.2,#0.78, #(*%(reduction)) strength of intervention (reduction in beta's)
+                        stngcy= 0.46,#0.78, #(*%(reduction)) strength of intervention (reduction in beta's)
                         eff_t = as.numeric(eff_date - intro_date)
                         
 )
 
 
-pars1=c(mypars ,beta_m=1 , p=0.5, deltaeff=0) 
-
-pars2=pars1
-pars2["epsilon_m"]=(1-0.25)
-pars2["beta_m"] = 0.9
+# pars1=c(mypars ,beta_m=1 , p=0.5, deltaeff=0) 
+pars1=mypars
+pars1=parameters
+pars2=parameters
+#pars2["epsilon_m"]=(1-0.25)
+#pars2["beta_m"] = 0.9
 pars2["wf"]=0.25
 #pars2["deltaeff"]=0.6
 pars2["w2"]=1/(0.3*365)
 
-gg = compare_two_preval(pars1, pars2,
+gg = compare_two_preval(pars1, pars2,state0 = init, scale=N_pop,
                          name1="Baseline",  name2 = "More reinfection in vaccinated", 
-                         numdays =600,dispar=0.05, mode = "evol", scale = 5.07e6) 
+                         numdays =600,dispar=0.05, mode = "static",) 
 gg 
 
 c <- 1 - mypars["stngcy"]/(1+ exp(-1.25*(1:300-mypars["eff_t"]))) 

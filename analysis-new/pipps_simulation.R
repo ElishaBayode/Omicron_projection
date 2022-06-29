@@ -99,6 +99,7 @@ inctest$inc_reported = inctest$inc_tot*thisvec
 # a 0.2 to 0.25 difference between the two, so omicron at about 0.2 
 get_growth_rate(outtest, startoffset = 2, duration = 10)
 
+# I think this just shows the initial conditions and parameters and what they do
 ggplot(data =inctest, aes(x=date, y = inc_reported))+geom_line() +
   geom_line(aes(x=date, y= inc_res), color = "blue") +
   geom_line(aes(x=date, y= inc_mut), color = "red") +
@@ -108,10 +109,10 @@ ggplot(data =inctest, aes(x=date, y = inc_reported))+geom_line() +
 
 # Fitting 
 
-known_prop <- 0.5
-date_known_prop <- "2021-12-12"
+known_prop <- 0.5 # known the proportion of resident and new strain
+date_known_prop <- "2021-12-12" # what time was the proportion known? 
 # 2. growth advantage of mutant strain
-known_growth <- 0.2
+known_growth <- 0.2 # daily rise of omicron on dec 12 
 period_known_growth <- c("2021-12-05", "2021-12-15")
 penalties <- list(known_prop = known_prop, date_known_prop = date_known_prop, 
                   known_growth = known_growth, period_known_growth = period_known_growth)
@@ -120,6 +121,7 @@ penalties <- list(known_prop = known_prop, date_known_prop = date_known_prop,
 # Qu: how strong should penalty be on scale of 0-1? 0 = no penalty. 1 = relatively as impactful as the likelihood
 pen.size <- 0.1
 
+# Guess starting parameters and fit the model 
 guess <- c( beta_m=1, stngcy=0.4,beta_r=0.6, theta=0.1,p=0.1) 
 pen.fit_BC <- optim(fn=func_penloglik,  par=guess, lower=c(0,0,0,0.001,0), upper = c(Inf,1,Inf,Inf,1), 
                     method = "L-BFGS-B", 
@@ -226,12 +228,12 @@ ggplot() + geom_line(data=project_dat_BC,aes(x=date,y=`50%`), col="green",size=1
   geom_ribbon(data=project_dat_BC,aes(x=date,ymin=`2.5%`,ymax=`97.5%`),fill='darkgreen',alpha=0.1, size = 1.5) +
  labs(y="Reported cases",x="Date") + ylim(c(0,7000)) + #30000
   scale_x_date(date_breaks = "15 days", date_labels = "%b-%d-%y") +theme_light() +
-  scale_color_manual(values = cols) +  theme(axis.text=element_text(size=15),
+  scale_color_manual(values = cols) +  theme(axis.text=element_text(size=12),
                                              plot.title = element_text(size=15, face="bold"),
                                              axis.text.x = element_text(angle = 45, hjust = 1),
                                              legend.position = "bottom", legend.title = element_text(size=15),
-                                             legend.text = element_text(size=15),
-                                             axis.title=element_text(size=15,face="bold")) 
+                                             legend.text = element_text(size=12),
+                                             axis.title=element_text(size=12,face="bold")) 
   
 
 #saveRDS(project_dat_BC, file.path("data/BC_fit_omicron.rds"))
