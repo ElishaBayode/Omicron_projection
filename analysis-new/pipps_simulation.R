@@ -43,7 +43,7 @@ past_infection_in = 0.14  #increased this from 0.1 to 0.18 # total in R at start
 #New-----changed to past_infection_in to 14% (by end of Nov 2021), seroprev was 9% in Sept/Oct 
 
 incres_in = 389*1.78 #( 389, reported cases on Nov 30) # resident strain (delta) incidence at start 
-incmut_in = 12# new (omicron) inc at stat (#first cases of Omicron reported on 30 Nov)
+incmut_in = 30# new (omicron) inc at stat (#first cases of Omicron reported on 30 Nov)
 simu_size = 1e5 # number of times to resample the negative binom (for ribbons)
 #forecasts_days =30 # how long to forecast for 
 times = 1:nrow(dat_omic)
@@ -66,8 +66,8 @@ parameters <-         c(sigma=1/3, # incubation period (days)
                         beta_m=1.12, #transmission rate 
                         epsilon_r = (1-0.8), # % this should be 1-ve 
                         epsilon_m = 1-0.15, # % 1-ve omicron 
-                        b= 0.012, # booster rate
-                        beff = 0.7, # booster efficacy
+                        b= 0.018, # booster rate
+                        beff = 0.85, # booster efficacy
                         wf=0.1, # protection for newly recovered
                         N=5.07e6,
                         stngcy= 0.45, #(*%(reduction)) strength of intervention (reduction in beta's)
@@ -81,6 +81,7 @@ parameters <-         c(sigma=1/3, # incubation period (days)
                         
 )
 init <- make_init()   #generate initial states
+
 
 
 
@@ -122,8 +123,11 @@ penalties <- list(known_prop = known_prop, date_known_prop = date_known_prop,
 pen.size <- 0.1
 
 # Guess starting parameters and fit the model 
-guess <- c( beta_m=1, stngcy=0.4,beta_r=0.6, theta=0.1,p=0.1) 
-pen.fit_BC <- optim(fn=func_penloglik,  par=guess, lower=c(0,0,0,0.001,0), upper = c(Inf,1,Inf,Inf,1), 
+guess <- c( beta_m=1, stngcy=0.4,beta_r=0.6, theta=0.1,p=0.1,beff=0.8) 
+
+
+pen.fit_BC <- optim(fn=func_penloglik,  par=guess, lower=c(0,0,0,0.001,0, 0), 
+                    upper = c(Inf,1,Inf,Inf,1,1), 
                     method = "L-BFGS-B", 
                     parameters = parameters, test_prop=test_prop, 
                     pen.size=pen.size, penalties = penalties, dat_omic=dat_omic, hessian=T)

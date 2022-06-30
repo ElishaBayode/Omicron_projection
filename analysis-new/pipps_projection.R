@@ -27,10 +27,12 @@ init_rem <-  c(S=last(out_samp$S),
 rem_parameters  <- parameters
 
 rem_parameters["beta_r"] <- rem_parameters["beta_r"]*(1-rem_parameters[["stngcy"]])
-rem_parameters["beta_m"] <- rem_parameters["beta_m"]*(1-rem_parameters[["stngcy"]])*1.7
-rem_parameters["eff_t"]  <- 27
+rem_parameters["beta_m"] <- rem_parameters["beta_m"]*(1-rem_parameters[["stngcy"]])*1.5
+rem_parameters["eff_t"]  <- 100
 rem_parameters[["stngcy"]] <- 0.35
-#rem_parameters[["p]] <- 0.2
+#rem_parameters[["p"]] <- 0.5
+rem_parameters[["beff"]] <- 0.5
+
 #initialm data matching 
 
 
@@ -49,18 +51,19 @@ geom_line(data=dat_rem, aes(x=date, y= value), color = "blue") #a bit off at the
 
 
 
-#guess <- c( beta_m=0.27, beta_r = 0.1,stngcy=0.3 ) 
+guess <- c( beta_m=0.27) 
 
 #the parameters are constrained  accordingly (lower and upper)
-#rem_fit <- optim(fn=func_loglik_2,  par=guess, lower=c(0,0,0.001), 
-#             upper = c(Inf,Inf,1), method = "L-BFGS-B", 
-#             parameters = rem_parameters,dat = dat_rem, hessian=T)
-# check the values:
-#rem_fit
 
-#func_loglik_2(rem_fit$par, dat_rem,rem_parameters) 
+rem_fit <- optim(fn=func_loglik_2,  par=guess, lower=c(0), 
+             upper = c(Inf), method = "L-BFGS-B", 
+           parameters = rem_parameters,dat = dat_rem, hessian=T)
+ #check the values:
+   rem_fit
 
-#rem_parameters[names(guess)] <- rem_fit$par
+func_loglik_2(rem_fit$par, dat_rem,rem_parameters) 
+
+rem_parameters[names(guess)] <- rem_fit$par
 #rem_parameters["beta_m"] <- rem_parameters["beta_m"]*(1-rem_parameters[["stngcy"]])
 
 
