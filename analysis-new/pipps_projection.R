@@ -26,15 +26,15 @@ init_rem <-  c(S=last(out_samp$S),
 
 rem_parameters  <- parameters
 
-rem_parameters["beta_r"] <- rem_parameters["beta_r"]*(1-rem_parameters[["stngcy"]])
-rem_parameters["beta_m"] <- rem_parameters["beta_m"]*(1-rem_parameters[["stngcy"]])*1.5
-rem_parameters["eff_t"]  <- 100
-rem_parameters[["stngcy"]] <- 0.35
+rem_parameters["beta_r"] <- rem_parameters["beta_r"]#*(1-rem_parameters[["stngcy"]])
+rem_parameters["beta_m"] <- rem_parameters["beta_m"]*1.2#)20% increase for BA.2)*(1-rem_parameters[["stngcy"]])*1.7
+rem_parameters["eff_t"]  <- 1000 #set to  some time in the future beyond  the projection period 
+#rem_parameters[["stngcy"]] <- 0.35
 #rem_parameters[["p"]] <- 0.5
-rem_parameters[["beff"]] <- 0.5
-
+rem_parameters[["beff"]] <- 0.95
+rem_parameters[["wf"]] <- 0.01
+rem_parameters[["b"]] <- 0.089
 #initialm data matching 
-
 
 
 forecasts_days <- 1
@@ -50,20 +50,20 @@ ggplot(data =rem_outtest, aes(x=date, y = incid))+geom_line() +
 geom_line(data=dat_rem, aes(x=date, y= value), color = "blue") #a bit off at the onset 
 
 
-
-guess <- c( beta_m=0.27) 
-
-#the parameters are constrained  accordingly (lower and upper)
-
-rem_fit <- optim(fn=func_loglik_2,  par=guess, lower=c(0), 
-             upper = c(Inf), method = "L-BFGS-B", 
-           parameters = rem_parameters,dat = dat_rem, hessian=T)
- #check the values:
-   rem_fit
-
-func_loglik_2(rem_fit$par, dat_rem,rem_parameters) 
-
-rem_parameters[names(guess)] <- rem_fit$par
+# 
+# guess <- c( beta_m=0.27, beta_r=0.1 ) 
+# 
+# #the parameters are constrained  accordingly (lower and upper)
+# 
+# rem_fit <- optim(fn=func_loglik_2,  par=guess, lower=c(0,0), 
+#              upper = c(Inf, Inf), method = "L-BFGS-B", 
+#            parameters = rem_parameters,dat = dat_rem, hessian=T)
+#  #check the values:
+#    rem_fit
+# 
+# func_loglik_2(rem_fit$par, dat_rem,rem_parameters) 
+# 
+# rem_parameters[names(guess)] <- rem_fit$par
 #rem_parameters["beta_m"] <- rem_parameters["beta_m"]*(1-rem_parameters[["stngcy"]])
 
 
@@ -120,29 +120,37 @@ ggplot() + geom_line(data=project_dat_BC,aes(x=date,y=`50%`), col="green",size=1
 #initiate the model with a new mutant starin 
 #switch r for m ########### 
 
-init_proj <-  c(S=last(rem_out$S),Er=5, Em=last(rem_out$Er) + (last(rem_out$Em)-5),
-               Ir=4,Im=last(rem_out$Ir) + (last(rem_out$Im)-4), R=last(rem_out$R),
+init_proj <-  c(S=last(rem_out$S),Er=50, Em=last(rem_out$Er) + (last(rem_out$Em)-50),
+               Ir=40,Im=last(rem_out$Ir) + (last(rem_out$Im)-40), R=last(rem_out$R),
                V=last(rem_out$V),
                Erv=5,   Emv= last(rem_out$Erv) + (last(rem_out$Emv)-5),
-               Irv=1 ,Imv= last(rem_out$Irv) + (last(rem_out$Imv)-1),
+               Irv=10 ,Imv= last(rem_out$Irv) + (last(rem_out$Imv)-10),
                Rv=last(rem_out$Rv),
                W=last(rem_out$W),  
-               Erw=1,Emw=last(rem_out$Erw) + (last(rem_out$Emw)-1),
-               Irw=5,Imw= last(rem_out$Irw) + (last(rem_out$Imw)- 5)
+               Erw=11,Emw=last(rem_out$Erw) + (last(rem_out$Emw)- 11),
+               Irw=15,Imw= last(rem_out$Irw) + (last(rem_out$Imw)- 15)
                ,Rw=last(rem_out$Rw)) 
 
 
 proj_parameters <- rem_parameters
 
-proj_parameters["beta_r"] <- proj_parameters["beta_m"]*3
+#introducing BA.5
+
+proj_parameters["beta_r"] <- proj_parameters["beta_m"]*1.7
 proj_parameters["eff_t"]  <- 600
 proj_parameters[["stngcy"]] <- 0.35
+proj_parameters[["relx_level"]] <- 0
 
-forecasts_days <- 100
+forecasts_days <- 30
 
 times <- 1:(forecasts_days)
+
 proj_out <- as.data.frame(deSolve::ode(y=init_proj, time=times,func= sveirs,
-                                      parms=proj_parameters))  
+                                      parms=proj_parameters)) 
+
+#check growth rate 
+get_growth_rate(output= proj_out, startoffset = 20, duration = 7)
+
 proj_out <- proj_out %>% mutate(incid=last(test_prop)*proj_parameters[["p"]]*
                               proj_parameters[["sigma"]]*(proj_out$Er + proj_out$Erv + proj_out$Erw + 
                               proj_out$Em + proj_out$Emv + proj_out$Emw)) %>% 

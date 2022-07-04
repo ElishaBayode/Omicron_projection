@@ -7,7 +7,7 @@ source("analysis-new/likelihood_func.R") # likelihood function
 #import data 
 dat = readRDS("data/BC-dat.rds")
 
-#resize data to include Omicron wave only---stoping in March to
+#resize data to include Omicron wave only---stopping in March to
 #enable sensible comparison between model output and seroprevalence data
 
 forecasts_days <- 1 
@@ -66,8 +66,8 @@ parameters <-         c(sigma=1/3, # incubation period (days)
                         beta_m=1.12, #transmission rate 
                         epsilon_r = (1-0.8), # % this should be 1-ve 
                         epsilon_m = 1-0.15, # % 1-ve omicron 
-                        b= 0.018, # booster rate
-                        beff = 0.85, # booster efficacy
+                        b= 0.03,#0.018, # booster rate
+                        beff = 0.88, # booster efficacy
                         wf=0.1, # protection for newly recovered
                         N=5.07e6,
                         stngcy= 0.45, #(*%(reduction)) strength of intervention (reduction in beta's)
