@@ -65,10 +65,10 @@ parameters <-         c(sigma=1/3, # incubation period (days)
                         beta_r=0.6, #transmission rate 
                         beta_m=1.12, #transmission rate 
                         epsilon_r = (1-0.8), # % this should be 1-ve 
-                        epsilon_m = 1-0.15, # % 1-ve omicron 
+                        epsilon_m = 1-0.3, # % 1-ve omicron 
                         b= 0.03,#0.018, # booster rate
                         beff = 0.88, # booster efficacy
-                        wf=0.1, # protection for newly recovered
+                        wf=0.05, # protection for newly recovered
                         N=5.07e6,
                         stngcy= 0.45, #(*%(reduction)) strength of intervention (reduction in beta's)
                         eff_t = as.numeric(eff_date - intro_date),
@@ -76,7 +76,7 @@ parameters <-         c(sigma=1/3, # incubation period (days)
                         fur_relx_level = 0,
                         rlx_t = as.numeric(intv_date - intro_date),
                         fur_rlx_t = as.numeric(fur_intv_date - intro_date),
-                        p = 0.52, #negative binomial mean (from pre-Omicron seroprevalence estimates)
+                        p = 0.2, #negative binomial mean (from pre-Omicron seroprevalence estimates)
                         theta = 0.1 #negative binomial dispersion
                         
 )
@@ -123,7 +123,7 @@ penalties <- list(known_prop = known_prop, date_known_prop = date_known_prop,
 pen.size <- 0.1
 
 # Guess starting parameters and fit the model 
-guess <- c( beta_m=1, stngcy=0.4,beta_r=0.6, theta=0.1,p=0.1,beff=0.8) 
+guess <- c( beta_m=1, stngcy=0.4,beta_r=0.6, theta=0.1,beff=0.8) 
 
 
 pen.fit_BC <- optim(fn=func_penloglik,  par=guess, lower=c(0,0,0,0.001,0, 0), 
@@ -176,7 +176,7 @@ tot_true/N #(27% infection from Nov 30, 2021 to March 30, 2022)
 tot_reported/tot_true #(9% ascertainment from Nov 30, 2021 to March 30, 2022)
 
 tot_inf_vax <- (out_samp$V+ out_samp$Erv+ out_samp$Emv+out_samp$Irv + out_samp$Imv+  out_samp$Rv + out_samp$R + 
-out_samp$W+out_samp$Erw+out_samp$Emw+out_samp$Irw + out_samp$Imw + out_samp$Rw)
+                  out_samp$W+out_samp$Erw+out_samp$Emw+out_samp$Irw + out_samp$Imw + out_samp$Rw)
 
 last(tot_inf_vax/N) #(95.5%, consistent)
 
@@ -212,7 +212,7 @@ bound_mlesample_BC <-apply(incidence_resampled,2,  function(x){raply(simu_size/1
 bound_mlesample_BC <- do.call(rbind, bound_mlesample_BC)
 
 project_dat_BC  =  as.data.frame(aaply(bound_mlesample_BC,2,quantile,na.rm=TRUE,probs=c(0.025,0.5,0.975))) %>% 
-                   mutate(date=seq.Date(ymd(intro_date),ymd(intro_date)-1+length(times), 1))
+  mutate(date=seq.Date(ymd(intro_date),ymd(intro_date)-1+length(times), 1))
 
 
 # #last date of data   
@@ -230,7 +230,7 @@ dat_reported <- dat_omic  %>% mutate(date=seq.Date(ymd(intro_date),ymd(intro_dat
 ggplot() + geom_line(data=project_dat_BC,aes(x=date,y=`50%`), col="green",size=1.5,alpha=0.4) +
   geom_point(data=dat_reported,aes(x=date, y=value),color='grey48', alpha=0.8, size = 1.5) +
   geom_ribbon(data=project_dat_BC,aes(x=date,ymin=`2.5%`,ymax=`97.5%`),fill='darkgreen',alpha=0.1, size = 1.5) +
- labs(y="Reported cases",x="Date") + ylim(c(0,7000)) + #30000
+  labs(y="Reported cases",x="Date") + ylim(c(0,7000)) + #30000
   scale_x_date(date_breaks = "15 days", date_labels = "%b-%d-%y") +theme_light() +
   scale_color_manual(values = cols) +  theme(axis.text=element_text(size=12),
                                              plot.title = element_text(size=15, face="bold"),
@@ -238,10 +238,9 @@ ggplot() + geom_line(data=project_dat_BC,aes(x=date,y=`50%`), col="green",size=1
                                              legend.position = "bottom", legend.title = element_text(size=15),
                                              legend.text = element_text(size=12),
                                              axis.title=element_text(size=12,face="bold")) 
-  
+
 
 #saveRDS(project_dat_BC, file.path("data/BC_fit_omicron.rds"))
-
 
 
 
