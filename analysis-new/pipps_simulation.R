@@ -129,9 +129,9 @@ pen.size <- 0.1
 
 # Guess starting parameters and fit the model 
 
-#guess <- c( beta_m=1, beta_r=0.6, theta=0.1, stngcy=0.4,p=0.2) 
+guess <- c( beta_m=1, beta_r=0.6, theta=0.1, stngcy=0.4,p=0.2) 
 
-guess <- c( beta_m=1, stngcy=0.4,beta_r=0.6, theta=0.1,beff=0.8) 
+#guess <- c( beta_m=1, stngcy=0.4,beta_r=0.6, theta=0.1,beff=0.8) 
 
 
 
