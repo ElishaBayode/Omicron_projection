@@ -12,7 +12,7 @@ dat = readRDS("data/BC-dat.rds")
 
 forecasts_days <- 1 
 intro_date <-  ymd("2021-11-30")
-stop_date <- ymd("2022-03-31")#last(dat$date)# #last date of data   
+stop_date <- ymd("2022-03-13")#last(dat$date)# #last date of data   
 
 dat <- dat %>% filter(date >= intro_date &  date <= stop_date)
 dat_omic <- dat
@@ -66,7 +66,7 @@ parameters <-         c(sigma=1/3, # incubation period (days)
                         beta_m=1.12, #transmission rate 
                         epsilon_r = (1-0.8), # % this should be 1-ve 
                         epsilon_m = 1-0.15, # % 1-ve omicron 
-                        b= 0.03,#0.018, # booster rate
+                        b= 0.018, # booster rate
                         beff = 0.88, # booster efficacy
                         wf=0.1, # protection for newly recovered
                         N=5.07e6,
@@ -123,11 +123,11 @@ penalties <- list(known_prop = known_prop, date_known_prop = date_known_prop,
 pen.size <- 0.1
 
 # Guess starting parameters and fit the model 
-guess <- c( beta_m=1, stngcy=0.4,beta_r=0.6, theta=0.1,p=0.1,beff=0.8) 
+guess <- c( beta_m=1, beta_r=0.6, theta=0.1, stngcy=0.4,p=0.2) 
 
 
-pen.fit_BC <- optim(fn=func_penloglik,  par=guess, lower=c(0,0,0,0.001,0, 0), 
-                    upper = c(Inf,1,Inf,Inf,1,1), 
+pen.fit_BC <- optim(fn=func_penloglik,  par=guess, lower=c(0,0,0.01, 0,0), 
+                    upper = c(Inf,Inf,1,1,1), 
                     method = "L-BFGS-B", 
                     parameters = parameters, test_prop=test_prop, 
                     pen.size=pen.size, penalties = penalties, dat_omic=dat_omic, hessian=T)

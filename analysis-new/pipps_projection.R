@@ -3,7 +3,7 @@
 dat_full = readRDS("data/BC-dat.rds")
 
 forecasts_days <- 1 
-intro_date <-  ymd("2022-03-31")
+intro_date <-   ymd("2022-03-13")
 stop_date <- last(dat_full$date)
 
 dat_rem <- dat_full %>% filter(date >= intro_date &  date <= stop_date)
@@ -14,27 +14,34 @@ dat_full$day <- 1:nrow(dat_full)
 plot(dat_rem$value)
 
 #initiating with the last point on fit from pipps_simulation.R script 
-init_rem <-  c(S=last(out_samp$S),
-                Er=last(out_samp$Er),Em=last(out_samp$Em),
-                Ir=last(out_samp$Ir),Im=last(out_samp$Im),
+init_rem <-     c(S=last(out_samp$S),
+                Er=1,Em=last(out_samp$Em)-1,
+                Ir=2,Im=last(out_samp$Im)-2,
                 R=last(out_samp$R),V=last(out_samp$V),
-                Erv=last(out_samp$Erv),Emv=last(out_samp$Emv),
-                Irv=last(out_samp$Irv),Imv=last(out_samp$Imv),
-                Rv=last(out_samp$Rv),W=last(out_samp$W),Erw=last(out_samp$Erw)
-                ,Emw=last(out_samp$Emw),Irw=last(out_samp$Irw),Imw=last(out_samp$Imw)
+                Erv=10,Emv=last(out_samp$Emv)-10,
+                Irv=1,Imv=last(out_samp$Imv)-1,
+                Rv=last(out_samp$Rv),W=last(out_samp$W),
+                Erw=0,Emw=last(out_samp$Emw),
+                Irw=0,Imw=last(out_samp$Imw)-0
                 ,Rw=last(out_samp$Rw)) 
+
+
+
 
 rem_parameters  <- parameters
 
-rem_parameters["beta_r"] <- rem_parameters["beta_r"]#*(1-rem_parameters[["stngcy"]])
-rem_parameters["beta_m"] <- rem_parameters["beta_m"]*1.2#)20% increase for BA.2)*(1-rem_parameters[["stngcy"]])*1.7
+rem_parameters["beta_r"] <- rem_parameters["beta_m"]*(1-rem_parameters[["stngcy"]])*1.5*1.35
+rem_parameters["beta_m"] <- rem_parameters["beta_m"]*(1-rem_parameters[["stngcy"]])*1.5
 rem_parameters["eff_t"]  <- 1000 #set to  some time in the future beyond  the projection period 
+rem_parameters["epsilon_r"] <- (1-0.15) 
 #rem_parameters[["stngcy"]] <- 0.35
 #rem_parameters[["p"]] <- 0.5
-rem_parameters[["beff"]] <- 0.95
-rem_parameters[["wf"]] <- 0.01
-rem_parameters[["b"]] <- 0.089
+#rem_parameters[["beff"]] <- 0.95
+#rem_parameters[["wf"]] <- 0.01
+rem_parameters[["b"]] <- 0.018*1.3
 #initialm data matching 
+
+
 
 
 forecasts_days <- 1
@@ -51,19 +58,19 @@ geom_line(data=dat_rem, aes(x=date, y= value), color = "blue") #a bit off at the
 
 
 # 
-# guess <- c( beta_m=0.27, beta_r=0.1 ) 
+ guess <- c( beta_m=0.1, b=0.03) 
 # 
 # #the parameters are constrained  accordingly (lower and upper)
 # 
-# rem_fit <- optim(fn=func_loglik_2,  par=guess, lower=c(0,0), 
-#              upper = c(Inf, Inf), method = "L-BFGS-B", 
-#            parameters = rem_parameters,dat = dat_rem, hessian=T)
+rem_fit <- optim(fn=func_loglik_2,  par=guess, lower=c(0,0), 
+              upper = c( Inf,1), method = "L-BFGS-B", 
+          parameters = rem_parameters,dat = dat_rem, hessian=T)
 #  #check the values:
-#    rem_fit
+    rem_fit
 # 
-# func_loglik_2(rem_fit$par, dat_rem,rem_parameters) 
+ func_loglik_2(rem_fit$par, dat_rem,rem_parameters) 
 # 
-# rem_parameters[names(guess)] <- rem_fit$par
+ rem_parameters[names(guess)] <- rem_fit$par
 #rem_parameters["beta_m"] <- rem_parameters["beta_m"]*(1-rem_parameters[["stngcy"]])
 
 
