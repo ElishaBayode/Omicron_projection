@@ -121,10 +121,10 @@ ggplot() + geom_line(data=project_dat_BC,aes(x=date,y=`50%`), col="green",size=1
 
 # Set the desired characteristics of the new mutant. You can include any of the named elements of rem_parameters to be adjusted. 
 # Old mutant will be swapped to resident automatically, and does not need to be defined here
-params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.7, "eff_t" = 600)
+params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.7, "eff_t" = 600) # eff_t is just pushed back beyond the time horizon of the projection
 
 # Swap resident and mutant, then set up new mutant. 
-# This assumes that the new mutant arrives with mut_prop% of cases
+# This assumes that the new mutant 'arrives' with mut_prop% of current cases
 new_model <- swap_strains(out_old = rem_out, params_old = rem_parameters, params_newmutant = params_newmutant, mut_prop = 0.01)
 init_proj <- new_model$init_newm
 proj_parameters <- new_model$newm_parameters
