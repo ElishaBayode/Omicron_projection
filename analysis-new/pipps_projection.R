@@ -124,46 +124,42 @@ ggplot() + geom_line(data=project_dat_BC,aes(x=date,y=`50%`), col="green",size=1
 ############### Scenario projections ##################
 
 
-#initiate the model with a new mutant starin 
-#switch r for m ########### 
+#initiate the model with a new mutant strain - e.g. introducing BA.5
 
-init_proj <-  c(S=last(rem_out$S),Er=50, Em=last(rem_out$Er) + (last(rem_out$Em)-50),
-               Ir=40,Im=last(rem_out$Ir) + (last(rem_out$Im)-40), R=last(rem_out$R),
-               V=last(rem_out$V),
-               Erv=5,   Emv= last(rem_out$Erv) + (last(rem_out$Emv)-5),
-               Irv=10 ,Imv= last(rem_out$Irv) + (last(rem_out$Imv)-10),
-               Rv=last(rem_out$Rv),
-               W=last(rem_out$W),  
-               Erw=11,Emw=last(rem_out$Erw) + (last(rem_out$Emw)- 11),
-               Irw=15,Imw= last(rem_out$Irw) + (last(rem_out$Imw)- 15)
-               ,Rw=last(rem_out$Rw)) 
+# Set the desired characteristics of the new mutant. You can include any of the named elements of rem_parameters to be adjusted. 
+# Old mutant will be swapped to resident automatically, and does not need to be defined here
+params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.7, "eff_t" = 600) # eff_t is just pushed back beyond the time horizon of the projection
+
+# Swap resident and mutant, then set up new mutant. 
+# This assumes that the new mutant 'arrives' with mut_prop% of current cases
+new_model <- swap_strains(out_old = rem_out, params_old = rem_parameters, params_newmutant = params_newmutant, mut_prop = 0.01)
+init_proj <- new_model$init_newm
+proj_parameters <- new_model$newm_parameters
 
 
-proj_parameters <- rem_parameters
-
-#introducing BA.5
-
-proj_parameters["beta_r"] <- proj_parameters["beta_m"]*1.7
-proj_parameters["eff_t"]  <- 600
-proj_parameters[["stngcy"]] <- 0.35
-proj_parameters[["relx_level"]] <- 0
-
-forecasts_days <- 30
-
+# Make projections
+forecasts_days <- 200
 times <- 1:(forecasts_days)
-
 proj_out <- as.data.frame(deSolve::ode(y=init_proj, time=times,func= sveirs,
                                       parms=proj_parameters)) 
 
 #check growth rate 
 get_growth_rate(output= proj_out, startoffset = 20, duration = 7)
 
-proj_out <- proj_out %>% mutate(incid=last(test_prop)*proj_parameters[["p"]]*
+# Simple plot of the projection
+proj_out <- proj_out %>% mutate(Total=last(test_prop)*proj_parameters[["p"]]*
                               proj_parameters[["sigma"]]*(proj_out$Er + proj_out$Erv + proj_out$Erw + 
-                              proj_out$Em + proj_out$Emv + proj_out$Emw)) %>% 
-  mutate(date=seq.Date(ymd(last(rem_out$date)),ymd(last(rem_out$date))-1+length(times), 1))
+                              proj_out$Em + proj_out$Emv + proj_out$Emw), 
+                              Resident=last(test_prop)*proj_parameters[["p"]]*
+                                proj_parameters[["sigma"]]*(proj_out$Er + proj_out$Erv + proj_out$Erw), 
+                              Mutant=last(test_prop)*proj_parameters[["p"]]*
+                                proj_parameters[["sigma"]]*(proj_out$Em + proj_out$Emv + proj_out$Emw)) %>% 
+  mutate(date=seq.Date(ymd(last(rem_out$date)),ymd(last(rem_out$date))-1+length(times), 1)) 
 
-plot(proj_out$incid)
+pivot_longer(proj_out, c(Total, Resident, Mutant), names_to = "Strain", values_to = "count") %>%
+ggplot(aes(x=date, y=count, colour=Strain)) + geom_line()
+
+
 
 
 

@@ -488,3 +488,42 @@ extendtp <- function(n=100, test_prop=test_prop){
   return(c(test_prop, rep(test_prop[length(test_prop)], n-length(test_prop))))
 }
 
+
+
+#------- initiate the model with a new mutant strain 
+swap_strains <- function(out_old=out_old, params_old = params_old, params_newmutant = params_newmutant, mut_prop = mut_prop){
+  #switch r for m ########### 
+  
+  # Initialization
+  init_newm <-  c(S=last(out_old$S),
+                  Er=(last(out_old$Em) + last(out_old$Er))*(1-mut_prop), 
+                  Em=(last(out_old$Em) + last(out_old$Er))*(mut_prop),
+                  Ir=(last(out_old$Im) + last(out_old$Ir))*(1-mut_prop),
+                  Im=(last(out_old$Im) + last(out_old$Ir))*(mut_prop), 
+                  R=last(out_old$R),
+                  V=last(out_old$V),
+                  Erv=(last(out_old$Emv) + last(out_old$Erv))*(1-mut_prop),   
+                  Emv= (last(out_old$Emv) + last(out_old$Erv))*(mut_prop),
+                  Irv=(last(out_old$Imv) + last(out_old$Irv))*(1-mut_prop),
+                  Imv= (last(out_old$Imv) + last(out_old$Irv))*(mut_prop),
+                  Rv=last(out_old$Rv),
+                  W=last(out_old$W),  
+                  Erw=(last(out_old$Emw) + last(out_old$Erw))*(1-mut_prop),
+                  Emw=(last(out_old$Emw) + last(out_old$Erw))*(mut_prop),
+                  Irw=(last(out_old$Imw) + last(out_old$Irw))*(1-mut_prop),
+                  Imw= (last(out_old$Imw) + last(out_old$Irw))*(mut_prop),
+                  Rw=last(out_old$Rw)
+                  ) 
+  
+  # Parameters
+  newm_parameters <- params_old
+  #introducing new strains
+  newm_parameters[names(params_newmutant)] <- unlist(params_newmutant)
+  newm_parameters["beta_r"] <- params_old["beta_m"]
+  newm_parameters["epsilon_r"] <- params_old["epsilon_m"]
+  
+  return(list(init_newm = init_newm,newm_parameters = newm_parameters))
+}
+
+
+
