@@ -58,14 +58,16 @@ parameters <-         c(sigma=1/3, # incubation period (days)
                         gamma=1/5, #recovery rate 
                         nu =0.007, #vax rate: 0.7% per day 
                         mu=1/(82*365), # 1/life expectancy 
-                        w1= 1/(0.33*365),# waning rate from R to S 
-                        w2= 1/(0.33*365), # waning rate from Rv to V 
-                        w3= 1/(0.33*365),# waning rate Rw to W 
+                        w_m= 1/(0.33*365),# waning rate from R to S 
+                        w_r= 1/(0.33*365),
+                        w_b= 1/(0.33*365), # waning rate from Rv to V 
                         ve=1, # I think this should be 1. it is not really efficacy  
                         beta_r=0.6, #transmission rate 
                         beta_m=1.12, #transmission rate 
                         c_m = 0.005,  #protection from mutant variants when individuals  just recovered  from it (made-up (for now)) 
-                        c_r = 0.02, #protection from resident variants when individuals  just recovered  from it (made-up (for now)) 
+                        c_r = 0.005, #protection from resident variants when individuals  just recovered  from it (made-up (for now)) 
+                        c_mr = 0.2, #cross immunity of resident  from mutant 
+                        c_rm = 0.001, #cross immunity of mutant  from resident 
                         epsilon_r = (1-0.8), # % this should be 1-ve 
                         epsilon_m = 1-0.15, # % 1-ve omicron 
                         b= 0.018, # booster rate
@@ -238,7 +240,7 @@ dat_reported <- dat_omic  %>% mutate(date=seq.Date(ymd(intro_date),ymd(intro_dat
 ggplot() + geom_line(data=project_dat_BC,aes(x=date,y=`50%`), col="green",size=1.5,alpha=0.4) +
   geom_point(data=dat_reported,aes(x=date, y=value),color='grey48', alpha=0.8, size = 1.5) +
   geom_ribbon(data=project_dat_BC,aes(x=date,ymin=`2.5%`,ymax=`97.5%`),fill='darkgreen',alpha=0.1, size = 1.5) +
-  labs(y="Reported cases",x="Date") + ylim(c(0,7000)) + #30000
+  labs(y="Reported cases",x="Date") + ylim(c(0,10000)) + #30000
   scale_x_date(date_breaks = "15 days", date_labels = "%b-%d-%y") +theme_light() +
   scale_color_manual(values = cols) +  theme(axis.text=element_text(size=12),
                                              plot.title = element_text(size=15, face="bold"),

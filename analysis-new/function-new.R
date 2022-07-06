@@ -24,17 +24,19 @@ sveirs <- function(time, state, parameters) {
     rlx <- (1 + relx_level/(1+ exp(-1.25*(time-rlx_t)))) # relaxation 
     further_rlx <- (1 + fur_relx_level/(1+ exp(-1.25*(time-fur_rlx_t))))
     #split R, Rv and Rw to Rr & Rm, Rrv & Rmv, and  Rrw & Rmw
-    N <- S+Er+Em+Ir+Im+Rr + Rm+V+Erv+Emv+Irv+Imv+Rrv + Rmv+W+Erw+Emw+Irw+Imw+Rrw+Rmw #total population 
+    N <- S+Er+Em+Ir+Im + Rr + Rm+V+Erv+Emv+Irv+Imv+Rrv + Rmv+W+Erw+Emw+Irw+Imw+Rrw+Rmw #total population 
     lambda_r <- c*rlx*further_rlx*beta_r*(Ir + Irv + Irw)
     lambda_m <- c*rlx*further_rlx*beta_m*(Im + Imv + Imw) #force of infection mutant strain
     
     #introduced Rr and Rm for individuals recovering from resident and mutant strain, respectively   
-    dS <-  mu*N - (lambda_r+lambda_m)*S/N  + w1*(Rr + Rm) -(mu + nu*ve)*S
+    dS <-  mu*N - (lambda_r+lambda_m)*S/N  + (w_r*Rr + w_m*Rm) -(mu + nu*ve)*S
     
     #included new parameters c_r and c_m protection from  variant that individuals just recovered from  
     
-    dEr <- lambda_r*S/N + wf* epsilon_r*lambda_r*(c_r*Rr+Rm)/N - (sigma+mu)*Er 
-    dEm <- lambda_m*S/N + wf* epsilon_m*lambda_m*(Rr+c_m*Rm)/N - (sigma+mu)*Em
+    
+    
+    dEr <- lambda_r*S/N +  epsilon_r*lambda_r*(c_r*Rr + c_rm*Rm)/N - (sigma+mu)*Er 
+    dEm <- lambda_m*S/N +  epsilon_m*lambda_m*(c_mr*Rr + c_m*Rm)/N - (sigma+mu)*Em
     
     dIr <- sigma*Er - (gamma + mu)*Ir
     dIm <- sigma*Em - (gamma + mu)*Im
@@ -43,35 +45,35 @@ sveirs <- function(time, state, parameters) {
     #included new parameters c_r and c_m protection from  variant that individuals just recovered from  
     #two new states Rrv and Rmv to replace R
     
-    dRr <-  gamma*Ir  - wf*(c_r*epsilon_r*lambda_r + epsilon_m*lambda_m)*Rr/N - (mu + w1)*Rr
-    dRm <-  gamma*Im  - wf*(epsilon_r*lambda_r + c_m*epsilon_m*lambda_m)*Rm/N - (mu + w1)*Rm
+    dRr <-  gamma*Ir  -  (c_r*epsilon_r*lambda_r + c_mr*epsilon_m*lambda_m)*Rr/N - (mu + w_r)*Rr
+    dRm <-  gamma*Im  -  (c_rm*epsilon_r*lambda_r + c_m*epsilon_m*lambda_m)*Rm/N - (mu + w_m)*Rm
     
     
     
-    dV <-  nu*ve*S + w2*(Rrv + Rmv) + w3*W - (epsilon_r*lambda_r + epsilon_m*lambda_m)*V/N - (mu + b*ve)*V 
+    dV <-  nu*ve*S + (w_r*Rrv + w_m*Rmv) + w_b*W - (epsilon_r*lambda_r + epsilon_m*lambda_m)*V/N - (mu + b*ve)*V 
     
-    dErv <- epsilon_r*lambda_r*V/N + wf*epsilon_r*lambda_r*(c_r*Rrv+Rmv)/N - (sigma+mu)*Erv 
-    dEmv <- epsilon_m*lambda_m*V/N + wf*epsilon_m*lambda_m*(Rrv+c_m*Rmv)/N - (sigma+mu)*Emv 
+    dErv <- epsilon_r*lambda_r*V/N + epsilon_r*lambda_r*(c_r*Rrv + c_rm*Rmv)/N - (sigma+mu)*Erv 
+    dEmv <- epsilon_m*lambda_m*V/N + epsilon_m*lambda_m*(c_mr*Rrv+c_m*Rmv)/N - (sigma+mu)*Emv 
     
     
     dIrv <- sigma*Erv - (gamma + mu)*Irv
     dImv <- sigma*Emv - (gamma + mu)*Imv
     
-    dRrv <-  gamma*Irv -wf* (c_r*epsilon_r*lambda_r + epsilon_m*lambda_m)*Rrv/N - (mu + w2 + b*ve)*Rrv
-    dRmv <-  gamma*+ Imv -wf* (epsilon_r*lambda_r + c_m*epsilon_m*lambda_m)*Rmv/N - (mu + w2 + b*ve)*Rmv
+    dRrv <-  gamma*Irv - (c_r*epsilon_r*lambda_r + c_mr*epsilon_m*lambda_m)*Rrv/N - (mu + w_r + b*ve)*Rrv
+    dRmv <-  gamma*+ Imv - (c_rm*epsilon_r*lambda_r + c_m*epsilon_m*lambda_m)*Rmv/N - (mu + w_m + b*ve)*Rmv
     
     
-    dW <-   b*ve*V + w2*(Rrw + Rmw) - (1-beff)*(lambda_r + lambda_m)*W/N -(mu+ w3)*W
+    dW <-   b*ve*V + (w_r*Rrw + w_m*Rmw) - (1-beff)*(lambda_r + lambda_m)*W/N -(mu+ w_b)*W
     
-    dErw <-(1-beff)*lambda_r*W/N + (1-beff)*wf*lambda_r*(c_r*Rrw + Rmw)/N - (sigma+mu)*Erw 
-    dEmw <- (1-beff)*lambda_m*W/N + (1-beff)*wf*lambda_m*(Rrw + c_m*Rmw)/N - (sigma+mu)*Emw 
+    dErw <-(1-beff)*lambda_r*W/N + (1-beff)*lambda_r*(c_r*Rrw + c_rm*Rmw)/N - (sigma+mu)*Erw 
+    dEmw <- (1-beff)*lambda_m*W/N + (1-beff)*wf*lambda_m*(c_mr*Rrw + c_m*Rmw)/N - (sigma+mu)*Emw 
     
     
     dIrw <- sigma*Erw - (gamma + mu)*Irw
     dImw <- sigma*Emw - (gamma + mu)*Imw
     
-    dRrw <-  b*ve*Rrv + gamma*(Irw + Imw) - wf*(1-beff)*(lambda_r + lambda_m)*(c_r*Rrw+ Rmw)/N - (mu + w2)*Rrw
-    dRmw <-  b*ve*Rmv + gamma*(Irw + Imw) - wf*(1-beff)*(lambda_r + lambda_m)*(Rrw+ c_m*Rmw)/N - (mu + w2)*Rmw
+    dRrw <-  b*ve*Rrv + gamma*(Irw + Imw) - (1-beff)*(c_r*lambda_r + c_mr*lambda_m)*Rrw/N - (mu + w_r)*Rrw
+    dRmw <-  b*ve*Rmv + gamma*(Irw + Imw) - (1-beff)*(c_rm*lambda_r + c_m*lambda_m)*Rmw/N - (mu + w_m)*Rmw
     
     
     return(list(c(dS,dEr,dEm,dIr,dIm,dRr,dRm,dV,dErv,dEmv,dIrv,dImv,dRrv,dRmv,dW,dErw,dEmw,dIrw,dImw,dRrw,dRmw)))
@@ -549,7 +551,7 @@ swap_strains <- function(out_old=out_old, params_old = params_old, params_newmut
                   Emw=(last(out_old$Emw) + last(out_old$Erw))*(mut_prop),
                   Irw=(last(out_old$Imw) + last(out_old$Irw))*(1-mut_prop),
                   Imw= (last(out_old$Imw) + last(out_old$Irw))*(mut_prop),
-                   Rrw=last(out_old$Rrw),   Rmw=last(out_old$Rmw)
+                  Rrw=last(out_old$Rrw),   Rmw=last(out_old$Rmw)
   ) 
   
   # Parameters
