@@ -2,7 +2,7 @@
 source("analysis-new/functions.R") #functions
 source("analysis-new/BC_data.R") # data
 source("analysis-new/likelihood_func.R") # likelihood function
-
+source("analysis-new/function-new.R")
 ########## Data setup  ######
 #import data 
 dat = readRDS("data/BC-dat.rds")
@@ -12,7 +12,7 @@ dat = readRDS("data/BC-dat.rds")
 
 forecasts_days <- 1 
 intro_date <-  ymd("2021-11-30")
-stop_date <- ymd("2022-03-13")#last(dat$date)# #last date of data   
+stop_date <- ymd("2022-06-25")#last(dat$date)# #last date of data   
 
 dat <- dat %>% filter(date >= intro_date &  date <= stop_date)
 dat_omic <- dat
@@ -50,7 +50,7 @@ times = 1:nrow(dat_omic)
 
 #declaring  parameters 
 eff_date <-   ymd("2021-12-31")  # intervention date 
-intv_date <-  ymd("2022-07-18") #  increase due to BA.2 (not needed here)
+intv_date <-  ymd("2022-03-05") #  increase due to BA.2 (not needed here)
 fur_intv_date <- ymd("2022-07-04") #increase due to reopening (not needed here)
 
 
@@ -64,20 +64,19 @@ parameters <-         c(sigma=1/3, # incubation period (days)
                         ve=1, # I think this should be 1. it is not really efficacy  
                         beta_r=0.6, #transmission rate 
                         beta_m=1.12, #transmission rate 
+                        c_m = 0.005,  #protection from mutant variants when individuals  just recovered  from it (made-up (for now)) 
+                        c_r = 0.02, #protection from resident variants when individuals  just recovered  from it (made-up (for now)) 
                         epsilon_r = (1-0.8), # % this should be 1-ve 
-<<<<<<< HEAD
                         epsilon_m = 1-0.15, # % 1-ve omicron 
                         b= 0.018, # booster rate
-=======
                         epsilon_m = 1-0.3, # % 1-ve omicron 
                         b= 0.03,#0.018, # booster rate
->>>>>>> 0e5c8afe37fe8ad92af586f941d2f94e2eb4a01e
                         beff = 0.88, # booster efficacy
-                        wf=0.05, # protection for newly recovered
+                        wf=0.01, # protection for newly recovered
                         N=5.07e6,
-                        stngcy= 0.45, #(*%(reduction)) strength of intervention (reduction in beta's)
+                        stngcy= 0.4, #(*%(reduction)) strength of intervention (reduction in beta's)
                         eff_t = as.numeric(eff_date - intro_date),
-                        relx_level = 0.4,
+                        relx_level = 0.45,
                         fur_relx_level = 0,
                         rlx_t = as.numeric(intv_date - intro_date),
                         fur_rlx_t = as.numeric(fur_intv_date - intro_date),

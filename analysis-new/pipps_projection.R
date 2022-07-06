@@ -2,8 +2,11 @@
 #here I match model output to the remaining data point (i.e. from March 31, 2022 onward)
 dat_full = readRDS("data/BC-dat.rds")
 
+
+
+
 forecasts_days <- 1 
-intro_date <-   ymd("2022-03-13")
+intro_date <-   ymd("2022-03-31")
 stop_date <- last(dat_full$date)
 
 dat_rem <- dat_full %>% filter(date >= intro_date &  date <= stop_date)
@@ -13,33 +16,83 @@ dat_full$day <- 1:nrow(dat_full)
 
 plot(dat_rem$value)
 
-#initiating with the last point on fit from pipps_simulation.R script 
-init_rem <-     c(S=last(out_samp$S),
-                Er=1,Em=last(out_samp$Em)-1,
-                Ir=2,Im=last(out_samp$Im)-2,
-                R=last(out_samp$R),V=last(out_samp$V),
-                Erv=10,Emv=last(out_samp$Emv)-10,
-                Irv=1,Imv=last(out_samp$Imv)-1,
-                Rv=last(out_samp$Rv),W=last(out_samp$W),
-                Erw=0,Emw=last(out_samp$Emw),
-                Irw=0,Imw=last(out_samp$Imw)-0
-                ,Rw=last(out_samp$Rw)) 
-
-
-
+#now using Jessica's function to switch variants 
 
 rem_parameters  <- parameters
 
-rem_parameters["beta_r"] <- rem_parameters["beta_m"]*(1-rem_parameters[["stngcy"]])*1.5*1.35
-rem_parameters["beta_m"] <- rem_parameters["beta_m"]*(1-rem_parameters[["stngcy"]])*1.5
+times = 1:nrow(dat_omic)
+
+#find how much intervention and relaxation has impacted transmission 
+with(as.list( rem_parameters), {
+  c <- (1 - stngcy/(1+ exp(-1.25*(times-eff_t)))) 
+  rlx <- (1 + relx_level/(1+ exp(-1.25*(times-rlx_t)))) # relaxation 
+  further_rlx <- (1 + fur_relx_level/(1+ exp(-1.25*(times-fur_rlx_t))))
+  infectionfactor <- c*rlx*further_rlx
+  plot(infectionfactor)})
+
+#increase due to reopening 
+rem_parameters["beta_r"] <- rem_parameters["beta_r"]*0.78
+rem_parameters["beta_m"] <- rem_parameters["beta_m"]*0.78
 rem_parameters["eff_t"]  <- 1000 #set to  some time in the future beyond  the projection period 
-rem_parameters["epsilon_r"] <- (1-0.15) 
+#rem_parameters["epsilon_r"] <- (1-0.15) 
 #rem_parameters[["stngcy"]] <- 0.35
 #rem_parameters[["p"]] <- 0.5
 #rem_parameters[["beff"]] <- 0.95
-#rem_parameters[["wf"]] <- 0.01
-rem_parameters[["b"]] <- 0.018*1.3
+rem_parameters[["wf"]] <- 0.01
+rem_parameters[["b"]] <- 0.018
 #initialm data matching 
+
+params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.5, "eff_t" = 600) # eff_t is just pushed back beyond the time horizon of the projection
+ 
+# Swap resident and mutant, then set up new mutant. 
+# This assumes that the new mutant 'arrives' with mut_prop% of current cases
+new_model <- swap_strains(out_old = out_samp, params_old = rem_parameters, 
+                          params_newmutant = params_newmutant, mut_prop = 0.3)
+init_proj <- new_model$init_newm
+proj_parameters <- new_model$newm_parameters
+
+# Make projections
+forecasts_days <- nrow(dat_rem)
+times <- 1:(forecasts_days)
+proj_out <- as.data.frame(deSolve::ode(y=init_proj, time=times,func= sveirs,
+                                       parms=proj_parameters)) 
+#check growth rate 
+get_growth_rate(output= proj_out, startoffset = 20, duration = 7)
+
+# Simple plot of the projection
+proj_out <- proj_out %>% mutate(Total=last(test_prop)*proj_parameters[["p"]]*
+                                  proj_parameters[["sigma"]]*(proj_out$Er + proj_out$Erv + proj_out$Erw + 
+                                                                proj_out$Em + proj_out$Emv + proj_out$Emw), 
+                                Resident=last(test_prop)*proj_parameters[["p"]]*
+                                  proj_parameters[["sigma"]]*(proj_out$Er + proj_out$Erv + proj_out$Erw), 
+                                Mutant=last(test_prop)*proj_parameters[["p"]]*
+                                  proj_parameters[["sigma"]]*(proj_out$Em + proj_out$Emv + proj_out$Emw)) %>% 
+  mutate(date=seq.Date(ymd(intro_date),ymd(intro_date )-1+length(times), 1)) 
+
+#pivot_longer(proj_out, c(Total, Resident, Mutant), names_to = "Strain", values_to = "count") %>%
+  ggplot(proj_out) + geom_line(aes( x=date, y=Resident), col="blue") + 
+    geom_line(aes( x=date, y=Mutant), col="red") +  geom_line(aes( x=date, y=Total), col="green") + 
+    geom_point(aes(x=dat_rem$date, y=dat_rem$value))
+
+
+
+
+
+
+#initiating with the last point on fit from pipps_simulation.R script 
+# init_rem <-     c(S=last(out_samp$S),
+#                 Er=1,Em=last(out_samp$Em)-1,
+#                 Ir=2,Im=last(out_samp$Im)-2,
+#                 R=last(out_samp$R),V=last(out_samp$V),
+#                 Erv=10,Emv=last(out_samp$Emv)-10,
+#                 Irv=1,Imv=last(out_samp$Imv)-1,
+#                 Rv=last(out_samp$Rv),W=last(out_samp$W),
+#                 Erw=0,Emw=last(out_samp$Emw),
+#                 Irw=0,Imw=last(out_samp$Imw)-0
+#                 ,Rw=last(out_samp$Rw)) 
+
+
+
 
 
 
@@ -48,6 +101,7 @@ forecasts_days <- 1
 times <- 1:(nrow(dat_rem) + forecasts_days)
 rem_outtest <- as.data.frame(deSolve::ode(y=init_rem,time=times,func= sveirs,
                              parms=rem_parameters))  
+
 rem_outtest <- rem_outtest %>% mutate(incid=last(test_prop)*rem_parameters[["p"]]*
                              rem_parameters[["sigma"]]*(rem_outtest$Er + rem_outtest$Erv + rem_outtest$Erw + 
                               rem_outtest$Em + rem_outtest$Emv + rem_outtest$Emw)) %>% 
@@ -149,8 +203,8 @@ get_growth_rate(output= proj_out, startoffset = 20, duration = 7)
 
 # Simple plot of the projection
 proj_out <- proj_out %>% mutate(Total=last(test_prop)*proj_parameters[["p"]]*
-                              proj_parameters[["sigma"]]*(proj_out$Er + proj_out$Erv + proj_out$Erw + 
-                              proj_out$Em + proj_out$Emv + proj_out$Emw), 
+                               proj_parameters[["sigma"]]*(proj_out$Er + proj_out$Erv + proj_out$Erw + 
+                               proj_out$Em + proj_out$Emv + proj_out$Emw), 
                               Resident=last(test_prop)*proj_parameters[["p"]]*
                               proj_parameters[["sigma"]]*(proj_out$Er + proj_out$Erv + proj_out$Erw), 
                               Mutant=last(test_prop)*proj_parameters[["p"]]*
