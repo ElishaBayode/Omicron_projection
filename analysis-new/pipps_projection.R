@@ -4,17 +4,21 @@ dat_full = readRDS("data/BC-dat.rds")
 
 
 
-
 forecasts_days <- 1 
+old_intro_date  = intro_date # Keep track of 'day 0'
 intro_date <-   ymd("2022-03-10")
 stop_date <- last(dat_full$date)
 
 dat_rem <- dat_full %>% filter(date >= intro_date &  date <= stop_date)
+# align 'day' to correct date, in order to continue counting on same scale as _simulation.R
+dat_rem$day <- as.numeric(intro_date - old_intro_date):(as.numeric(stop_date - old_intro_date))
+  
+  # eff_date <-   ymd("2021-12-31")
 
 #dat_rem <- filter(dat_full, date >= intro_date) %>% select(c("day", "value", "date"))
 dat_full$day <- 1:nrow(dat_full)
 
-plot(dat_rem$value)
+plot(dat_rem$date, dat_rem$value)
 
 #now using Jessica's function to switch variants 
 
@@ -31,9 +35,8 @@ with(as.list( rem_parameters), {
   plot(infectionfactor)})
 
 #increase due to reopening 
-rem_parameters["beta_r"] <- rem_parameters["beta_r"]*0.4*(1.5)
-rem_parameters["beta_m"] <- rem_parameters["beta_m"]*0.4*(1.5)
-#rem_parameters["eff_t"]  <- 1000 #set to  some time in the future beyond  the projection period 
+rem_parameters["beta_r"] <- rem_parameters["beta_r"]*(1.5) #rem_parameters["beta_r"]*0.4*(1.5)
+rem_parameters["beta_m"] <- rem_parameters["beta_m"]*(1.5) #rem_parameters["beta_m"]*0.4*(1.5)
 #rem_parameters["epsilon_r"] <- (1-0.15) 
 #rem_parameters[["stngcy"]] <- 0.35
 #rem_parameters[["p"]] <- 0.5
@@ -42,18 +45,11 @@ rem_parameters["beta_m"] <- rem_parameters["beta_m"]*0.4*(1.5)
 #rem_parameters[["b"]] <- 0.018*1.2
 #initialm data matching 
 
-#params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.15
-#                        , "eff_t" = 600) # eff_t is just pushed back beyond the time horizon of the projection
-
-#rem_parameters[["wf"]] <- 0.01
-#rem_parameters[["b"]] <- 0.018
-#initial data matching 
 
 # Set the desired characteristics of the new mutant. You can include any of the named elements of rem_parameters here
-# JS NOTE: I think this needs to be refined for BA2? I don't know if we should be changing epsilon.
+# JS NOTE: I think this may need to be refined for BA2? I don't know if we should be changing epsilon.
 params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.4,
-            "epsilon_m" = rem_parameters["epsilon_m"]*1,
-            "eff_t" = 1000) # eff_t is just pushed back beyond the time horizon of the projection
+            "epsilon_m" = rem_parameters["epsilon_m"]*1) 
 
 
 
@@ -65,8 +61,8 @@ init_proj <- new_model$init_newm
 proj_parameters <- new_model$newm_parameters
 
 # Make projections
-forecasts_days <- nrow(dat_rem)
-times <- 1:(forecasts_days)
+#forecasts_days <- nrow(dat_rem)
+times <- dat_rem$day # Keep the same time count going
 proj_out <- as.data.frame(deSolve::ode(y=init_proj, time=times,func= sveirs,
                                        parms=proj_parameters)) 
 #check growth rate 
