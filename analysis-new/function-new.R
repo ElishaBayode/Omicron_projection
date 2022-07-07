@@ -544,7 +544,7 @@ swap_strains <- function(out_old=out_old, params_old = params_old, params_newmut
                   
                   Rr=(last(out_old$Rm) + last(out_old$Rr)),
                   Rm=0,
-              
+      
                   
                   V=last(out_old$V),
                   Erv=(last(out_old$Emv) + last(out_old$Erv))*(1-mut_prop),   
@@ -576,6 +576,8 @@ swap_strains <- function(out_old=out_old, params_old = params_old, params_newmut
   
   return(list(init_newm = init_newm,newm_parameters = newm_parameters))
 }
+
+
 
 
 

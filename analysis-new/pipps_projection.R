@@ -24,7 +24,7 @@ plot(dat_rem$date, dat_rem$value)
 
 rem_parameters  <- parameters
 
-times = 1:nrow(dat_omic)
+times = dat_rem$day
 
 #find how much intervention and relaxation have impacted transmission 
 with(as.list( rem_parameters), {
@@ -56,7 +56,7 @@ params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.4,
 # Swap resident and mutant, then set up new mutant. 
 # This assumes that the new mutant 'arrives' with mut_prop% of current cases
 new_model <- swap_strains(out_old = out_samp, params_old = rem_parameters, 
-                          params_newmutant = params_newmutant, mut_prop = 0.4)
+                          params_newmutant = params_newmutant, mut_prop = 0.3)
 init_proj <- new_model$init_newm
 proj_parameters <- new_model$newm_parameters
 
