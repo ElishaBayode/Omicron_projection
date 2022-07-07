@@ -40,9 +40,11 @@ rem_parameters["eff_t"]  <- 1000 #set to  some time in the future beyond  the pr
 #rem_parameters[["beff"]] <- 0.95
 rem_parameters[["wf"]] <- 0.01
 rem_parameters[["b"]] <- 0.018
-#initialm data matching 
+#initial data matching 
 
-params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.5, "eff_t" = 600) # eff_t is just pushed back beyond the time horizon of the projection
+# Set the desired characteristics of the new mutant. You can include any of the named elements of rem_parameters here
+# JS NOTE: I think this needs to be refined for BA2? I don't know if we should be changing epsilon.
+params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.5, "epsilon_m" = rem_parameters["epsilon_m"]*1, "eff_t" = 1000) # eff_t is just pushed back beyond the time horizon of the projection
  
 # Swap resident and mutant, then set up new mutant. 
 # This assumes that the new mutant 'arrives' with mut_prop% of current cases
@@ -75,28 +77,16 @@ proj_out <- proj_out %>% mutate(Total=last(test_prop)*proj_parameters[["p"]]*
     geom_point(aes(x=dat_rem$date, y=dat_rem$value))
 
 
-
-
-
-
-#initiating with the last point on fit from pipps_simulation.R script 
-# init_rem <-     c(S=last(out_samp$S),
-#                 Er=1,Em=last(out_samp$Em)-1,
-#                 Ir=2,Im=last(out_samp$Im)-2,
-#                 R=last(out_samp$R),V=last(out_samp$V),
-#                 Erv=10,Emv=last(out_samp$Emv)-10,
-#                 Irv=1,Imv=last(out_samp$Imv)-1,
-#                 Rv=last(out_samp$Rv),W=last(out_samp$W),
-#                 Erw=0,Emw=last(out_samp$Emw),
-#                 Irw=0,Imw=last(out_samp$Imw)-0
-#                 ,Rw=last(out_samp$Rw)) 
+  
 
 
 
 
 
-
-
+  
+  
+  
+################################################################
 forecasts_days <- 1
 times <- 1:(nrow(dat_rem) + forecasts_days)
 rem_outtest <- as.data.frame(deSolve::ode(y=init_rem,time=times,func= sveirs,
