@@ -134,7 +134,7 @@ guess <- c( beta_m=1, beta_r=0.6, theta=0.1, stngcy=0.4,p=0.2)
 
 
 
-pen.fit_BC <- optim(fn=func_penloglik,  par=guess, lower=c(0,0,0.01, 0,0), 
+pen.fit_BC <- optim(fn=func_penloglik,  par=guess, lower=c(0,0,0.01, 0,0.01), 
                     upper = c(Inf,Inf,1,1,1), 
                     method = "L-BFGS-B", 
                     parameters = parameters, test_prop=test_prop, 

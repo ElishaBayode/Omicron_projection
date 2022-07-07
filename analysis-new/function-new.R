@@ -35,8 +35,8 @@ sveirs <- function(time, state, parameters) {
     
     
     
-    dEr <- lambda_r*S/N +  epsilon_r*lambda_r*(c_r*Rr + c_rm*Rm)/N - (sigma+mu)*Er 
-    dEm <- lambda_m*S/N +  epsilon_m*lambda_m*(c_mr*Rr + c_m*Rm)/N - (sigma+mu)*Em
+    dEr <- lambda_r*S/N +  lambda_r*(c_r*Rr + c_rm*Rm)/N - (sigma+mu)*Er 
+    dEm <- lambda_m*S/N +  lambda_m*(c_mr*Rr + c_m*Rm)/N - (sigma+mu)*Em
     
     dIr <- sigma*Er - (gamma + mu)*Ir
     dIm <- sigma*Em - (gamma + mu)*Im
@@ -45,8 +45,8 @@ sveirs <- function(time, state, parameters) {
     #included new parameters c_r and c_m protection from  variant that individuals just recovered from  
     #two new states Rrv and Rmv to replace R
     
-    dRr <-  gamma*Ir  -  (c_r*epsilon_r*lambda_r + c_mr*epsilon_m*lambda_m)*Rr/N - (mu + w_r)*Rr
-    dRm <-  gamma*Im  -  (c_rm*epsilon_r*lambda_r + c_m*epsilon_m*lambda_m)*Rm/N - (mu + w_m)*Rm
+    dRr <-  gamma*Ir  -  (c_r*lambda_r + c_mr*lambda_m)*Rr/N - (mu + w_r)*Rr
+    dRm <-  gamma*Im  -  (c_rm*lambda_r + c_m*lambda_m)*Rm/N - (mu + w_m)*Rm
     
     
     
@@ -72,8 +72,12 @@ sveirs <- function(time, state, parameters) {
     dIrw <- sigma*Erw - (gamma + mu)*Irw
     dImw <- sigma*Emw - (gamma + mu)*Imw
     
-    dRrw <-  b*ve*Rrv + gamma*Irw   - (1-beff)*(c_r*lambda_r + c_mr*lambda_m)*Rrw/N - (mu + w_r)*Rrw
-    dRmw <-  b*ve*Rmv + gamma*Imw - (1-beff)*(c_rm*lambda_r + c_m*lambda_m)*Rmw/N - (mu + w_m)*Rmw
+
+  #  dRrw <-  b*ve*Rrv + gamma*Irw   - (1-beff)*(c_r*lambda_r + c_mr*lambda_m)*Rrw/N - (mu + w_r)*Rrw
+  #  dRmw <-  b*ve*Rmv + gamma*Imw - (1-beff)*(c_rm*lambda_r + c_m*lambda_m)*Rmw/N - (mu + w_m)*Rmw
+    dRrw <-  b*ve*Rrv + gamma*(Irw) - (1-beff)*(c_r*lambda_r + c_mr*lambda_m)*Rrw/N - (mu + w_r)*Rrw
+    dRmw <-  b*ve*Rmv + gamma*(Imw) - (1-beff)*(c_rm*lambda_r + c_m*lambda_m)*Rmw/N - (mu + w_m)*Rmw
+
     
     
     return(list(c(dS,dEr,dEm,dIr,dIm,dRr,dRm,dV,dErv,dEmv,dIrv,dImv,dRrv,dRmv,dW,dErw,dEmw,dIrw,dImw,dRrw,dRmw)))
@@ -538,8 +542,8 @@ swap_strains <- function(out_old=out_old, params_old = params_old, params_newmut
                   Ir=(last(out_old$Im) + last(out_old$Ir))*(1-mut_prop),
                   Im=(last(out_old$Im) + last(out_old$Ir))*(mut_prop), 
                   
-                  Rr=(last(out_old$Rm) + last(out_old$Rr))*(1-mut_prop),
-                  Rm=(last(out_old$Rm) + last(out_old$Rr))*(mut_prop),
+                  Rr=(last(out_old$Rm) + last(out_old$Rr)),
+                  Rm=0,
               
                   
                   V=last(out_old$V),
@@ -548,8 +552,8 @@ swap_strains <- function(out_old=out_old, params_old = params_old, params_newmut
                   Irv=(last(out_old$Imv) + last(out_old$Irv))*(1-mut_prop),
                   Imv= (last(out_old$Imv) + last(out_old$Irv))*(mut_prop),
                   
-                  Rrv=(last(out_old$Rmv) + last(out_old$Rrv))*(1-mut_prop),
-                  Rmv=(last(out_old$Rmv) + last(out_old$Rrv))*(mut_prop),
+                  Rrv=(last(out_old$Rmv) + last(out_old$Rrv)),
+                  Rmv=0,
                   
                   
                   W=last(out_old$W),  
@@ -558,8 +562,8 @@ swap_strains <- function(out_old=out_old, params_old = params_old, params_newmut
                   Irw=(last(out_old$Imw) + last(out_old$Irw))*(1-mut_prop),
                   Imw= (last(out_old$Imw) + last(out_old$Irw))*(mut_prop),
                   
-                  Rrw=(last(out_old$Rmw) + last(out_old$Rrw))*(1-mut_prop),
-                  Rmw=(last(out_old$Rmw) + last(out_old$Rrw))*(mut_prop)
+                  Rrw=(last(out_old$Rmw) + last(out_old$Rrw)),
+                  Rmw=0
                   
   ) 
   
