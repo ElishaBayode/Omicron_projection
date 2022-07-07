@@ -538,8 +538,8 @@ swap_strains <- function(out_old=out_old, params_old = params_old, params_newmut
                   Ir=(last(out_old$Im) + last(out_old$Ir))*(1-mut_prop),
                   Im=(last(out_old$Im) + last(out_old$Ir))*(mut_prop), 
                   
-                  Rr=last(out_old$Rm) + last(out_old$Rr)*(1-mut_prop),
-                  Rm=last(out_old$Rm) + last(out_old$Rr)*(mut_prop),
+                  Rr=(last(out_old$Rm) + last(out_old$Rr))*(1-mut_prop),
+                  Rm=(last(out_old$Rm) + last(out_old$Rr))*(mut_prop),
               
                   
                   V=last(out_old$V),
@@ -548,8 +548,8 @@ swap_strains <- function(out_old=out_old, params_old = params_old, params_newmut
                   Irv=(last(out_old$Imv) + last(out_old$Irv))*(1-mut_prop),
                   Imv= (last(out_old$Imv) + last(out_old$Irv))*(mut_prop),
                   
-                  Rrv=last(out_old$Rmv) + last(out_old$Rrv)*(1-mut_prop),
-                  Rmv=last(out_old$Rmv) + last(out_old$Rrv)*(mut_prop),
+                  Rrv=(last(out_old$Rmv) + last(out_old$Rrv))*(1-mut_prop),
+                  Rmv=(last(out_old$Rmv) + last(out_old$Rrv))*(mut_prop),
                   
                   
                   W=last(out_old$W),  
@@ -558,8 +558,8 @@ swap_strains <- function(out_old=out_old, params_old = params_old, params_newmut
                   Irw=(last(out_old$Imw) + last(out_old$Irw))*(1-mut_prop),
                   Imw= (last(out_old$Imw) + last(out_old$Irw))*(mut_prop),
                   
-                  Rrw=last(out_old$Rmw) + last(out_old$Rrw)*(1-mut_prop),
-                  Rmw=last(out_old$Rmw) + last(out_old$Rrw)*(mut_prop)
+                  Rrw=(last(out_old$Rmw) + last(out_old$Rrw))*(1-mut_prop),
+                  Rmw=(last(out_old$Rmw) + last(out_old$Rrw))*(mut_prop)
                   
   ) 
   
