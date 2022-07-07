@@ -38,23 +38,25 @@ rem_parameters["beta_m"] <- rem_parameters["beta_m"]*0.4*(1.5)
 #rem_parameters[["stngcy"]] <- 0.35
 #rem_parameters[["p"]] <- 0.5
 #rem_parameters[["beff"]] <- 0.95
-<<<<<<< HEAD
 #rem_parameters[["wf"]] <- 0.01
-rem_parameters[["b"]] <- 0.018*1.2
+#rem_parameters[["b"]] <- 0.018*1.2
 #initialm data matching 
 
-params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.15
-                        , "eff_t" = 600) # eff_t is just pushed back beyond the time horizon of the projection
-=======
-rem_parameters[["wf"]] <- 0.01
-rem_parameters[["b"]] <- 0.018
+#params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.15
+#                        , "eff_t" = 600) # eff_t is just pushed back beyond the time horizon of the projection
+
+#rem_parameters[["wf"]] <- 0.01
+#rem_parameters[["b"]] <- 0.018
 #initial data matching 
 
 # Set the desired characteristics of the new mutant. You can include any of the named elements of rem_parameters here
 # JS NOTE: I think this needs to be refined for BA2? I don't know if we should be changing epsilon.
-params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.5, "epsilon_m" = rem_parameters["epsilon_m"]*1, "eff_t" = 1000) # eff_t is just pushed back beyond the time horizon of the projection
->>>>>>> ae7638f04f31ad981b9e75821ede055e2b98be3d
- 
+params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.4,
+            "epsilon_m" = rem_parameters["epsilon_m"]*1,
+            "eff_t" = 1000) # eff_t is just pushed back beyond the time horizon of the projection
+
+
+
 # Swap resident and mutant, then set up new mutant. 
 # This assumes that the new mutant 'arrives' with mut_prop% of current cases
 new_model <- swap_strains(out_old = out_samp, params_old = rem_parameters, 
