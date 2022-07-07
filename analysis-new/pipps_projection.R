@@ -6,7 +6,7 @@ dat_full = readRDS("data/BC-dat.rds")
 
 
 forecasts_days <- 1 
-intro_date <-   ymd("2022-03-31")
+intro_date <-   ymd("2022-03-10")
 stop_date <- last(dat_full$date)
 
 dat_rem <- dat_full %>% filter(date >= intro_date &  date <= stop_date)
@@ -22,7 +22,7 @@ rem_parameters  <- parameters
 
 times = 1:nrow(dat_omic)
 
-#find how much intervention and relaxation has impacted transmission 
+#find how much intervention and relaxation have impacted transmission 
 with(as.list( rem_parameters), {
   c <- (1 - stngcy/(1+ exp(-1.25*(times-eff_t)))) 
   rlx <- (1 + relx_level/(1+ exp(-1.25*(times-rlx_t)))) # relaxation 
@@ -31,23 +31,24 @@ with(as.list( rem_parameters), {
   plot(infectionfactor)})
 
 #increase due to reopening 
-rem_parameters["beta_r"] <- rem_parameters["beta_r"]*0.78
-rem_parameters["beta_m"] <- rem_parameters["beta_m"]*0.78
-rem_parameters["eff_t"]  <- 1000 #set to  some time in the future beyond  the projection period 
+rem_parameters["beta_r"] <- rem_parameters["beta_r"]*0.4*(1.5)
+rem_parameters["beta_m"] <- rem_parameters["beta_m"]*0.4*(1.5)
+#rem_parameters["eff_t"]  <- 1000 #set to  some time in the future beyond  the projection period 
 #rem_parameters["epsilon_r"] <- (1-0.15) 
 #rem_parameters[["stngcy"]] <- 0.35
 #rem_parameters[["p"]] <- 0.5
 #rem_parameters[["beff"]] <- 0.95
-rem_parameters[["wf"]] <- 0.01
-rem_parameters[["b"]] <- 0.018
+#rem_parameters[["wf"]] <- 0.01
+rem_parameters[["b"]] <- 0.018*1.2
 #initialm data matching 
 
-params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.5, "eff_t" = 600) # eff_t is just pushed back beyond the time horizon of the projection
+params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.15
+                        , "eff_t" = 600) # eff_t is just pushed back beyond the time horizon of the projection
  
 # Swap resident and mutant, then set up new mutant. 
 # This assumes that the new mutant 'arrives' with mut_prop% of current cases
 new_model <- swap_strains(out_old = out_samp, params_old = rem_parameters, 
-                          params_newmutant = params_newmutant, mut_prop = 0.3)
+                          params_newmutant = params_newmutant, mut_prop = 0.4)
 init_proj <- new_model$init_newm
 proj_parameters <- new_model$newm_parameters
 

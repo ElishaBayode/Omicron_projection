@@ -12,7 +12,7 @@ dat = readRDS("data/BC-dat.rds")
 
 forecasts_days <- 1 
 intro_date <-  ymd("2021-11-30")
-stop_date <- ymd("2022-06-25")#last(dat$date)# #last date of data   
+stop_date <- ymd("2022-03-10")#last(dat$date)# #last date of data   
 
 dat <- dat %>% filter(date >= intro_date &  date <= stop_date)
 dat_omic <- dat
@@ -50,7 +50,7 @@ times = 1:nrow(dat_omic)
 
 #declaring  parameters 
 eff_date <-   ymd("2021-12-31")  # intervention date 
-intv_date <-  ymd("2022-03-05") #  increase due to BA.2 (not needed here)
+intv_date <-  ymd("2022-03-20") #  increase due to BA.2 (not needed here)
 fur_intv_date <- ymd("2022-07-04") #increase due to reopening (not needed here)
 
 
@@ -58,27 +58,26 @@ parameters <-         c(sigma=1/3, # incubation period (days)
                         gamma=1/5, #recovery rate 
                         nu =0.007, #vax rate: 0.7% per day 
                         mu=1/(82*365), # 1/life expectancy 
-                        w_m= 1/(0.33*365),# waning rate from R to S 
-                        w_r= 1/(0.33*365),
-                        w_b= 1/(0.33*365), # waning rate from Rv to V 
+                        w_m= 1/(0.42*365),# waning rate from R to S 
+                        w_r= 1/(0.42*365),
+                        w_b= 1/(0.5*365), # waning rate from Rv to V 
                         ve=1, # I think this should be 1. it is not really efficacy  
                         beta_r=0.6, #transmission rate 
                         beta_m=1.12, #transmission rate 
                         c_m = 0.005,  #(1-%protection) protection from mutant variants when individuals  just recovered  from it (made-up (for now)) 
                         c_r = 0.005, #protection from resident variants when individuals  just recovered  from it (made-up (for now)) 
-                        c_mr = 0.2, #cross immunity of resident  from mutant 
+                        c_mr = 0.1, #cross immunity of resident  from mutant 
                         c_rm = 0.001, #cross immunity of mutant  from resident 
                         epsilon_r = (1-0.8), # % this should be 1-ve 
-                        epsilon_m = 1-0.15, # % 1-ve omicron 
+                        epsilon_m = (1-0.30), # % 1-ve omicron 
                         b= 0.018, # booster rate
-                        epsilon_m = 1-0.3, # % 1-ve omicron 
                         b= 0.03,#0.018, # booster rate
                         beff = 0.88, # booster efficacy
                         wf=0.01, # protection for newly recovered
                         N=5.07e6,
                         stngcy= 0.4, #(*%(reduction)) strength of intervention (reduction in beta's)
                         eff_t = as.numeric(eff_date - intro_date),
-                        relx_level = 0.45,
+                        relx_level = 0.65,
                         fur_relx_level = 0,
                         rlx_t = as.numeric(intv_date - intro_date),
                         fur_rlx_t = as.numeric(fur_intv_date - intro_date),
