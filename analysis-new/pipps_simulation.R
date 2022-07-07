@@ -70,7 +70,6 @@ parameters <-         c(sigma=1/3, # incubation period (days)
                         c_rm = 0.001, #cross immunity of mutant  from resident 
                         epsilon_r = (1-0.8), # % this should be 1-ve 
                         epsilon_m = (1-0.30), # % 1-ve omicron 
-                        b= 0.018, # booster rate
                         b= 0.03,#0.018, # booster rate
                         beff = 0.88, # booster efficacy
                         wf=0.01, # protection for newly recovered
