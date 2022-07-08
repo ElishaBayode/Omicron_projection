@@ -54,8 +54,8 @@ intv_date <-  ymd("2022-03-20") #  increase due to BA.2
 fur_intv_date <- ymd("2022-07-04") #increase due to reopening (not needed here)
 
 
-parameters <-         c(sigma=1/3, # incubation period (days) 
-                        gamma=1/5, #recovery rate 
+parameters <-         c(sigma=1/1, # incubation period (days) 
+                        gamma=1/4, #recovery rate 
                         nu =0.007, #vax rate: 0.7% per day 
                         mu=1/(82*365), # 1/life expectancy 
                         w_m= 1/(0.42*365),# waning rate from R to S 
@@ -71,7 +71,7 @@ parameters <-         c(sigma=1/3, # incubation period (days)
                         epsilon_r = (1-0.8), # % this should be 1-ve 
                         epsilon_m = (1-0.30), # % 1-ve omicron 
                         b= 0.03,#0.018, # booster rate
-                        beff = 0.88, # booster efficacy
+                        beff = 0.75, # booster efficacy
                         N=5.07e6,
                         stngcy= 0.4, #(*%(reduction)) strength of intervention (reduction in beta's)
                         eff_t = as.numeric(eff_date - intro_date),
@@ -79,7 +79,7 @@ parameters <-         c(sigma=1/3, # incubation period (days)
                         fur_relx_level = 0,
                         rlx_t = as.numeric(intv_date - intro_date),
                         fur_rlx_t = as.numeric(fur_intv_date - intro_date),
-                        p = 0.2, #negative binomial mean (from pre-Omicron seroprevalence estimates)
+                        p = 0.3, #negative binomial mean (from pre-Omicron seroprevalence estimates)
                         theta = 0.1 #negative binomial dispersion
                         
 )
@@ -127,7 +127,7 @@ pen.size <- 0.1
 
 # Guess starting parameters and fit the model 
 
-guess <- c( beta_m=1, beta_r=0.6, theta=0.1, stngcy=0.4,p=0.2) 
+guess <- c( beta_m=1, beta_r=0.6, theta=0.1, stngcy=0.4)  # NOTE removed fitting p 
 
 #guess <- c( beta_m=1, stngcy=0.4,beta_r=0.6, theta=0.1,beff=0.8) 
 
@@ -187,7 +187,9 @@ tot_inf_vax <- (out_samp$V+ out_samp$Erv+ out_samp$Emv+out_samp$Irv + out_samp$I
 
 last(tot_inf_vax/N) #(95.5%, consistent)
 
-
+# check vaccination / booster level 
+vv = get_vax(out_samp)
+ggplot(vv, aes(x=time, y=boosted/N))+geom_line()
 
 ################################# re-sampling CI
 

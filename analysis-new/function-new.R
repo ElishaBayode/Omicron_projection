@@ -237,9 +237,9 @@ get_true_incidence_prop_plot = function(times, start_date, parameters_base,init)
 get_vax = function(output) {
   vax = output %>% mutate(unvax = S+Er + Em + Ir + Im + Rr + Rm, 
                           vaxtot = V+ Erv + Emv+ 
-                            Irv+ Imv+ Rv+ W +Erw+Emw+ Irw+ Imw+ Rrw + Rmw,
+                            Irv+ Imv+ Rmv +Rwv+ W +Erw+Emw+ Irw+ Imw+ Rrw + Rmw,
                           vaxtwodose = V+ Erv + Emv+ 
-                            Irv+ Imv+ Rv, boosted = W +Erw+Emw+ Irw+ Imw+ Rrw + Rmw) %>% 
+                            Irv+ Imv+ Rmv+Rwv, boosted = W +Erw+Emw+ Irw+ Imw+ Rrw + Rmw) %>% 
     dplyr::select(time,unvax, vaxtot, vaxtwodose, boosted) 
   return(vax) 
 }
