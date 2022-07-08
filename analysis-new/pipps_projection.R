@@ -90,7 +90,18 @@ proj_out <- proj_out %>% mutate(Total=last(test_prop)*proj_parameters[["p"]]*
 
 
   
-
+# cc adding here -------------
+  IHR = 0.01 * (5/16) # see slak w nicola
+  proj_out <- proj_out %>% mutate(incid=
+                                    proj_parameters[["sigma"]]*(proj_out$Er + proj_out$Erv + proj_out$Erw + 
+                                                                  proj_out$Em + proj_out$Emv + proj_out$Emw), 
+                                 prev =Ir + Irv + Irw + Im + Imv +Imw,
+                                 ) %>% mutate(hosp = incid*IHR*(1e5/N)) %>%  # note per 100K hosp
+    mutate(date=seq.Date(ymd(intro_date),ymd(intro_date )-1+length(times), 1)) 
+  ggplot(proj_out) + geom_line(aes( x=date, y=hosp), col="blue")
+  
+  
+  # -- end cc adding here ------- 
 
 
 

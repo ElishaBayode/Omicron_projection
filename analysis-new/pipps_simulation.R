@@ -28,10 +28,11 @@ dat_omic$day <- 1:nrow(dat_omic)
 
 #test prop goes down to 0.33 during the Omicron wave 
 x=intro_date+1:nrow(dat_omic)
-tptest = 1 -0.67/(1+exp(-0.2*as.numeric((x - ymd("2021-12-20")))))
-tptest = tptest - (0.97-0.67)/(1+exp(-0.2*as.numeric((x - ymd("2022-03-01")))))
+tptest = 1 -0.8/(1+exp(-0.2*as.numeric((x - ymd("2021-12-20")))))
+# tptest = tptest - (0.97-0.67)/(1+exp(-0.2*as.numeric((x - ymd("2022-03-01")))))
 plot(x,tptest)
 test_prop= tptest
+plot(x,test_prop)
 
 
 ########## Parameters setup 
@@ -65,13 +66,13 @@ parameters <-         c(sigma=1/1, # incubation period (days)
                         ve=1, # I think this should be 1. it is not really efficacy  
                         beta_r=0.6, #transmission rate 
                         beta_m=1.12, #transmission rate 
-                        c_m = 0.005,  #(1-protection) protection from mutant variants when individuals  just recovered  from it (made-up (for now)) 
-                        c_r = 0.005, # 1- protection from resident variants when individuals  just recovered  from it (made-up (for now)) 
-                        c_mr = 0.1, #1 -cross immunity of resident  from mutant 
-                        c_rm = 0.001, #1-cross immunity of mutant  from resident 
-                        epsilon_r = (1-0.8), # % this should be 1-ve 
-                        epsilon_m = (1-0.6), # % 1-ve omicron 
-                        b= 0.03,#0.018, # booster rate
+                        c_m = 0.05,  # KEEP AT 0.05 for now . (1-protection) protection from mutant variants when individuals  just recovered  from it (made-up (for now)) 
+                        c_r = 0.05, # KEEP AT 0.05 for now1- protection from resident variants when individuals  just recovered  from it (made-up (for now)) 
+                        c_mr = 0.1, # CAN BE HIGHER than 0.05 1 -cross immunity of resident  from mutant 
+                        c_rm = 0.05, #KEEP AT 0.05 for now1-cross immunity of mutant  from resident 
+                        epsilon_r = (1-0.8), # % this should be 1-ve against delta - fine at 0.8
+                        epsilon_m = (1-0.3), # % 1-ve omicron . ve omicron is at most 0.3 #DISCUSSED WITH JS
+                        b= 0.02,#0.018, # booster rate DISCUSSED
                         beff = 0.75, # booster efficacy
                         N=5.07e6,
                         stngcy= 0.4, #(*%(reduction)) strength of intervention (reduction in beta's)
@@ -80,7 +81,7 @@ parameters <-         c(sigma=1/1, # incubation period (days)
                         fur_relx_level = 0,
                         rlx_t = as.numeric(intv_date - intro_date),
                         fur_rlx_t = as.numeric(fur_intv_date - intro_date),
-                        p = 0.3, #negative binomial mean (from pre-Omicron seroprevalence estimates)
+                        p = 0.3, # ascertainment fraction from pre-Omicron seroprevalence estimates
                         theta = 0.1 #negative binomial dispersion
                         
 )
@@ -183,10 +184,13 @@ tot_reported <- sum(dat_omic$value)
 tot_true/N #(27% infection from Nov 30, 2021 to March 30, 2022)
 tot_reported/tot_true #(9% ascertainment from Nov 30, 2021 to March 30, 2022)
 
-tot_inf_vax <- (out_samp$V+ out_samp$Erv+ out_samp$Emv+out_samp$Irv + out_samp$Imv+  out_samp$Rv + out_samp$R + 
-                  out_samp$W+out_samp$Erw+out_samp$Emw+out_samp$Irw + out_samp$Imw + out_samp$Rw)
+tot_inf_vax <- (out_samp$V+ out_samp$Erv+ out_samp$Emv+out_samp$Irv + out_samp$Imv+   out_samp$Rrv+out_samp$Rmv + 
+                  out_samp$W+out_samp$Erw+out_samp$Emw+out_samp$Irw + out_samp$Imw + out_samp$Rrw + out_samp$Rmw)
 
 last(tot_inf_vax/N) #(95.5%, consistent)
+# check delta and omicron growth rate 
+get_growth_rate(out_samp, startoffset = 2, duration = 10)
+
 
 # check vaccination / booster level 
 vv = get_vax(out_samp)
