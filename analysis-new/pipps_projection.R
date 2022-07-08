@@ -32,7 +32,7 @@ with(as.list( rem_parameters), {
   rlx <- (1 + relx_level/(1+ exp(-1.25*(times-rlx_t)))) # relaxation 
   further_rlx <- (1 + fur_relx_level/(1+ exp(-1.25*(times-fur_rlx_t))))
   infectionfactor <- c*rlx*further_rlx
-  plot(infectionfactor)})
+  plot(times,infectionfactor)})
 
 #increase due to reopening 
 #rem_parameters["beta_r"] <- rem_parameters["beta_r"]*(1.5) #rem_parameters["beta_r"]*0.4*(1.5) - JS: I think this is already being done by rlx_t?
@@ -49,7 +49,7 @@ with(as.list( rem_parameters), {
 # Set the desired characteristics of the new mutant. You can include any of the named elements of rem_parameters here
 # JS NOTE: I think this may need to be refined for BA2? I don't know if we should be changing epsilon, the Cs or w_m.
 params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.3,
-                        "epsilon_m" = rem_parameters["epsilon_m"]*1,
+                        "epsilon_m" = 0.7,
                         "c_m" = rem_parameters["c_m"]*1,
                         "c_mr" = rem_parameters["c_mr"]*1,
                         "c_rm" = rem_parameters["c_rm"]*1,
@@ -71,6 +71,7 @@ proj_out <- as.data.frame(deSolve::ode(y=init_proj, time=times,func= sveirs,
                                        parms=proj_parameters)) 
 #check growth rate 
 get_growth_rate(output= proj_out, startoffset = 20, duration = 7)
+
 
 # Simple plot of the projection
 proj_out <- proj_out %>% mutate(Total=last(test_prop)*proj_parameters[["p"]]*

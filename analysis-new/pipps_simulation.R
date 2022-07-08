@@ -29,6 +29,7 @@ dat_omic$day <- 1:nrow(dat_omic)
 #test prop goes down to 0.33 during the Omicron wave 
 x=intro_date+1:nrow(dat_omic)
 tptest = 1 -0.67/(1+exp(-0.2*as.numeric((x - ymd("2021-12-20")))))
+tptest = tptest - (0.97-0.67)/(1+exp(-0.2*as.numeric((x - ymd("2022-03-01")))))
 plot(x,tptest)
 test_prop= tptest
 
@@ -50,8 +51,8 @@ times = 1:nrow(dat_omic)
 
 #declaring  parameters 
 eff_date <-   ymd("2021-12-31")  # intervention date 
-intv_date <-  ymd("2022-03-20") #  increase due to BA.2
-fur_intv_date <- ymd("2022-07-04") #increase due to reopening (not needed here)
+intv_date <-  ymd("2022-07-08") #  increase due to BA.2
+fur_intv_date <- ymd("2022-07-09") #increase due to reopening (not needed here)
 
 
 parameters <-         c(sigma=1/1, # incubation period (days) 
@@ -69,7 +70,7 @@ parameters <-         c(sigma=1/1, # incubation period (days)
                         c_mr = 0.1, #1 -cross immunity of resident  from mutant 
                         c_rm = 0.001, #1-cross immunity of mutant  from resident 
                         epsilon_r = (1-0.8), # % this should be 1-ve 
-                        epsilon_m = (1-0.30), # % 1-ve omicron 
+                        epsilon_m = (1-0.6), # % 1-ve omicron 
                         b= 0.03,#0.018, # booster rate
                         beff = 0.75, # booster efficacy
                         N=5.07e6,
