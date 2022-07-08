@@ -72,9 +72,7 @@ sveirs <- function(time, state, parameters) {
     dIrw <- sigma*Erw - (gamma + mu)*Irw
     dImw <- sigma*Emw - (gamma + mu)*Imw
     
-
-  #  dRrw <-  b*ve*Rrv + gamma*Irw   - (1-beff)*(c_r*lambda_r + c_mr*lambda_m)*Rrw/N - (mu + w_r)*Rrw
-  #  dRmw <-  b*ve*Rmv + gamma*Imw - (1-beff)*(c_rm*lambda_r + c_m*lambda_m)*Rmw/N - (mu + w_m)*Rmw
+    
     dRrw <-  b*ve*Rrv + gamma*(Irw) - (1-beff)*(c_r*lambda_r + c_mr*lambda_m)*Rrw/N - (mu + w_r)*Rrw
     dRmw <-  b*ve*Rmv + gamma*(Imw) - (1-beff)*(c_rm*lambda_r + c_m*lambda_m)*Rmw/N - (mu + w_m)*Rmw
 
@@ -570,9 +568,12 @@ swap_strains <- function(out_old=out_old, params_old = params_old, params_newmut
   # Parameters
   newm_parameters <- params_old
   #introducing new strains
-  newm_parameters[names(params_newmutant)] <- unlist(params_newmutant)
   newm_parameters["beta_r"] <- params_old["beta_m"]
   newm_parameters["epsilon_r"] <- params_old["epsilon_m"]
+  newm_parameters["w_r"] <- params_old["w_m"]
+  newm_parameters["c_r"] <- params_old["c_m"]
+  newm_parameters["c_rm"] <- params_old["c_mr"]
+  newm_parameters[names(params_newmutant)] <- unlist(params_newmutant)
   
   return(list(init_newm = init_newm,newm_parameters = newm_parameters))
 }

@@ -50,7 +50,7 @@ times = 1:nrow(dat_omic)
 
 #declaring  parameters 
 eff_date <-   ymd("2021-12-31")  # intervention date 
-intv_date <-  ymd("2022-03-20") #  increase due to BA.2 (not needed here)
+intv_date <-  ymd("2022-03-20") #  increase due to BA.2
 fur_intv_date <- ymd("2022-07-04") #increase due to reopening (not needed here)
 
 

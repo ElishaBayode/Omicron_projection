@@ -35,8 +35,8 @@ with(as.list( rem_parameters), {
   plot(infectionfactor)})
 
 #increase due to reopening 
-rem_parameters["beta_r"] <- rem_parameters["beta_r"]*(1.5) #rem_parameters["beta_r"]*0.4*(1.5)
-rem_parameters["beta_m"] <- rem_parameters["beta_m"]*(1.5) #rem_parameters["beta_m"]*0.4*(1.5)
+#rem_parameters["beta_r"] <- rem_parameters["beta_r"]*(1.5) #rem_parameters["beta_r"]*0.4*(1.5) - JS: I think this is already being done by rlx_t?
+#rem_parameters["beta_m"] <- rem_parameters["beta_m"]*(1.5) #rem_parameters["beta_m"]*0.4*(1.5)
 #rem_parameters["epsilon_r"] <- (1-0.15) 
 #rem_parameters[["stngcy"]] <- 0.35
 #rem_parameters[["p"]] <- 0.5
@@ -47,9 +47,13 @@ rem_parameters["beta_m"] <- rem_parameters["beta_m"]*(1.5) #rem_parameters["beta
 
 
 # Set the desired characteristics of the new mutant. You can include any of the named elements of rem_parameters here
-# JS NOTE: I think this may need to be refined for BA2? I don't know if we should be changing epsilon.
-params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.4,
-            "epsilon_m" = rem_parameters["epsilon_m"]*1) 
+# JS NOTE: I think this may need to be refined for BA2? I don't know if we should be changing epsilon, the Cs or w_m.
+params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.3,
+                        "epsilon_m" = rem_parameters["epsilon_m"]*1,
+                        "c_m" = rem_parameters["c_m"]*1,
+                        "c_mr" = rem_parameters["c_mr"]*1,
+                        "c_rm" = rem_parameters["c_rm"]*1,
+                        "w_m" =  rem_parameters["w_m"]*1) 
 
 
 
