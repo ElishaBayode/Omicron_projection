@@ -4,23 +4,27 @@ dat_full = readRDS("data/BC-dat.rds")
 
 
 
-
 forecasts_days <- 1 
+old_intro_date  = intro_date # Keep track of 'day 0'
 intro_date <-   ymd("2022-03-10")
 stop_date <- last(dat_full$date)
 
 dat_rem <- dat_full %>% filter(date >= intro_date &  date <= stop_date)
+# align 'day' to correct date, in order to continue counting on same scale as _simulation.R
+dat_rem$day <- as.numeric(intro_date - old_intro_date):(as.numeric(stop_date - old_intro_date))
+
+# eff_date <-   ymd("2021-12-31")
 
 #dat_rem <- filter(dat_full, date >= intro_date) %>% select(c("day", "value", "date"))
 dat_full$day <- 1:nrow(dat_full)
 
-plot(dat_rem$value)
+plot(dat_rem$date, dat_rem$value)
 
 #now using Jessica's function to switch variants 
 
 rem_parameters  <- parameters
 
-times = 1:nrow(dat_omic)
+times = dat_rem$day
 
 #find how much intervention and relaxation have impacted transmission 
 with(as.list( rem_parameters), {
@@ -31,9 +35,8 @@ with(as.list( rem_parameters), {
   plot(infectionfactor)})
 
 #increase due to reopening 
-#rem_parameters["beta_r"] <- rem_parameters["beta_r"]*0.4*(1.5)
-#rem_parameters["beta_m"] <- rem_parameters["beta_m"]*0.4*(1.5)
-#rem_parameters["eff_t"]  <- 1000 #set to  some time in the future beyond  the projection period 
+#rem_parameters["beta_r"] <- rem_parameters["beta_r"]*(1.5) #rem_parameters["beta_r"]*0.4*(1.5) - JS: I think this is already being done by rlx_t?
+#rem_parameters["beta_m"] <- rem_parameters["beta_m"]*(1.5) #rem_parameters["beta_m"]*0.4*(1.5)
 #rem_parameters["epsilon_r"] <- (1-0.15) 
 #rem_parameters[["stngcy"]] <- 0.35
 #rem_parameters[["p"]] <- 0.5
@@ -42,32 +45,28 @@ with(as.list( rem_parameters), {
 #rem_parameters[["b"]] <- 0.018*1.2
 #initialm data matching 
 
-#params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.15
-#                        , "eff_t" = 600) # eff_t is just pushed back beyond the time horizon of the projection
-
-#rem_parameters[["wf"]] <- 0.01
-#rem_parameters[["b"]] <- 0.018
-#initial data matching 
 
 # Set the desired characteristics of the new mutant. You can include any of the named elements of rem_parameters here
-# JS NOTE: I think this needs to be refined for BA2? I don't know if we should be changing epsilon.
-params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.5,
-            "epsilon_m" = rem_parameters["epsilon_m"]*1,
-            "eff_t" = 1000) # eff_t is just pushed back beyond the time horizon of the projection
+# JS NOTE: I think this may need to be refined for BA2? I don't know if we should be changing epsilon, the Cs or w_m.
+params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.3,
+                        "epsilon_m" = rem_parameters["epsilon_m"]*1,
+                        "c_m" = rem_parameters["c_m"]*1,
+                        "c_mr" = rem_parameters["c_mr"]*1,
+                        "c_rm" = rem_parameters["c_rm"]*1,
+                        "w_m" =  rem_parameters["w_m"]*1) 
 
 
 
 # Swap resident and mutant, then set up new mutant. 
 # This assumes that the new mutant 'arrives' with mut_prop% of current cases
 new_model <- swap_strains(out_old = out_samp, params_old = rem_parameters, 
-                          params_newmutant = params_newmutant, mut_prop = 0.4)
+                          params_newmutant = params_newmutant, mut_prop = 0.3)
 init_proj <- new_model$init_newm
 proj_parameters <- new_model$newm_parameters
 
 # Make projections
-forecasts_days <- nrow(dat_rem)
-times <- (last(1:nrow(dat_omic))+1):((forecasts_days) + nrow(dat_omic))
-
+#forecasts_days <- nrow(dat_rem)
+times <- dat_rem$day # Keep the same time count going
 proj_out <- as.data.frame(deSolve::ode(y=init_proj, time=times,func= sveirs,
                                        parms=proj_parameters)) 
 #check growth rate 
@@ -84,59 +83,59 @@ proj_out <- proj_out %>% mutate(Total=last(test_prop)*proj_parameters[["p"]]*
   mutate(date=seq.Date(ymd(intro_date),ymd(intro_date )-1+length(times), 1)) 
 
 #pivot_longer(proj_out, c(Total, Resident, Mutant), names_to = "Strain", values_to = "count") %>%
-  ggplot(proj_out) + geom_line(aes( x=date, y=Resident), col="blue") + 
-    geom_line(aes( x=date, y=Mutant), col="red") +  geom_line(aes( x=date, y=Total), col="green") + 
-    geom_point(aes(x=dat_rem$date, y=dat_rem$value))
-
-
-  
+ggplot(proj_out) + geom_line(aes( x=date, y=Resident), col="blue") + 
+  geom_line(aes( x=date, y=Mutant), col="red") +  geom_line(aes( x=date, y=Total), col="green") + 
+  geom_point(aes(x=dat_rem$date, y=dat_rem$value))
 
 
 
 
 
-  
-  
-  
+
+
+
+
+
+
 ################################################################
 forecasts_days <- 1
 times <- 1:(nrow(dat_rem) + forecasts_days)
 rem_outtest <- as.data.frame(deSolve::ode(y=init_rem,time=times,func= sveirs,
-                             parms=rem_parameters))  
+                                          parms=rem_parameters))  
 
 rem_outtest <- rem_outtest %>% mutate(incid=last(test_prop)*rem_parameters[["p"]]*
-                             rem_parameters[["sigma"]]*(rem_outtest$Er + rem_outtest$Erv + rem_outtest$Erw + 
-                              rem_outtest$Em + rem_outtest$Emv + rem_outtest$Emw)) %>% 
-                             mutate(date=seq.Date(ymd(intro_date),ymd(intro_date)-1+length(times), 1))
+                                        rem_parameters[["sigma"]]*(rem_outtest$Er + rem_outtest$Erv + rem_outtest$Erw + 
+                                                                     rem_outtest$Em + rem_outtest$Emv + rem_outtest$Emw)) %>% 
+  mutate(date=seq.Date(ymd(intro_date),ymd(intro_date)-1+length(times), 1))
 
 ggplot(data =rem_outtest, aes(x=date, y = incid))+geom_line() +
-geom_line(data=dat_rem, aes(x=date, y= value), color = "blue") #a bit off at the onset 
+  geom_line(data=dat_rem, aes(x=date, y= value), color = "blue") #a bit off at the onset 
 
 
 # 
- guess <- c( beta_m=0.1, b=0.03) 
+guess <- c( beta_m=0.1, b=0.03) 
 # 
 # #the parameters are constrained  accordingly (lower and upper)
 # 
 rem_fit <- optim(fn=func_loglik_2,  par=guess, lower=c(0,0), 
-              upper = c( Inf,1), method = "L-BFGS-B", 
-          parameters = rem_parameters,dat = dat_rem, hessian=T)
+                 upper = c( Inf,1), method = "L-BFGS-B", 
+                 parameters = rem_parameters,dat = dat_rem, hessian=T)
 #  #check the values:
-    rem_fit
+rem_fit
 # 
- func_loglik_2(rem_fit$par, dat_rem,rem_parameters) 
+func_loglik_2(rem_fit$par, dat_rem,rem_parameters) 
 # 
- rem_parameters[names(guess)] <- rem_fit$par
+rem_parameters[names(guess)] <- rem_fit$par
 #rem_parameters["beta_m"] <- rem_parameters["beta_m"]*(1-rem_parameters[["stngcy"]])
 
 
 
 times <- 1:(nrow(dat_rem) + forecasts_days)
 rem_out <- as.data.frame(deSolve::ode(y=init_rem,time=times,func= sveirs,
-                                          parms=rem_parameters))  
+                                      parms=rem_parameters))  
 rem_out <- rem_out %>% mutate(incid=last(test_prop)*rem_parameters[["p"]]*
-                                        rem_parameters[["sigma"]]*(rem_out$Er + rem_out$Erv + rem_out$Erw + 
-                                        rem_out$Em + rem_out$Emv + rem_out$Emw)) %>% 
+                                rem_parameters[["sigma"]]*(rem_out$Er + rem_out$Erv + rem_out$Erw + 
+                                                             rem_out$Em + rem_out$Emv + rem_out$Emw)) %>% 
   mutate(date=seq.Date(ymd(intro_date),ymd(intro_date)-1+length(times), 1))
 
 #with test_prop 
@@ -150,11 +149,11 @@ uncert_bound_fit = raply(simu_size,rnbinom(n=length(rem_out$incid),
                                            size=1/rem_parameters[["theta"]]))
 
 project_dat_fit =  as.data.frame(aaply(uncert_bound_fit ,2,quantile,na.rm=TRUE,probs=c(0.025,0.5,0.975))) %>% 
-mutate(date=seq.Date(ymd(intro_date),ymd(intro_date)-1+length(times), 1))
+  mutate(date=seq.Date(ymd(intro_date),ymd(intro_date)-1+length(times), 1))
 
 
 
- 
+
 
 ggplot() + geom_line(data=project_dat_BC,aes(x=date,y=`50%`), col="green",size=1.5,alpha=0.4) +
   geom_point(data=dat_reported,aes(x=date, y=value),color='grey48', alpha=0.8, size = 1.5) +
@@ -184,7 +183,7 @@ ggplot() + geom_line(data=project_dat_BC,aes(x=date,y=`50%`), col="green",size=1
 
 # Set the desired characteristics of the new mutant. You can include any of the named elements of rem_parameters to be adjusted. 
 # Old mutant will be swapped to resident automatically, and does not need to be defined here
-params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.5, "eff_t" = 600) # eff_t is just pushed back beyond the time horizon of the projection
+params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.7, "eff_t" = 600) # eff_t is just pushed back beyond the time horizon of the projection
 
 # Swap resident and mutant, then set up new mutant. 
 # This assumes that the new mutant 'arrives' with mut_prop% of current cases
@@ -198,26 +197,21 @@ proj_parameters <- new_model$newm_parameters
 forecasts_days <- 200
 times <- 1:(forecasts_days)
 proj_out <- as.data.frame(deSolve::ode(y=init_proj, time=times,func= sveirs,
-                                      parms=proj_parameters)) 
+                                       parms=proj_parameters)) 
 
 #check growth rate 
 get_growth_rate(output= proj_out, startoffset = 20, duration = 7)
 
 # Simple plot of the projection
 proj_out <- proj_out %>% mutate(Total=last(test_prop)*proj_parameters[["p"]]*
-                               proj_parameters[["sigma"]]*(proj_out$Er + proj_out$Erv + proj_out$Erw + 
-                               proj_out$Em + proj_out$Emv + proj_out$Emw), 
-                              Resident=last(test_prop)*proj_parameters[["p"]]*
-                              proj_parameters[["sigma"]]*(proj_out$Er + proj_out$Erv + proj_out$Erw), 
-                              Mutant=last(test_prop)*proj_parameters[["p"]]*
-                                proj_parameters[["sigma"]]*(proj_out$Em + proj_out$Emv + proj_out$Emw)) %>% 
+                                  proj_parameters[["sigma"]]*(proj_out$Er + proj_out$Erv + proj_out$Erw + 
+                                                                proj_out$Em + proj_out$Emv + proj_out$Emw), 
+                                Resident=last(test_prop)*proj_parameters[["p"]]*
+                                  proj_parameters[["sigma"]]*(proj_out$Er + proj_out$Erv + proj_out$Erw), 
+                                Mutant=last(test_prop)*proj_parameters[["p"]]*
+                                  proj_parameters[["sigma"]]*(proj_out$Em + proj_out$Emv + proj_out$Emw)) %>% 
   mutate(date=seq.Date(ymd(last(rem_out$date)),ymd(last(rem_out$date))-1+length(times), 1)) 
 
 pivot_longer(proj_out, c(Total, Resident, Mutant), names_to = "Strain", values_to = "count") %>%
-ggplot(aes(x=date, y=count, colour=Strain)) + geom_line()
-
-
-
-
-
+  ggplot(aes(x=date, y=count, colour=Strain)) + geom_line()
 
