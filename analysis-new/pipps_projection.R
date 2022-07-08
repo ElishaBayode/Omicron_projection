@@ -31,8 +31,8 @@ with(as.list( rem_parameters), {
   plot(infectionfactor)})
 
 #increase due to reopening 
-rem_parameters["beta_r"] <- rem_parameters["beta_r"]*0.4*(1.5)
-rem_parameters["beta_m"] <- rem_parameters["beta_m"]*0.4*(1.5)
+#rem_parameters["beta_r"] <- rem_parameters["beta_r"]*0.4*(1.5)
+#rem_parameters["beta_m"] <- rem_parameters["beta_m"]*0.4*(1.5)
 #rem_parameters["eff_t"]  <- 1000 #set to  some time in the future beyond  the projection period 
 #rem_parameters["epsilon_r"] <- (1-0.15) 
 #rem_parameters[["stngcy"]] <- 0.35
@@ -51,7 +51,7 @@ rem_parameters["beta_m"] <- rem_parameters["beta_m"]*0.4*(1.5)
 
 # Set the desired characteristics of the new mutant. You can include any of the named elements of rem_parameters here
 # JS NOTE: I think this needs to be refined for BA2? I don't know if we should be changing epsilon.
-params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.4,
+params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.5,
             "epsilon_m" = rem_parameters["epsilon_m"]*1,
             "eff_t" = 1000) # eff_t is just pushed back beyond the time horizon of the projection
 
@@ -66,7 +66,8 @@ proj_parameters <- new_model$newm_parameters
 
 # Make projections
 forecasts_days <- nrow(dat_rem)
-times <- 1:(forecasts_days)
+times <- (last(1:nrow(dat_omic))+1):((forecasts_days) + nrow(dat_omic))
+
 proj_out <- as.data.frame(deSolve::ode(y=init_proj, time=times,func= sveirs,
                                        parms=proj_parameters)) 
 #check growth rate 
@@ -183,7 +184,7 @@ ggplot() + geom_line(data=project_dat_BC,aes(x=date,y=`50%`), col="green",size=1
 
 # Set the desired characteristics of the new mutant. You can include any of the named elements of rem_parameters to be adjusted. 
 # Old mutant will be swapped to resident automatically, and does not need to be defined here
-params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.7, "eff_t" = 600) # eff_t is just pushed back beyond the time horizon of the projection
+params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.5, "eff_t" = 600) # eff_t is just pushed back beyond the time horizon of the projection
 
 # Swap resident and mutant, then set up new mutant. 
 # This assumes that the new mutant 'arrives' with mut_prop% of current cases
