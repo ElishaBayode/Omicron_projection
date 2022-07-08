@@ -17,8 +17,6 @@ set.seed(3242)
 
 sveirs <- function(time, state, parameters) {
   with(as.list(c(state, parameters)), {
-    #wf=0.2 # NOTE - this was to test the impact of recovered people being more immune than 
-    # vaccinated people. i think it probably makes sense - after all they *just* recovered .
     #c <- 1# effectiveness of NPIs, set as 1, change later to c(t)
     c <- (1 - stngcy/(1+ exp(-1.25*(time-eff_t))))   #intervention 
     rlx <- (1 + relx_level/(1+ exp(-1.25*(time-rlx_t)))) # relaxation 
