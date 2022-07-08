@@ -72,7 +72,6 @@ parameters <-         c(sigma=1/3, # incubation period (days)
                         epsilon_m = (1-0.30), # % 1-ve omicron 
                         b= 0.03,#0.018, # booster rate
                         beff = 0.88, # booster efficacy
-                        wf=0.01, # protection for newly recovered
                         N=5.07e6,
                         stngcy= 0.4, #(*%(reduction)) strength of intervention (reduction in beta's)
                         eff_t = as.numeric(eff_date - intro_date),
