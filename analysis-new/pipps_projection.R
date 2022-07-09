@@ -49,11 +49,11 @@ with(as.list( rem_parameters), {
 # Set the desired characteristics of the new mutant. You can include any of the named elements of rem_parameters here
 # JS NOTE: I think this may need to be refined for BA2? I don't know if we should be changing epsilon, the Cs or w_m.
 params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.3,
-                        "epsilon_m" = 0.7,
+                        "epsilon_m" = 0.8,
                         "c_m" = rem_parameters["c_m"]*1,
                         "c_mr" = rem_parameters["c_mr"]*1,
                         "c_rm" = rem_parameters["c_rm"]*1,
-                        "w_m" =  rem_parameters["w_m"]*1) 
+                        "w_m" =  rem_parameters["w_m"]*1)
 
 
 

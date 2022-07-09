@@ -52,9 +52,8 @@ times = 1:nrow(dat_omic)
 
 #declaring  parameters 
 eff_date <-   ymd("2021-12-31")  # intervention date 
-intv_date <-  ymd("2022-07-08") #  increase due to BA.2
-fur_intv_date <- ymd("2022-07-09") #increase due to reopening (not needed here)
-
+intv_date <-  ymd("2024-12-08") #  increase due to BA.2 - turned off
+fur_intv_date <- ymd("2024-12-09") #increase due to reopening  - turned off
 
 parameters <-         c(sigma=1/1, # incubation period (days) 
                         gamma=1/4, #recovery rate 
