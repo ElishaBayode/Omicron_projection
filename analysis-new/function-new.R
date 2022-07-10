@@ -102,13 +102,13 @@ make_init = function( N=N_pop, vaxlevel = vaxlevel_in,
   Rmw0 = 0
   
   # set up Es : resident 
-  Ertot = ff*incres/pars$sigma # total Er 
+  Ertot = ff*incres/(pars$sigma*pars$p) # total Er 
   Ervw = vaxlevel*pars$ve*Ertot # vaccinated 
   Erw0 = Ervw * port_wane # waned
   Erv0 = Ervw *(1-port_wane) # not waned.  these two add to Ervwboth
   Er0 = (1-vaxlevel*pars$epsilon_r)*Ertot # unvaccinated 
   # set up Es : mutant  
-  Emtot = ff*incmut/pars$sigma # total Er 
+  Emtot = ff*incmut/(pars$sigma*pars$p) # total Er 
   Emvw = vaxlevel*pars$ve*Emtot # vaccinated 
   Emw0 = Emvw * port_wane # waned
   Emv0 = Emvw *(1-port_wane) # not waned.  these two add to Ervwboth

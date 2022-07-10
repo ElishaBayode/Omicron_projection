@@ -1,6 +1,7 @@
 
 ####### Doing 'ba2' like projections for fall  - we project in March '22 under various scenarios and then shift the x-axis...
 # This script follows on directly from pipps_simulation.r
+load("cc-fit-jul10.Rdata")
 
 
 # Adjust dates for projection
@@ -11,15 +12,16 @@ times = as.numeric(intro_date - old_intro_date):(as.numeric(stop_date - old_intr
 
 
 
-
 rem_parameters  <- parameters # ...to keep 'parameters' safe
 # Set the desired characteristics of the new mutant. You can include any of the named elements of rem_parameters here -------------
 # Choose which scenario you want to run:
 
-# 1. Worst case scenario
+# 1. Worst case scenario: cc modified to explore what makes what worse.
+# insights -- only get a really high hosp peak if beta is higher. 
+# but the other parameters, unsurprisingly, make the eventual endemic level (jan ++ ) really bad
 params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.5,
                         "epsilon_m" = 0.9, # Previous mutant epsilon was 0.7
-                        "c_m" = rem_parameters["c_m"]*1,
+                        "c_m" = rem_parameters["c_m"]*1.3,
                         "c_mr" = rem_parameters["c_mr"]*1.3,
                         "c_rm" = rem_parameters["c_rm"]*1,
                         "w_m" =  rem_parameters["w_m"]*1) 

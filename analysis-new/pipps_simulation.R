@@ -28,7 +28,7 @@ dat_omic$day <- 1:nrow(dat_omic)
 
 #test prop goes down to 0.33 during the Omicron wave 
 x=intro_date+1:nrow(dat_omic)
-tptest = 1 -0.8/(1+exp(-0.2*as.numeric((x - ymd("2021-12-20")))))
+tptest = 1 -0.85/(1+exp(-0.2*as.numeric((x - ymd("2021-12-20")))))
 # tptest = tptest - (0.97-0.67)/(1+exp(-0.2*as.numeric((x - ymd("2022-03-01")))))
 plot(x,tptest)
 test_prop= tptest
@@ -44,8 +44,8 @@ port_wane_in = 0.04 # portion boosted at start tie
 past_infection_in = 0.14  #increased this from 0.1 to 0.18 # total in R at start time 
 #New-----changed to past_infection_in to 14% (by end of Nov 2021), seroprev was 9% in Sept/Oct 
 
-incres_in = 389*1.78 #( 389, reported cases on Nov 30) # resident strain (delta) incidence at start 
-incmut_in = 30# new (omicron) inc at stat (#first cases of Omicron reported on 30 Nov)
+incres_in = 389 #( 389, then was 389*1.78 reported cases on Nov 30) # resident strain (delta) incidence at start 
+incmut_in = 20# new (omicron) inc at stat (#first cases of Omicron reported on 30 Nov)
 simu_size = 1e5 # number of times to resample the negative binom (for ribbons)
 #forecasts_days =30 # how long to forecast for 
 times = 1:nrow(dat_omic)
@@ -63,8 +63,8 @@ parameters <-         c(sigma=1/1, # incubation period (days)
                         w_r= 1/(0.42*365),
                         w_b= 1/(0.5*365), # waning rate from Rv to V 
                         ve=1, # I think this should be 1. it is not really efficacy  
-                        beta_r=0.6, #transmission rate 
-                        beta_m=1.12, #transmission rate 
+                        beta_r=0.7, #transmission rate 
+                        beta_m=1, #transmission rate 
                         c_m = 0.05,  # KEEP AT 0.05 for now . (1-protection) protection from mutant variants when individuals  just recovered  from it (made-up (for now)) 
                         c_r = 0.05, # KEEP AT 0.05 for now1- protection from resident variants when individuals  just recovered  from it (made-up (for now)) 
                         c_mr = 0.1, # CAN BE HIGHER than 0.05 1 -cross immunity of resident  from mutant 
@@ -194,6 +194,28 @@ get_growth_rate(out_samp, startoffset = 2, duration = 10)
 # check vaccination / booster level 
 vv = get_vax(out_samp)
 ggplot(vv, aes(x=time, y=boosted/N))+geom_line()
+
+# check two strain dynamics: did delta actually decline ? 
+incdf= get_total_incidence(out_samp, parameters)
+incdf$date = incdf$time+ymd("2021-12-01")-1 
+ggplot(incdf, aes(x=date, y=inc_res/parameters["p"]))+geom_line() + 
+  geom_line(data = incdf, aes(x=date, y = inc_mut/parameters["p"]), inherit.aes = F)
+
+# look at our incident cases along with Tara Moriarty's estimates 
+taram = readr::read_csv("data/Canadian COVID data_Infections_Line chart.csv")
+taram = taram %>% mutate(chardate = date) %>% mutate(date = dmy(chardate))
+
+# tara says broadly consistent with serology, and indeed: 
+ba1tara = filter(taram, date > ymd("2021-12-01") & date < ymd("2022-03-30"))
+sum(ba1tara$BC)/N
+
+ggplot(ba1tara, aes(x=date, y = BC))+geom_point(alpha=0.5)+
+  geom_line(data = incdf, inherit.aes = F, aes(x=date, y = inc_mut/parameters["p"]), 
+            color="blue") + 
+  scale_x_date(date_breaks = "months", date_labels = "%b-%d") +theme_light()
+# i think what we have now is a good enough interpolation between what we know from 
+
+
 
 ################################# re-sampling CI
 
