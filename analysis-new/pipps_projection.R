@@ -32,7 +32,7 @@ with(as.list( rem_parameters), {
   rlx <- (1 + relx_level/(1+ exp(-1.25*(times-rlx_t)))) # relaxation 
   further_rlx <- (1 + fur_relx_level/(1+ exp(-1.25*(times-fur_rlx_t))))
   infectionfactor <- c*rlx*further_rlx
-  plot(infectionfactor)})
+  plot(times,infectionfactor)})
 
 #increase due to reopening 
 #rem_parameters["beta_r"] <- rem_parameters["beta_r"]*(1.5) #rem_parameters["beta_r"]*0.4*(1.5) - JS: I think this is already being done by rlx_t?
@@ -49,11 +49,11 @@ with(as.list( rem_parameters), {
 # Set the desired characteristics of the new mutant. You can include any of the named elements of rem_parameters here
 # JS NOTE: I think this may need to be refined for BA2? I don't know if we should be changing epsilon, the Cs or w_m.
 params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.3,
-                        "epsilon_m" = rem_parameters["epsilon_m"]*1,
+                        "epsilon_m" = 0.8,
                         "c_m" = rem_parameters["c_m"]*1,
                         "c_mr" = rem_parameters["c_mr"]*1,
                         "c_rm" = rem_parameters["c_rm"]*1,
-                        "w_m" =  rem_parameters["w_m"]*1) 
+                        "w_m" =  rem_parameters["w_m"]*1)
 
 
 
@@ -72,6 +72,7 @@ proj_out <- as.data.frame(deSolve::ode(y=init_proj, time=times,func= sveirs,
 #check growth rate 
 get_growth_rate(output= proj_out, startoffset = 20, duration = 7)
 
+
 # Simple plot of the projection
 proj_out <- proj_out %>% mutate(Total=last(test_prop)*proj_parameters[["p"]]*
                                   proj_parameters[["sigma"]]*(proj_out$Er + proj_out$Erv + proj_out$Erw + 
@@ -89,7 +90,18 @@ ggplot(proj_out) + geom_line(aes( x=date, y=Resident), col="blue") +
 
 
 
+# cc adding here -------------
+IHR = 0.01 * (5/16) # see slak w nicola
+proj_out <- proj_out %>% mutate(incid=
+                                  proj_parameters[["sigma"]]*(proj_out$Er + proj_out$Erv + proj_out$Erw + 
+                                                                proj_out$Em + proj_out$Emv + proj_out$Emw), 
+                                prev =Ir + Irv + Irw + Im + Imv +Imw,
+) %>% mutate(hosp = incid*IHR*(1e5/N)) %>%  # note per 100K hosp
+  mutate(date=seq.Date(ymd(intro_date),ymd(intro_date )-1+length(times), 1)) 
+ggplot(proj_out) + geom_line(aes( x=date, y=hosp), col="blue")
 
+
+# -- end cc adding here ------- 
 
 
 

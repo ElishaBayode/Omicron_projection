@@ -102,13 +102,13 @@ make_init = function( N=N_pop, vaxlevel = vaxlevel_in,
   Rmw0 = 0
   
   # set up Es : resident 
-  Ertot = ff*incres/pars$sigma # total Er 
+  Ertot = ff*incres/(pars$sigma*pars$p) # total Er 
   Ervw = vaxlevel*pars$ve*Ertot # vaccinated 
   Erw0 = Ervw * port_wane # waned
   Erv0 = Ervw *(1-port_wane) # not waned.  these two add to Ervwboth
   Er0 = (1-vaxlevel*pars$epsilon_r)*Ertot # unvaccinated 
   # set up Es : mutant  
-  Emtot = ff*incmut/pars$sigma # total Er 
+  Emtot = ff*incmut/(pars$sigma*pars$p) # total Er 
   Emvw = vaxlevel*pars$ve*Emtot # vaccinated 
   Emw0 = Emvw * port_wane # waned
   Emv0 = Emvw *(1-port_wane) # not waned.  these two add to Ervwboth
@@ -237,9 +237,9 @@ get_true_incidence_prop_plot = function(times, start_date, parameters_base,init)
 get_vax = function(output) {
   vax = output %>% mutate(unvax = S+Er + Em + Ir + Im + Rr + Rm, 
                           vaxtot = V+ Erv + Emv+ 
-                            Irv+ Imv+ Rv+ W +Erw+Emw+ Irw+ Imw+ Rrw + Rmw,
+                            Irv+ Imv+ Rmv +Rrv+ W +Erw+Emw+ Irw+ Imw+ Rrw + Rmw,
                           vaxtwodose = V+ Erv + Emv+ 
-                            Irv+ Imv+ Rv, boosted = W +Erw+Emw+ Irw+ Imw+ Rrw + Rmw) %>% 
+                            Irv+ Imv+ Rmv+Rrv, boosted = W +Erw+Emw+ Irw+ Imw+ Rrw + Rmw) %>% 
     dplyr::select(time,unvax, vaxtot, vaxtwodose, boosted) 
   return(vax) 
 }
