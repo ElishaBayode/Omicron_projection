@@ -1,7 +1,7 @@
 
 ####### Doing 'ba2' like projections for fall  - we project in March '22 under various scenarios and then shift the x-axis...
 # This script follows on directly from pipps_simulation.r
-load("cc-fit-jul10.Rdata")
+load("simulationscript_out.Rdata")
 
 
 # Adjust dates for projection
@@ -30,17 +30,17 @@ IHR_factor <- 2 # multiplier for IHR (see below)
 # 2. Intermediate case scenario
 params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.3,
                         "epsilon_m" = 0.8, # Previous mutant epsilon was 0.7
-                        "c_m" = rem_parameters["c_m"]*1,
+                        "c_m" = rem_parameters["c_m"]*1.3,
                         "c_mr" = rem_parameters["c_mr"]*1.3,
                         "c_rm" = rem_parameters["c_rm"]*1,
                         "w_m" =  rem_parameters["w_m"]*1) 
 IHR_factor <- 2 # multiplier for IHR (see below)
 
 # 3. Best case scenario
-params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.0,
+params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.1,
                         "epsilon_m" = 0.8, # Previous mutant epsilon was 0.7
-                        "c_m" = rem_parameters["c_m"]*1,
-                        "c_mr" = rem_parameters["c_mr"]*1,
+                        "c_m" = rem_parameters["c_m"]*1.3,
+                        "c_mr" = rem_parameters["c_mr"]*1.3,
                         "c_rm" = rem_parameters["c_rm"]*1,
                         "w_m" =  rem_parameters["w_m"]*1) 
                         # May want to consider: "beff" =  rem_parameters["beff"]*0.7) 
