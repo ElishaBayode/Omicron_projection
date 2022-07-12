@@ -91,14 +91,27 @@ proj_out <- proj_out %>% mutate(Total=last(test_prop)*proj_parameters[["p"]]*
 
   
 # -- Hospitalizations -------------
-  IHR = 0.01 * (5/16) # see slack w nicola
-  proj_out <- proj_out %>% mutate(incid=
-                                    proj_parameters[["sigma"]]*(proj_out$Er + proj_out$Erv + proj_out$Erw + 
-                                                                  proj_out$Em + proj_out$Emv + proj_out$Emw), 
-                                 prev =Ir + Irv + Irw + Im + Imv +Imw,
-                                 ) %>% mutate(hosp = incid*IHR*(1e5/N)) %>%  # note per 100K hosp
+# IHR = 0.01 * (5/16) # see slack w nicola
+IHR <- 0.00258 # from pipps_simulation
+l <- 14 # from pipps_simulation
+
+hosp_data <- get_can_covid_tracker_data("bc") %>%
+  mutate(date=as.Date(date)) %>%
+  dplyr::select("date", "total_hospitalizations") %>%
+  filter(date %in% proj_out$date) %>%
+  mutate(hosp_admit = as.numeric(total_hospitalizations)/8)
+
+proj_out <- proj_out %>% 
+    mutate(incid=proj_parameters[["sigma"]]*
+                   (Er + Erv + Erw + Em + Emv + Emw), 
+           prev = Ir + Irv + Irw + Im + Imv + Imw) %>% 
+    mutate(hosp = lag(incid,l)*IHR) %>%  
     mutate(date=seq.Date(ymd(intro_date),ymd(intro_date )-1+length(times), 1)) 
-  ggplot(proj_out) + geom_line(aes( x=date, y=hosp), col="blue")
+
+ggplot(proj_out) + 
+  geom_line(aes(x=date, y=hosp), col="blue") +
+  geom_point(data=hosp_data, aes(x=date, y=hosp_admit), col="grey")+
+  labs(x="",y="Projected Hospital Admissions")
   
   
 # -------------------------------- 
