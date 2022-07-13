@@ -6,7 +6,7 @@ dat_full = readRDS("data/BC-dat.rds")
 
 forecasts_days <- 1 
 old_intro_date  = intro_date # Keep track of 'day 0'
-intro_date <-   ymd("2022-03-10")
+intro_date <-   ymd("2022-02-27") # cc made this a little earlier. 
 stop_date <- last(dat_full$date)
 
 dat_rem <- dat_full %>% filter(date >= intro_date &  date <= stop_date)
@@ -48,10 +48,10 @@ with(as.list( rem_parameters), {
 
 # Set the desired characteristics of the new mutant. You can include any of the named elements of rem_parameters here
 # JS NOTE: I think this may need to be refined for BA2? I don't know if we should be changing epsilon, the Cs or w_m.
-params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.38,#1.11
+params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.55,#1.11
                         "epsilon_m" = 0.88,
-                        "c_m" = rem_parameters["c_m"]*0.3,#BA.2's protection against itself higher than BA.1's?
-                        "c_mr" = rem_parameters["c_mr"]*1,
+                        "c_m" = rem_parameters["c_m"]*1,#BA.2's protection against itself higher than BA.1's?
+                        "c_mr" = rem_parameters["c_mr"]*1, # lowering this (wo other changes) slows it down. 
                         "c_rm" = rem_parameters["c_rm"]*1,
                         "w_m" =  rem_parameters["w_m"]*1
                       #  "eff_t"= 137,
@@ -63,7 +63,7 @@ params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.38,#1.11
 # Swap resident and mutant, then set up new mutant. 
 # This assumes that the new mutant 'arrives' with mut_prop% of current cases
 new_model <- swap_strains(out_old = out_samp, params_old = rem_parameters, 
-                          params_newmutant = params_newmutant, mut_prop = 0.4)
+                          params_newmutant = params_newmutant, mut_prop = 0.35)
 init_proj <- new_model$init_newm
 proj_parameters <- new_model$newm_parameters
 
@@ -96,7 +96,8 @@ ggplot(proj_out) + geom_line(aes( x=date, y=Resident), col="blue") +
 # -- Hospitalizations -------------
 # IHR = 0.01 * (5/16) # see slack w nicola
 IHR <- 0.00258 # from pipps_simulation
-l <- 14 # from pipps_simulation
+l <- 14 # from pipps_simulation. NOTE - if the age distribution changed, the lag would change too 
+# seems reasonable for ba2 to have a higher IHR and lower lag, but of course not a negative lag... 
 
 hosp_data <- get_can_covid_tracker_data("bc") %>%
   mutate(date=as.Date(date)) %>%
