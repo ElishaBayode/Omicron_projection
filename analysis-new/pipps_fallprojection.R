@@ -72,7 +72,12 @@ proj_out <- proj_out %>% mutate(Total=
 
 pivot_longer(proj_out, c(Total,"BA4/5", "New variant X"), names_to = "Strain", values_to = "count") %>%
   ggplot(aes(x=date, y=count, colour=Strain)) + geom_line() + ylab("Incident cases") + xlab("Date") + theme_minimal()
-  
+ 
+# Split projected cases across HAs ------------
+source("analysis-new/pipps_geographical.R")
+# 'which_wave_match' tells this function whether to make a 'delta-like' wave, a 'ba.1-like wave' and so on 
+#                                                               - you can currently provide any wave 1:7 (7 = ba.2)
+project_HAs(total_out = proj_out, which_wave_match = 7) pipps_ge
 
 
 # Plot of the projected  hospitalizations -------------

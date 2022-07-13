@@ -1,3 +1,5 @@
+#load("simulationscript_out.Rdata") - if you want to read in the saved output of simulation.R
+
 #add dat to data for plotting 
 #here I match model output to the remaining data point (i.e. from March 31, 2022 onward)
 dat_full = readRDS("data/BC-dat.rds")
@@ -47,7 +49,6 @@ with(as.list( rem_parameters), {
 
 
 # Set the desired characteristics of the new mutant. You can include any of the named elements of rem_parameters here
-# JS NOTE: I think this may need to be refined for BA2? I don't know if we should be changing epsilon, the Cs or w_m.
 params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.55,#1.11
                         "epsilon_m" = 0.88,
                         "c_m" = rem_parameters["c_m"]*1,#BA.2's protection against itself higher than BA.1's?
@@ -118,4 +119,13 @@ ggplot(proj_out) +
   labs(x="",y="Projected Hospital Admissions")
 
 
-# -------------------------------- 
+# -- Split cases across HAs ------------
+source("analysis-new/pipps_geographical.R")
+# 'which_wave_match' tells this function whether to make a 'delta-like' wave, a 'ba.1-like wave' and so on 
+#                                                               - you can currently provide any wave 1:7 (7 = ba.2)
+project_HAs(total_out = proj_out, which_wave_match = 5)
+
+
+
+
+
