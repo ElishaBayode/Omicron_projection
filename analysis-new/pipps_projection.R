@@ -64,7 +64,7 @@ params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.55,#1.11
 # Swap resident and mutant, then set up new mutant. 
 # This assumes that the new mutant 'arrives' with mut_prop% of current cases
 new_model <- swap_strains(out_old = out_samp, params_old = rem_parameters, 
-                          params_newmutant = params_newmutant, mut_prop = 0.35)
+                          params_newmutant = params_newmutant, mut_prop = 0.35, res_to_s_prop =  0.5)
 init_proj <- new_model$init_newm
 proj_parameters <- new_model$newm_parameters
 
@@ -127,5 +127,5 @@ project_HAs(total_out = proj_out, which_wave_match = 5)
 
 
 
-
+save.image(file = "projectionscript_out.Rdata")
 

@@ -1,12 +1,14 @@
 
 ####### Doing 'ba2' like projections for fall  - we project in March '22 under various scenarios and then shift the x-axis...
-# This script follows on directly from pipps_simulation.r
-load("simulationscript_out.Rdata")
+
+# This script follows on directly from either pipps_simulation.r or pipps_projection.r
+#load("simulationscript_out.Rdata")
+load("projectionscript_out.Rdata")
 
 
 # Adjust dates for projection
 old_intro_date  = intro_date # Keep track of 'day 0'
-intro_date <-   ymd("2022-03-10")
+intro_date <-   ymd("2022-07-01")
 stop_date <- intro_date + 300 # 300 days projection
 times = as.numeric(intro_date - old_intro_date):(as.numeric(stop_date - old_intro_date)) # Keep the same time count going
 
@@ -52,7 +54,7 @@ IHR_factor <- 1 # multiplier for IHR (see below)
 # Swap resident and mutant, then set up new mutant -------------
 # This assumes that the new mutant 'arrives' with mut_prop% of current cases
 new_model <- swap_strains(out_old = out_samp, params_old = rem_parameters, 
-                          params_newmutant = params_newmutant, mut_prop = 0.3)
+                          params_newmutant = params_newmutant, mut_prop = 0.3, res_to_s_prop =  0)
 proj_parameters <- new_model$newm_parameters
 
 # Make projections
@@ -77,7 +79,7 @@ pivot_longer(proj_out, c(Total,"BA4/5", "New variant X"), names_to = "Strain", v
 source("analysis-new/pipps_geographical.R")
 # 'which_wave_match' tells this function whether to make a 'delta-like' wave, a 'ba.1-like wave' and so on 
 #                                                               - you can currently provide any wave 1:7 (7 = ba.2)
-project_HAs(total_out = proj_out, which_wave_match = 7) pipps_ge
+project_HAs(total_out = proj_out, which_wave_match = 7) 
 
 
 # Plot of the projected  hospitalizations -------------

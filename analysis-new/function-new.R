@@ -528,37 +528,37 @@ extendtp <- function(n=100, test_prop=test_prop){
 
 
 #------- initiate the model with a new mutant strain 
-swap_strains <- function(out_old=out_old, params_old = params_old, params_newmutant = params_newmutant, mut_prop = mut_prop){
+swap_strains <- function(out_old=out_old, params_old = params_old, params_newmutant = params_newmutant, mut_prop = mut_prop, res_to_s_prop =  0){
   #switch r for m ########### 
   
   # Initialization
-  init_newm <-  c(S=last(out_old$S),
+  init_newm <-  c(S=last(out_old$S) + last(out_old$Rr)*res_to_s_prop,
                   Er=(last(out_old$Em) + last(out_old$Er))*(1-mut_prop), 
                   Em=(last(out_old$Em) + last(out_old$Er))*(mut_prop),
                   Ir=(last(out_old$Im) + last(out_old$Ir))*(1-mut_prop),
                   Im=(last(out_old$Im) + last(out_old$Ir))*(mut_prop), 
                   
-                  Rr=(last(out_old$Rm) + last(out_old$Rr)),
+                  Rr=(last(out_old$Rm) + last(out_old$Rr)*(1-res_to_s_prop)),
                   Rm=0,
       
                   
-                  V=last(out_old$V),
+                  V=last(out_old$V) + last(out_old$Rrv)*(res_to_s_prop),
                   Erv=(last(out_old$Emv) + last(out_old$Erv))*(1-mut_prop),   
                   Emv= (last(out_old$Emv) + last(out_old$Erv))*(mut_prop),
                   Irv=(last(out_old$Imv) + last(out_old$Irv))*(1-mut_prop),
                   Imv= (last(out_old$Imv) + last(out_old$Irv))*(mut_prop),
                   
-                  Rrv=(last(out_old$Rmv) + last(out_old$Rrv)),
+                  Rrv=(last(out_old$Rmv) + last(out_old$Rrv)*(1-res_to_s_prop)),
                   Rmv=0,
                   
                   
-                  W=last(out_old$W),  
+                  W=last(out_old$W) + last(out_old$Rrw)*(res_to_s_prop),  
                   Erw=(last(out_old$Emw) + last(out_old$Erw))*(1-mut_prop),
                   Emw=(last(out_old$Emw) + last(out_old$Erw))*(mut_prop),
                   Irw=(last(out_old$Imw) + last(out_old$Irw))*(1-mut_prop),
                   Imw= (last(out_old$Imw) + last(out_old$Irw))*(mut_prop),
                   
-                  Rrw=(last(out_old$Rmw) + last(out_old$Rrw)),
+                  Rrw=(last(out_old$Rmw) + last(out_old$Rrw)*(1-res_to_s_prop)),
                   Rmw=0
                   
   ) 

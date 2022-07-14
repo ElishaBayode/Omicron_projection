@@ -275,8 +275,6 @@ ggplot() + geom_line(data=project_dat_BC,aes(x=date,y=`50%`), col="green",size=1
                                              axis.title=element_text(size=12,face="bold")) 
 
 
-#saveRDS(project_dat_BC, file.path("data/BC_fit_omicron.rds"))
-
 save.image(file = "simulationscript_out.Rdata")
 
 ########################
