@@ -14,7 +14,7 @@ times = as.numeric(intro_date - old_intro_date):(as.numeric(stop_date - old_intr
 
 
 
-rem_parameters  <- parameters # ...to keep 'parameters' safe
+rem_parameters  <- proj_parameters # ...to keep parameters safe
 # Set the desired characteristics of the new mutant. You can include any of the named elements of rem_parameters here -------------
 # Choose which scenario you want to run:
 
@@ -53,41 +53,41 @@ IHR_factor <- 1 # multiplier for IHR (see below)
 
 # Swap resident and mutant, then set up new mutant -------------
 # This assumes that the new mutant 'arrives' with mut_prop% of current cases
-new_model <- swap_strains(out_old = out_samp, params_old = rem_parameters, 
+new_model <- swap_strains(out_old = proj_out, params_old = rem_parameters, 
                           params_newmutant = params_newmutant, mut_prop = 0.3, res_to_s_prop =  0)
-proj_parameters <- new_model$newm_parameters
+fproj_parameters <- new_model$newm_parameters
 
 # Make projections
-proj_out <- as.data.frame(deSolve::ode(y=new_model$init_newm, time=times,func= sveirs,
-                                       parms=proj_parameters)) 
+fproj_out <- as.data.frame(deSolve::ode(y=new_model$init_newm, time=times,func= sveirs,
+                                       parms=fproj_parameters)) 
 
 
 # Plot of the projected cases -------------
-proj_out <- proj_out %>% mutate(Total=
-                                  proj_parameters[["sigma"]]*(proj_out$Er + proj_out$Erv + proj_out$Erw + 
-                                                                proj_out$Em + proj_out$Emv + proj_out$Emw), 
+fproj_out <- fproj_out %>% mutate(Total=
+                                  fproj_parameters[["sigma"]]*(fproj_out$Er + fproj_out$Erv + fproj_out$Erw + 
+                                                                fproj_out$Em + fproj_out$Emv + fproj_out$Emw), 
                                 "BA4/5"=
-                                  proj_parameters[["sigma"]]*(proj_out$Er + proj_out$Erv + proj_out$Erw), 
+                                  fproj_parameters[["sigma"]]*(fproj_out$Er + fproj_out$Erv + fproj_out$Erw), 
                                 "New variant X"=
-                                  proj_parameters[["sigma"]]*(proj_out$Em + proj_out$Emv + proj_out$Emw)) %>% 
+                                  fproj_parameters[["sigma"]]*(fproj_out$Em + fproj_out$Emv + fproj_out$Emw)) %>% 
   mutate(date=seq.Date(ymd("2022-10-01"),ymd("2022-10-01")+300, 1)) 
 
-pivot_longer(proj_out, c(Total,"BA4/5", "New variant X"), names_to = "Strain", values_to = "count") %>%
+pivot_longer(fproj_out, c(Total,"BA4/5", "New variant X"), names_to = "Strain", values_to = "count") %>%
   ggplot(aes(x=date, y=count, colour=Strain)) + geom_line() + ylab("Incident cases") + xlab("Date") + theme_minimal()
  
 # Split projected cases across HAs ------------
 source("analysis-new/pipps_geographical.R")
 # 'which_wave_match' tells this function whether to make a 'delta-like' wave, a 'ba.1-like wave' and so on 
 #                                                               - you can currently provide any wave 1:7 (7 = ba.2)
-project_HAs(total_out = proj_out, which_wave_match = 7) 
+project_HAs(total_out = fproj_out, which_wave_match = 5) 
 
 
 # Plot of the projected  hospitalizations -------------
 IHR = 0.01 * (5/16)*IHR_factor # see slack w nicola
 
-proj_out <- proj_out %>% mutate(prev =Ir + Irv + Irw + Im + Imv +Imw) %>% mutate(hosp = Total*IHR*(1e5/N))  # note per 100K hosp
+fproj_out <- fproj_out %>% mutate(prev =Ir + Irv + Irw + Im + Imv +Imw) %>% mutate(hosp = Total*IHR*(1e5/N))  # note per 100K hosp
   
-ggplot(proj_out) + geom_line(aes( x=date, y=hosp), col="blue") + theme_minimal() + ylab("Hospitalizations, per 100k population") + xlab("Date")
+ggplot(fproj_out) + geom_line(aes( x=date, y=hosp), col="blue") + theme_minimal() + ylab("Hospitalizations, per 100k population") + xlab("Date")
 
 
 
