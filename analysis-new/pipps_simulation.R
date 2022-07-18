@@ -47,14 +47,15 @@ plot(x,test_prop)
 ########## Parameters setup 
 #set values to generate initial conditions with make_init()
 N=5.07e6
-N_pop=N
+# Neff = 2.7e6 # this made no difference 
+N_pop= N
 vaxlevel_in = 0.88 # portion of the pop vaccinated at start time 
 port_wane_in = 0.07 # portion boosted at start tie 
 past_infection_in = 0.14  #increased this from 0.1 to 0.18 # total in R at start time 
 #New-----changed to past_infection_in to 14% (by end of Nov 2021), seroprev was 9% in Sept/Oct 
 
 incres_in = 389 #( 389, then was 389*1.78 reported cases on Nov 30) # resident strain (delta) incidence at start 
-incmut_in = 30# new (omicron) inc at stat (#first cases of Omicron reported on 30 Nov)
+incmut_in = 40# new (omicron) inc at stat (#first cases of Omicron reported on 30 Nov)
 simu_size = 1e5 # number of times to resample the negative binom (for ribbons)
 #forecasts_days =30 # how long to forecast for 
 times = 1:nrow(dat_omic)
@@ -68,22 +69,22 @@ parameters <-         c(sigma=1/1, # incubation period (days)
                         gamma=1/4, #recovery rate 
                         nu =0.007, #vax rate: 0.7% per day 
                         mu=1/(82*365), # 1/life expectancy 
-                        w_m= 1/(0.42*365),# waning rate from R to S 
-                        w_r= 1/(0.42*365),
+                        w_m= 1/(0.62*365),# waning rate from R to S 
+                        w_r= 1/(0.62*365),
                         w_b= 1/(0.5*365), # waning rate from Rv to V 
                         ve=1, # I think this should be 1. it is not really efficacy  
                         beta_r=0.7, #transmission rate 
                         beta_m=1, #transmission rate 
                         c_m = 0.05,  # KEEP AT 0.05 for now . (1-protection) protection from mutant variants when individuals  just recovered  from it (made-up (for now)) 
                         c_r = 0.05, # KEEP AT 0.05 for now1- protection from resident variants when individuals  just recovered  from it (made-up (for now)) 
-                        c_mr = 0.1, # CAN BE HIGHER than 0.05 1 -cross immunity of resident  from mutant 
+                        c_mr = 0.05, # CAN BE HIGHER than 0.05 1 -cross immunity of resident  from mutant 
                         c_rm = 0.05, #KEEP AT 0.05 for now1-cross immunity of mutant  from resident 
-                        epsilon_r = (1-0.8), # % this should be 1-ve against delta - fine at 0.8
-                        epsilon_m = (1-0.3), # % 1-ve omicron . ve omicron is at most 0.3 #DISCUSSED WITH JS
+                        epsilon_r = (1-0.83), # % this should be 1-ve against delta - fine at 0.8
+                        epsilon_m = (1-0.45), # % 1-ve omicron . ve omicron is at most 0.3 #DISCUSSED WITH JS
                         b= 0.015,#0.018, # booster rate DISCUSSED
                         beffr = 0.75, # booster efficacy, resident strain
                         beffm = 0.75, # booster efficacy, mutant strain. 
-                        N=5.07e6,
+                        N=N_pop,
                         stngcy= 0.4, #(*%(reduction)) strength of intervention (reduction in beta's)
                         eff_t = as.numeric(eff_date - intro_date),
                         relx_level = 0.65,
@@ -94,7 +95,7 @@ parameters <-         c(sigma=1/1, # incubation period (days)
                         theta = 0.1 #negative binomial dispersion
                         
 )
-init <- make_init()   #generate initial states
+init <- make_init(N=N_pop)   #generate initial states
 
 
 
@@ -116,7 +117,7 @@ get_growth_rate(outtest, startoffset = 2, duration = 10)
 
 # check booster
 vv = get_vax(outtest)
-ggplot(vv, aes(x=time, y=boosted/N))+geom_line()
+ggplot(vv, aes(x=time, y=boosted/N))+geom_line() 
 
 
 # I think this just shows the initial conditions and parameters and what they do
@@ -139,7 +140,7 @@ penalties <- list(known_prop = known_prop, date_known_prop = date_known_prop,
 
 # Determine weight of penalty. 
 # Qu: how strong should penalty be on scale of 0-1? 0 = no penalty. 1 = relatively as impactful as the likelihood
-pen.size <- 0.1
+pen.size <- 0.3
 
 # Guess starting parameters and fit the model 
 
@@ -291,7 +292,7 @@ ggplot() + geom_line(data=project_dat_BC,aes(x=date,y=`50%`), col="green",size=1
                                              axis.title=element_text(size=12,face="bold")) 
 
 
-save.image(file = "simulationscript_out.Rdata")
+
 
 ########################
 # Quick check with hosps
@@ -326,5 +327,8 @@ ggplot(hosp_data, aes(x=date, y=hosp_admit))+
   labs(x="", y="Predicted Hospital Admissions")+
   theme_light()
 
+
+
+# save.image(file = "simulationscript_out.Rdata")
 
 

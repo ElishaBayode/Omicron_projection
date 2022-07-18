@@ -61,10 +61,12 @@ pie(as.numeric(x),
 # Set the desired characteristics of the new mutant.
 # change booster rate etc as needed 
 # You can include any of the named elements of rem_parameters here
-params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.35,#1.11
-                        "epsilon_m" = (1-0.2), # was (1-0.3) where 0.3 is ve 
+params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.30,#1.11
+                        "gamma"=1/4,
+                        "sigma"=3, 
+                        "epsilon_m" = (1-0.4), # was (1-0.3) where 0.3 is ve 
                         "c_m" = rem_parameters["c_m"]*1,#BA.2's protection against itself higher than BA.1's?
-                        "c_mr" = rem_parameters["c_mr"]*1, # lowering this (wo other changes) slows it down. 
+                        "c_mr" = rem_parameters["c_mr"]*2, # lowering this (wo other changes) slows it down. 
                         "c_rm" = rem_parameters["c_rm"]*1,
                         "w_m" =  rem_parameters["w_m"]*1,
                         "b"=1/(0.4*365), # lower booster rate 
@@ -80,9 +82,11 @@ params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.35,#1.11
 
 # Swap resident and mutant, then set up new mutant. 
 # This assumes that the new mutant 'arrives' with mut_prop% of current cases
+out_samp$date = out_samp$time + old_intro_date -1 
+out_samp = dplyr::filter(out_samp, date < intro_date)
 new_model <- swap_strains(out_old = out_samp, params_old = rem_parameters, 
                           params_newmutant = params_newmutant, 
-                          mut_prop = 0.5, res_to_s_prop =  0.5)
+                          mut_prop = 0.6, res_to_s_prop =  0.3)
 init_proj <- new_model$init_newm
 proj_parameters <- new_model$newm_parameters
 
@@ -115,11 +119,20 @@ ggplot(proj_out) + geom_line(aes( x=date, y=Resident), col="blue") +
   geom_point(aes(x=dat_rem$date, y=dat_rem$value)) # this is really only useful for peak time
 
 # and what do we know about ba2 in BC? 
-# ww: peak approx 1/2 the ba1 peak, late april (maybe 3rd week april) 
+# ww: peak approx 1/2 the ba1 peak, late april, trough in 
+# mid-June
 # serology with fudge - about 13-18% of BC got BA2. 
 # hosp and ww: it is approx 1/2 the peak height of BA1 
 
 # add plot showing BA1 so we can compare
+incba1 = dplyr::filter(incdf, date < intro_date+2) %>% dplyr::select(date, inc_tot) 
+incba2 = proj_out[3:nrow(proj_out),] %>% dplyr::select(date, Total) %>% rename(inc_tot = Total) %>% 
+  mutate(inc_tot = inc_tot / last(test_prop))
+ggplot(rbind(incba1, incba2), aes(x=date, y=inc_tot))+geom_line()+ 
+  scale_x_date(date_breaks = "months", date_labels = "%b-%d")
+
+
+# 
 infected =get_total_infection(proj_out, from_date = ymd("2022-03-16"), 
                               to_date = ymd("2022-05-15"), 
                                             parameters=proj_parameters)
