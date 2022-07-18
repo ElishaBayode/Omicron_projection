@@ -57,22 +57,22 @@ sveirs <- function(time, state, parameters) {
     dIrv <- sigma*Erv - (gamma + mu)*Irv
     dImv <- sigma*Emv - (gamma + mu)*Imv
     
-    dRrv <-  gamma*Irv - (c_r*epsilon_r*lambda_r + c_mr*epsilon_m*lambda_m)*Rrv/N - (mu + w_r + b*ve)*Rrv
-    dRmv <-  gamma*+ Imv - (c_rm*epsilon_r*lambda_r + c_m*epsilon_m*lambda_m)*Rmv/N - (mu + w_m + b*ve)*Rmv
+    dRrv <-  gamma*Irv - (c_r*epsilon_r*lambda_r + c_mr*epsilon_m*lambda_m)*Rrv/N - (mu + w_r + b*ve)*Rrv + w_b*Rrw
+    dRmv <-  gamma*+ Imv - (c_rm*epsilon_r*lambda_r + c_m*epsilon_m*lambda_m)*Rmv/N - (mu + w_m + b*ve)*Rmv + w_b*Rmw
     
     
-    dW <-   b*ve*V + (w_r*Rrw + w_m*Rmw) - (1-beff)*(lambda_r + lambda_m)*W/N -(mu+ w_b)*W
+    dW <-   b*ve*V + (w_r*Rrw + w_m*Rmw) - ((1-beffr)*lambda_r + (1-beffm)*lambda_m)*W/N -(mu+ w_b)*W
     
-    dErw <-(1-beff)*lambda_r*W/N + (1-beff)*lambda_r*(c_r*Rrw + c_rm*Rmw)/N - (sigma+mu)*Erw 
-    dEmw <- (1-beff)*lambda_m*W/N + (1-beff)*lambda_m*(c_mr*Rrw + c_m*Rmw)/N - (sigma+mu)*Emw 
+    dErw <-(1-beffr)*lambda_r*W/N + (1-beffr)*lambda_r*(c_r*Rrw + c_rm*Rmw)/N - (sigma+mu)*Erw 
+    dEmw <- (1-beffm)*lambda_m*W/N + (1-beffm)*lambda_m*(c_mr*Rrw + c_m*Rmw)/N - (sigma+mu)*Emw 
     
     
     dIrw <- sigma*Erw - (gamma + mu)*Irw
     dImw <- sigma*Emw - (gamma + mu)*Imw
     
     
-    dRrw <-  b*ve*Rrv + gamma*(Irw) - (1-beff)*(c_r*lambda_r + c_mr*lambda_m)*Rrw/N - (mu + w_r)*Rrw
-    dRmw <-  b*ve*Rmv + gamma*(Imw) - (1-beff)*(c_rm*lambda_r + c_m*lambda_m)*Rmw/N - (mu + w_m)*Rmw
+    dRrw <-  b*ve*Rrv + gamma*(Irw) - ((1-beffr)*c_r*lambda_r + (1-beffm)*c_mr*lambda_m)*Rrw/N - (mu + w_r + w_b)*Rrw
+    dRmw <-  b*ve*Rmv + gamma*(Imw) - ((1-beffr)*c_rm*lambda_r + (1-beffm)*c_m*lambda_m)*Rmw/N - (mu + w_m + w_b)*Rmw
 
     
     
@@ -520,6 +520,7 @@ get_total_infection <- function(output=output, from_date=from_date, to_date=to_d
   total_incid = sum(incid_subset)
   return(total_incid)
 }
+
 
 extendtp <- function(n=100, test_prop=test_prop){
   return(c(test_prop, rep(test_prop[length(test_prop)], n-length(test_prop))))

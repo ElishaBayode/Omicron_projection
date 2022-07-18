@@ -7,8 +7,17 @@ source("analysis-new/function-new.R")
 #import data 
 dat = readRDS("data/BC-dat.rds")
 
+
+# citf data 
+citf_bc = data.frame(date = c(ymd("2021-12-22"),ymd("2022-01-16"), ymd("2022-02-14"), ymd("2022-03-16"), 
+                              ymd("2022-04-15"), ymd("2022-05-15")), 
+                     cumulperc = c(5.83, 11.82, 25.52, 32.09, 35.01, 45.43)) 
+#ba2 wave in BC is mid-march to late may. see notes in pipps_projection
+sum(filter(dat_full, date< ymd("2021-12-22"))$cases)/N # number reported 
+ascprop2021 = (sum(filter(dat_full, date< ymd("2021-12-22"))$cases)/N )/ (0.08) # reported cases / approx serology
 #resize data to include Omicron wave only---stopping in March to
 #enable sensible comparison between model output and seroprevalence data
+
 
 forecasts_days <- 1 
 intro_date <-  ymd("2021-11-30")
@@ -28,7 +37,7 @@ dat_omic$day <- 1:nrow(dat_omic)
 
 #test prop goes down to 0.33 during the Omicron wave 
 x=intro_date+1:nrow(dat_omic)
-tptest = 1 -0.85/(1+exp(-0.2*as.numeric((x - ymd("2021-12-20")))))
+tptest = 1 -0.9/(1+exp(-0.2*as.numeric((x - ymd("2021-12-20")))))
 # tptest = tptest - (0.97-0.67)/(1+exp(-0.2*as.numeric((x - ymd("2022-03-01")))))
 plot(x,tptest)
 test_prop= tptest
@@ -40,12 +49,12 @@ plot(x,test_prop)
 N=5.07e6
 N_pop=N
 vaxlevel_in = 0.88 # portion of the pop vaccinated at start time 
-port_wane_in = 0.04 # portion boosted at start tie 
+port_wane_in = 0.07 # portion boosted at start tie 
 past_infection_in = 0.14  #increased this from 0.1 to 0.18 # total in R at start time 
 #New-----changed to past_infection_in to 14% (by end of Nov 2021), seroprev was 9% in Sept/Oct 
 
 incres_in = 389 #( 389, then was 389*1.78 reported cases on Nov 30) # resident strain (delta) incidence at start 
-incmut_in = 20# new (omicron) inc at stat (#first cases of Omicron reported on 30 Nov)
+incmut_in = 30# new (omicron) inc at stat (#first cases of Omicron reported on 30 Nov)
 simu_size = 1e5 # number of times to resample the negative binom (for ribbons)
 #forecasts_days =30 # how long to forecast for 
 times = 1:nrow(dat_omic)
@@ -71,8 +80,9 @@ parameters <-         c(sigma=1/1, # incubation period (days)
                         c_rm = 0.05, #KEEP AT 0.05 for now1-cross immunity of mutant  from resident 
                         epsilon_r = (1-0.8), # % this should be 1-ve against delta - fine at 0.8
                         epsilon_m = (1-0.3), # % 1-ve omicron . ve omicron is at most 0.3 #DISCUSSED WITH JS
-                        b= 0.02,#0.018, # booster rate DISCUSSED
-                        beff = 0.75, # booster efficacy
+                        b= 0.015,#0.018, # booster rate DISCUSSED
+                        beffr = 0.75, # booster efficacy, resident strain
+                        beffm = 0.75, # booster efficacy, mutant strain. 
                         N=5.07e6,
                         stngcy= 0.4, #(*%(reduction)) strength of intervention (reduction in beta's)
                         eff_t = as.numeric(eff_date - intro_date),
@@ -80,7 +90,7 @@ parameters <-         c(sigma=1/1, # incubation period (days)
                         fur_relx_level = 0,
                         rlx_t = as.numeric(intv_date - intro_date),
                         fur_rlx_t = as.numeric(fur_intv_date - intro_date),
-                        p = 0.3, # ascertainment fraction from pre-Omicron seroprevalence estimates
+                        p = ascprop2021, # ascertainment fraction from pre-Omicron seroprevalence estimates
                         theta = 0.1 #negative binomial dispersion
                         
 )
@@ -103,6 +113,11 @@ inctest$inc_reported = inctest$inc_tot*thisvec
 # sanity check - should have delta in a decline of about 2% /day (-0.02) and around 
 # a 0.2 to 0.25 difference between the two, so omicron at about 0.2 
 get_growth_rate(outtest, startoffset = 2, duration = 10)
+
+# check booster
+vv = get_vax(outtest)
+ggplot(vv, aes(x=time, y=boosted/N))+geom_line()
+
 
 # I think this just shows the initial conditions and parameters and what they do
 ggplot(data =inctest, aes(x=date, y = inc_reported))+geom_line() +
@@ -153,6 +168,7 @@ parameters[names(guess)] <- pen.fit_BC$par
 
 out_samp <- as.data.frame(deSolve::ode(y=init,time=times,func=sveirs,
                                        parms=parameters)) 
+get_growth_rate(out_samp, startoffset = 2, duration = 10)
 
 reportable = parameters[["p"]]*parameters[["sigma"]]*(out_samp$Er + out_samp$Erv + out_samp$Erw +
                                                         out_samp$Em + out_samp$Emv +
@@ -180,8 +196,8 @@ tot_true <- sum(true_incidence)
 tot_reported <- sum(dat_omic$value)
 
 #from model
-tot_true/N #(27% infection from Nov 30, 2021 to March 30, 2022)
-tot_reported/tot_true #(9% ascertainment from Nov 30, 2021 to March 30, 2022)
+tot_true/N # compare to Danuta's estimate of 34% of BC in the BA1 wave. 
+tot_reported/tot_true # approx ascertainment 
 
 tot_inf_vax <- (out_samp$V+ out_samp$Erv+ out_samp$Emv+out_samp$Irv + out_samp$Imv+   out_samp$Rrv+out_samp$Rmv + 
                   out_samp$W+out_samp$Erw+out_samp$Emw+out_samp$Irw + out_samp$Imw + out_samp$Rrw + out_samp$Rmw)
@@ -207,7 +223,7 @@ taram = taram %>% mutate(chardate = date) %>% mutate(date = dmy(chardate))
 
 # tara says broadly consistent with serology, and indeed: 
 ba1tara = filter(taram, date > ymd("2021-12-01") & date < ymd("2022-03-30"))
-sum(ba1tara$BC)/N
+sum(ba1tara$BC)/N # 38% -- high. Danuta had only 34% of BC in BA1 and citf has only 27%. 
 
 ggplot(ba1tara, aes(x=date, y = BC))+geom_point(alpha=0.5)+
   geom_line(data = incdf, inherit.aes = F, aes(x=date, y = inc_mut/parameters["p"]), 

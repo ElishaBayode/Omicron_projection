@@ -4,7 +4,15 @@
 #here I match model output to the remaining data point (i.e. from March 31, 2022 onward)
 dat_full = readRDS("data/BC-dat.rds")
 
-
+# approximately f1*f2*(13%) new infections in taht time period
+# where f1, f2 account for  citf under-rep and the fact that there were some reinfections
+# take f1 from the ba1 - ba2 difference. Danuta: 34% of BC in the BA1 wave
+# CITF: 4.68 (sept-oct) to end ba1 (march) 32.09 -> 27%. 
+# Difference is f1 = 1.26. 
+# f2 depends on efficacy of first infection, but probably a lot of people getting 
+# ba2 didn't get ba1. say f2 is about 1.15. 
+# then the total infections in the ba2 wave should be 
+tot_ba2_estimate = 1.26*1.15*0.13 # percent of BC infected in ba2
 
 forecasts_days <- 1 
 old_intro_date  = intro_date # Keep track of 'day 0'
@@ -46,15 +54,24 @@ with(as.list( rem_parameters), {
 #rem_parameters[["wf"]] <- 0.01
 #rem_parameters[["b"]] <- 0.018*1.2
 #initialm data matching 
+x = last(out_samp)[,2:ncol(out_samp)]
+pie(as.numeric(x),  
+    labels = colnames(out_samp)[2:ncol(out_samp)], radius = 1.5)
 
-
-# Set the desired characteristics of the new mutant. You can include any of the named elements of rem_parameters here
-params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.55,#1.11
-                        "epsilon_m" = 0.88,
+# Set the desired characteristics of the new mutant.
+# change booster rate etc as needed 
+# You can include any of the named elements of rem_parameters here
+params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.35,#1.11
+                        "epsilon_m" = (1-0.2), # was (1-0.3) where 0.3 is ve 
                         "c_m" = rem_parameters["c_m"]*1,#BA.2's protection against itself higher than BA.1's?
                         "c_mr" = rem_parameters["c_mr"]*1, # lowering this (wo other changes) slows it down. 
                         "c_rm" = rem_parameters["c_rm"]*1,
-                        "w_m" =  rem_parameters["w_m"]*1
+                        "w_m" =  rem_parameters["w_m"]*1,
+                        "b"=1/(0.4*365), # lower booster rate 
+                        "w_b" = 1/(0.5*365), # set booster waning to around booster rate 
+                        "beffr" = 0.75, 
+                        "beffm"=0.75
+                        
                       #  "eff_t"= 137,
                       #  "stngcy"=0.21
 )
@@ -64,7 +81,8 @@ params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.55,#1.11
 # Swap resident and mutant, then set up new mutant. 
 # This assumes that the new mutant 'arrives' with mut_prop% of current cases
 new_model <- swap_strains(out_old = out_samp, params_old = rem_parameters, 
-                          params_newmutant = params_newmutant, mut_prop = 0.35, res_to_s_prop =  0.5)
+                          params_newmutant = params_newmutant, 
+                          mut_prop = 0.5, res_to_s_prop =  0.5)
 init_proj <- new_model$init_newm
 proj_parameters <- new_model$newm_parameters
 
@@ -75,6 +93,10 @@ proj_out <- as.data.frame(deSolve::ode(y=init_proj, time=times,func= sveirs,
                                        parms=proj_parameters)) 
 #check growth rate 
 get_growth_rate(output= proj_out, startoffset = 20, duration = 7)
+
+# check booster
+#vv = get_vax(proj_out)
+# ggplot(vv, aes(x=time, y=boosted/N))+geom_line()
 
 
 # Simple plot of the projection
@@ -90,13 +112,25 @@ proj_out <- proj_out %>% mutate(Total=last(test_prop)*proj_parameters[["p"]]*
 #pivot_longer(proj_out, c(Total, Resident, Mutant), names_to = "Strain", values_to = "count") %>%
 ggplot(proj_out) + geom_line(aes( x=date, y=Resident), col="blue") + 
   geom_line(aes( x=date, y=Mutant), col="red") +  geom_line(aes( x=date, y=Total), col="green") + 
-  geom_point(aes(x=dat_rem$date, y=dat_rem$value))
+  geom_point(aes(x=dat_rem$date, y=dat_rem$value)) # this is really only useful for peak time
+
+# and what do we know about ba2 in BC? 
+# ww: peak approx 1/2 the ba1 peak, late april (maybe 3rd week april) 
+# serology with fudge - about 13-18% of BC got BA2. 
+# hosp and ww: it is approx 1/2 the peak height of BA1 
+
+# add plot showing BA1 so we can compare
+infected =get_total_infection(proj_out, from_date = ymd("2022-03-16"), 
+                              to_date = ymd("2022-05-15"), 
+                                            parameters=proj_parameters)
+infected/N # 
+
 
 
 
 # -- Hospitalizations -------------
 # IHR = 0.01 * (5/16) # see slack w nicola
-IHR <- 0.00258 # from pipps_simulation
+# IHR <- 0.00258 # from pipps_simulation
 l <- 14 # from pipps_simulation. NOTE - if the age distribution changed, the lag would change too 
 # seems reasonable for ba2 to have a higher IHR and lower lag, but of course not a negative lag... 
 
