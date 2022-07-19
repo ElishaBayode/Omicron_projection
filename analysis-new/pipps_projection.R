@@ -142,28 +142,23 @@ infected/N #
 
 
 # -- Hospitalizations -------------
-# IHR = 0.01 * (5/16) # see slack w nicola
-# IHR <- 0.00258 # from pipps_simulation
-l <- 14 # from pipps_simulation. NOTE - if the age distribution changed, the lag would change too 
-# seems reasonable for ba2 to have a higher IHR and lower lag, but of course not a negative lag... 
-
-hosp_data <- get_can_covid_tracker_data("bc") %>%
-  mutate(date=as.Date(date)) %>%
-  dplyr::select("date", "total_hospitalizations") %>%
-  filter(date %in% proj_out$date) %>%
-  mutate(hosp_admit = as.numeric(total_hospitalizations)/8)
+source("~/Omicron_projection/analysis-new/hosp-data.R")
+hospdat <- get_hosp_data(intro_date, stop_date)
+IHR <- get_IHR()*1.3 # account for reporting change...
 
 proj_out <- proj_out %>% 
   mutate(incid=proj_parameters[["sigma"]]*
            (Er + Erv + Erw + Em + Emv + Emw), 
          prev = Ir + Irv + Irw + Im + Imv + Imw) %>% 
-  mutate(hosp = lag(incid,l)*IHR) %>%  
+  mutate(hosp = lag(incid,6)*IHR) %>%  
   mutate(date=seq.Date(ymd(intro_date),ymd(intro_date )-1+length(times), 1)) 
 
-ggplot(proj_out) + 
-  geom_line(aes(x=date, y=hosp), col="blue") +
-  geom_point(data=hosp_data, aes(x=date, y=hosp_admit), col="grey")+
-  labs(x="",y="Projected Hospital Admissions")
+ggplot(hospdat, aes(x=week_of, y=new))+
+  geom_point(size=2.5)+
+  geom_point(col="grey")+
+  geom_line(data=proj_out, aes(x=date, y=hosp), col="darkblue", size=1.5)+
+  labs(x="Date", y="Predicted Hospital Admissions")+
+  theme_light()
 
 
 # -- Split cases across HAs ------------

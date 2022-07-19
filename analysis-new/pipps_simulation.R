@@ -174,7 +174,7 @@ get_growth_rate(out_samp, startoffset = 2, duration = 10)
 reportable = parameters[["p"]]*parameters[["sigma"]]*(out_samp$Er + out_samp$Erv + out_samp$Erw +
                                                         out_samp$Em + out_samp$Emv +
                                                         out_samp$Emw)
-incidence = test_prop*reportable #(length differs)
+#incidence = test_prop*reportable #(length differs)
 
 
 
@@ -297,34 +297,20 @@ ggplot() + geom_line(data=project_dat_BC,aes(x=date,y=`50%`), col="green",size=1
 ########################
 # Quick check with hosps
 ########################
-# **use admission data once we get it
-hosp_data <- get_can_covid_tracker_data("bc") %>%
-  mutate(date=as.Date(date)) %>%
-  dplyr::select("date", "total_hospitalizations") %>%
-  filter(date <= stop_date & date >= intro_date) %>%
-  rename(hosp_census = total_hospitalizations) %>%
-  mutate(hosp_admit = as.numeric(hosp_census)/8) # approx. based on av stay in hosp
+source("~/Omicron_projection/analysis-new/hosp-data.R")
+hospdat <- get_hosp_data(intro_date, stop_date)
+IHR <- get_IHR()
 
-l <- 14# lag
-ls_fit_hosp <- function(par, data){# super basic..
-  predict <- par[["IHR"]]*lag(incid$reportable, l)/parameters[["p"]]
-  predict <- predict[1:length(data)]
-  return(sum((predict-data)^2, na.rm=TRUE))
-}
+# prediction
+predict_hosps <- prevelence %>%
+  mutate(hosp=lag(prev*IHR,6))
 
-guess <- c(IHR=0.001)
-fit_BC_hosp <- optim(fn=ls_fit_hosp,  par=guess, lower=c(0),
-                upper = c(1), method = "L-BFGS-B", data = hosp_data$hosp_admit)
-
-# get result
-IHR <- fit_BC_hosp$par[["IHR"]]
-predict <- data.frame(n=IHR*lag(incid$reportable, l)/parameters[["p"]],
-  date = incid$date)
-
-ggplot(hosp_data, aes(x=date, y=hosp_admit))+
+# plot
+ggplot(hospdat, aes(x=week_of, y=new))+
+  geom_point(size=2.5)+
   geom_point(col="grey")+
-  geom_line(data=predict, aes(x=date, y=n), col="blue")+
-  labs(x="", y="Predicted Hospital Admissions")+
+  geom_line(data=predict_hosps, aes(x=date, y=hosp), col="darkblue", size=1.5)+
+  labs(x="Date", y="Predicted Hospital Admissions")+
   theme_light()
 
 
