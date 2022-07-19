@@ -63,7 +63,7 @@ pie(as.numeric(x),
 # You can include any of the named elements of rem_parameters here
 params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.30,#1.11
                         "gamma"=1/4,
-                        "sigma"=3, 
+                        "sigma"=1, 
                         "epsilon_m" = (1-0.4), # was (1-0.3) where 0.3 is ve 
                         "c_m" = rem_parameters["c_m"]*1,#BA.2's protection against itself higher than BA.1's?
                         "c_mr" = rem_parameters["c_mr"]*2, # lowering this (wo other changes) slows it down. 
@@ -86,7 +86,7 @@ out_samp$date = out_samp$time + old_intro_date -1
 out_samp = dplyr::filter(out_samp, date < intro_date)
 new_model <- swap_strains(out_old = out_samp, params_old = rem_parameters, 
                           params_newmutant = params_newmutant, 
-                          mut_prop = 0.6, res_to_s_prop =  0.3)
+                          mut_prop = 0.6, res_to_s_prop =  0.6)
 init_proj <- new_model$init_newm
 proj_parameters <- new_model$newm_parameters
 
