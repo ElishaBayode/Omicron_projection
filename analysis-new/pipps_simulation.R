@@ -50,7 +50,7 @@ N=5.07e6
 # Neff = 2.7e6 # this made no difference 
 N_pop= N
 vaxlevel_in = 0.88 # portion of the pop vaccinated at start time 
-port_wane_in = 0.07 # portion boosted at start tie 
+port_wane_in = 0.07 # portion boosted at start time 
 past_infection_in = 0.14  #increased this from 0.1 to 0.18 # total in R at start time 
 #New-----changed to past_infection_in to 14% (by end of Nov 2021), seroprev was 9% in Sept/Oct 
 

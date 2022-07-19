@@ -14,16 +14,18 @@ project_HAs <- function(total_out, which_wave_match = 6){
   
   ##---- Load historical regional data, to get HA proportions over time
   gdat <- read_csv("data/BCCDC_COVID19_Regional_Summary_Data.csv")
+   gdat %>% filter(HA!="All") %>% filter(HSDA=="All") %>% ggplot(aes(x=Date, y=Cases_Reported), group = HA) +
+   geom_line(aes(color=HA)) #+ ylim(0, 750) + xlim(as.Date("2021-01-01"), as.Date("2021-05-29"))
   
   ##---- Wave start/end cutoff dates
-  wave0 <- min(gdat$Date)
+  wave0 <- "2020-03-01"
   wave1 <- "2020-06-01"
-  wave2 <- "2020-09-24"
-  wave3 <- "2021-02-28"
+  wave2 <- "2020-09-30"
+  wave3 <- "2021-02-16"
   wave4 <- "2021-07-01"
   wave5 <- "2021-12-01"
   wave6 <- "2022-03-01"
-  wave7 <- max(gdat$Date)
+  wave7 <- "2022-06-02"
   wave_cutoffs <- as.Date(c(wave0, wave1,wave2,wave3,   wave4,   wave5,wave6, wave7))
   #                                wuhan wuhan wuhan alpha/gamma delta  ba1   ba2
 
@@ -33,6 +35,7 @@ project_HAs <- function(total_out, which_wave_match = 6){
     group_by(Date, HA) %>%
     summarise(n = sum( Cases_Reported_Smoothed)) %>%
     mutate(percentage = n / sum(n))
+  gdat <- gdat %>% group_by(Date) %>% mutate(allHA_total = sum(n))
   # Filter geo data to desired wave only:
   gdat <- gdat %>% filter(Date>wave_cutoffs[which_wave_match] & Date<=wave_cutoffs[which_wave_match+1])
   
@@ -67,4 +70,6 @@ project_HAs <- function(total_out, which_wave_match = 6){
 #testing <- testing %>% rowwise() %>% mutate(m = sum(c(Fraser, Coastal, Island, Interior, Northern)))
 #testing$m - total_out$Total
 # Ok, the sum of the HAs almost exactly matches the overall total, I think this is close enough
+
+
 
