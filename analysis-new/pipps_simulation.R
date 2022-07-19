@@ -174,7 +174,7 @@ get_growth_rate(out_samp, startoffset = 2, duration = 10)
 reportable = parameters[["p"]]*parameters[["sigma"]]*(out_samp$Er + out_samp$Erv + out_samp$Erw +
                                                         out_samp$Em + out_samp$Emv +
                                                         out_samp$Emw)
-#incidence = test_prop*reportable #(length differs)
+incidence = test_prop*reportable #(length differs)
 
 
 
@@ -302,18 +302,17 @@ hospdat <- get_hosp_data(intro_date, stop_date)
 IHR <- get_IHR()
 
 # prediction
-predict_hosps <- prevelence %>%
-  mutate(hosp=lag(prev*IHR,6))
+predict_hosps <- data.frame(inc=reportable/parameters[["p"]],
+   date=seq.Date(ymd(intro_date), ymd(intro_date)+length(reportable)-1, 1)) %>%
+  mutate(hosp=lag(inc*IHR,6))
 
 # plot
-ggplot(hospdat, aes(x=week_of, y=new))+
+ggplot(hospdat, aes(x=week_of, y=new/7))+#weekly to daily
   geom_point(size=2.5)+
   geom_point(col="grey")+
   geom_line(data=predict_hosps, aes(x=date, y=hosp), col="darkblue", size=1.5)+
   labs(x="Date", y="Predicted Hospital Admissions")+
   theme_light()
-
-
 
 # save.image(file = "simulationscript_out.Rdata")
 

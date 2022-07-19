@@ -144,7 +144,7 @@ infected/N #
 # -- Hospitalizations -------------
 source("~/Omicron_projection/analysis-new/hosp-data.R")
 hospdat <- get_hosp_data(intro_date, stop_date)
-IHR <- get_IHR()*1.3 # account for reporting change...
+IHR <- get_IHR()*1.1 # account for reporting change...
 
 proj_out <- proj_out %>% 
   mutate(incid=proj_parameters[["sigma"]]*
@@ -153,7 +153,7 @@ proj_out <- proj_out %>%
   mutate(hosp = lag(incid,6)*IHR) %>%  
   mutate(date=seq.Date(ymd(intro_date),ymd(intro_date )-1+length(times), 1)) 
 
-ggplot(hospdat, aes(x=week_of, y=new))+
+ggplot(hospdat, aes(x=week_of, y=new/7))+ #weekly to daily
   geom_point(size=2.5)+
   geom_point(col="grey")+
   geom_line(data=proj_out, aes(x=date, y=hosp), col="darkblue", size=1.5)+
