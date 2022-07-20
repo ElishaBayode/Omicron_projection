@@ -3,7 +3,7 @@
 
 # This script follows on directly from either pipps_simulation.r or pipps_projection.r
 #load("simulationscript_out.Rdata")
-load("projectionscript_out.Rdata")
+# load("projectionscript_out.Rdata")
 
 
 # Adjust dates for projection
@@ -21,13 +21,17 @@ rem_parameters  <- proj_parameters # ...to keep parameters safe
 # 1. Worst case scenario: cc modified to explore what makes what worse.
 # insights -- only get a really high hosp peak if beta is higher. 
 # but the other parameters, unsurprisingly, make the eventual endemic level (jan ++ ) really bad
-params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.5,
-                        "epsilon_m" = 0.9, # Previous mutant epsilon was 0.7
+params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.4,
+                        "gamma"=1/4,
+                        "sigma"=3, 
+                     #    "epsilon_m" = (1-0.4), for ref this is what i did for ba2
+                        "epsilon_m" = (1-0.25), # Previous mutant epsilon was 0.7
                         "c_m" = rem_parameters["c_m"]*1.3,
                         "c_mr" = rem_parameters["c_mr"]*1.3,
                         "c_rm" = rem_parameters["c_rm"]*1,
                         "w_m" =  rem_parameters["w_m"]*1) 
 IHR_factor <- 2 # multiplier for IHR (see below)
+res_swap = 0.7
 
 # 2. Intermediate case scenario
 params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.3,
@@ -37,6 +41,7 @@ params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.3,
                         "c_rm" = rem_parameters["c_rm"]*1,
                         "w_m" =  rem_parameters["w_m"]*1) 
 IHR_factor <- 2 # multiplier for IHR (see below)
+res_swap = 0.3
 
 # 3. Best case scenario
 params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.1,
@@ -47,6 +52,7 @@ params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.1,
                         "w_m" =  rem_parameters["w_m"]*1) 
                         # May want to consider: "beff" =  rem_parameters["beff"]*0.7) 
 IHR_factor <- 1 # multiplier for IHR (see below)
+res_swap = 0.3
 
 
 
@@ -54,13 +60,15 @@ IHR_factor <- 1 # multiplier for IHR (see below)
 # Swap resident and mutant, then set up new mutant -------------
 # This assumes that the new mutant 'arrives' with mut_prop% of current cases
 new_model <- swap_strains(out_old = proj_out, params_old = rem_parameters, 
-                          params_newmutant = params_newmutant, mut_prop = 0.3, res_to_s_prop =  0)
+                          params_newmutant = params_newmutant, mut_prop = 0.5, 
+                          res_to_s_prop =  res_swap)
 fproj_parameters <- new_model$newm_parameters
 
 # Make projections
 fproj_out <- as.data.frame(deSolve::ode(y=new_model$init_newm, time=times,func= sveirs,
                                        parms=fproj_parameters)) 
 
+get_growth_rate(fproj_out, startoffset = 5, duration = 10)
 
 # Plot of the projected cases -------------
 fproj_out <- fproj_out %>% mutate(Total=
@@ -83,9 +91,9 @@ project_HAs(total_out = fproj_out, which_wave_match = 5)
 
 
 # Plot of the projected  hospitalizations -------------
-IHR = 0.01 * (5/16)*IHR_factor # see slack w nicola
+IHRx = IHR*IHR_factor # see slack w nicola
 
-fproj_out <- fproj_out %>% mutate(prev =Ir + Irv + Irw + Im + Imv +Imw) %>% mutate(hosp = Total*IHR*(1e5/N))  # note per 100K hosp
+fproj_out <- fproj_out %>% mutate(prev =Ir + Irv + Irw + Im + Imv +Imw) %>% mutate(hosp = Total*IHRx*(1e5/N))  # note per 100K hosp
   
 ggplot(fproj_out) + geom_line(aes( x=date, y=hosp), col="blue") + theme_minimal() + ylab("Hospitalizations, per 100k population") + xlab("Date")
 

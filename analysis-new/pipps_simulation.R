@@ -55,7 +55,7 @@ past_infection_in = 0.14  #increased this from 0.1 to 0.18 # total in R at start
 #New-----changed to past_infection_in to 14% (by end of Nov 2021), seroprev was 9% in Sept/Oct 
 
 incres_in = 389 #( 389, then was 389*1.78 reported cases on Nov 30) # resident strain (delta) incidence at start 
-incmut_in = 40# new (omicron) inc at stat (#first cases of Omicron reported on 30 Nov)
+incmut_in = 30# new (omicron) inc at stat (#first cases of Omicron reported on 30 Nov)
 simu_size = 1e5 # number of times to resample the negative binom (for ribbons)
 #forecasts_days =30 # how long to forecast for 
 times = 1:nrow(dat_omic)
@@ -140,7 +140,7 @@ penalties <- list(known_prop = known_prop, date_known_prop = date_known_prop,
 
 # Determine weight of penalty. 
 # Qu: how strong should penalty be on scale of 0-1? 0 = no penalty. 1 = relatively as impactful as the likelihood
-pen.size <- 0.3
+pen.size <- 0.1
 
 # Guess starting parameters and fit the model 
 
@@ -234,72 +234,12 @@ ggplot(ba1tara, aes(x=date, y = BC))+geom_point(alpha=0.5)+
 
 
 
-################################# re-sampling CI
-
-
-times <- 1:(nrow(dat_omic) + 0)
-# Sample from asymptotic distribution of MLEs, 100 times
-resampled <- mvrnorm(n = 100, mu = pen.fit_BC$par,Sigma = (1/nrow(dat_omic))*solve(pen.fit_BC$hessian)) # don't need -ve because we MINimised NEGloglike
-
-
-#sample a new transmission rate from a distribution, then use that to calculate the selecytion coefficient 
-
-
-
-resample_incidence <- function(x, parameters){
-  # For each set of resampled MLEs, do a model simulation and output the daily incident reported cases
-  parameters[names(guess)] <- x
-  out_samp <- as.data.frame(deSolve::ode(y=init,time=times,func=sveirs,
-                                         parms=parameters)) 
-  incidence_samp =  parameters[["p"]]*parameters[["sigma"]]*(out_samp$Er + out_samp$Erv + out_samp$Erw +
-                                                               out_samp$Em + out_samp$Emv +
-                                                               out_samp$Emw)*test_prop#extendtp(nrow(out_samp), test_prop)
-}
-
-incidence_resampled <- apply(resampled, 1, resample_incidence, parameters=parameters)
-
-
-bound_mlesample_BC <-apply(incidence_resampled,2,  function(x){raply(simu_size/100,rnbinom(n=length(x),
-                                                                                           mu=x, size=1/parameters[["theta"]]))}, simplify=FALSE)
-bound_mlesample_BC <- do.call(rbind, bound_mlesample_BC)
-
-project_dat_BC  =  as.data.frame(aaply(bound_mlesample_BC,2,quantile,na.rm=TRUE,probs=c(0.025,0.5,0.975))) %>% 
-  mutate(date=seq.Date(ymd(intro_date),ymd(intro_date)-1+length(times), 1))
-
-
-# #last date of data   
-
-
-prevelence <- data.frame(prev=(out_samp$Ir + out_samp$Im + out_samp$Irv + out_samp$Imv + out_samp$Irw + out_samp$Imw))
-prevelence <- prevelence %>%  mutate(date=seq.Date(ymd(intro_date), ymd(intro_date)+length(times), 1))
-
-ggplot() + geom_line(data=prevelence,aes(x=date,y=prev), col="green",size=1.5,alpha=0.4)
-
-dat_reported <- dat_omic  %>% mutate(date=seq.Date(ymd(intro_date),ymd(intro_date)-1+length(dat_omic$day), 1))
-
-
-
-ggplot() + geom_line(data=project_dat_BC,aes(x=date,y=`50%`), col="green",size=1.5,alpha=0.4) +
-  geom_point(data=dat_reported,aes(x=date, y=value),color='grey48', alpha=0.8, size = 1.5) +
-  geom_ribbon(data=project_dat_BC,aes(x=date,ymin=`2.5%`,ymax=`97.5%`),fill='darkgreen',alpha=0.1, size = 1.5) +
-  labs(y="Reported cases",x="Date") + ylim(c(0,10000)) + #30000
-  scale_x_date(date_breaks = "15 days", date_labels = "%b-%d-%y") +theme_light() +
-  scale_color_manual(values = cols) +  theme(axis.text=element_text(size=12),
-                                             plot.title = element_text(size=15, face="bold"),
-                                             axis.text.x = element_text(angle = 45, hjust = 1),
-                                             legend.position = "bottom", legend.title = element_text(size=15),
-                                             legend.text = element_text(size=12),
-                                             axis.title=element_text(size=12,face="bold")) 
-
-
-
-
 ########################
 # Quick check with hosps
 ########################
 source("~/Omicron_projection/analysis-new/hosp-data.R")
 hospdat <- get_hosp_data(intro_date, stop_date)
-IHR <- get_IHR()
+IHR <- get_IHR() # note - the old IHR from Nicola's fit was 0.0035 I think
 
 # prediction
 predict_hosps <- data.frame(inc=reportable/parameters[["p"]],
@@ -316,4 +256,37 @@ ggplot(hospdat, aes(x=week_of, y=new/7))+#weekly to daily
 
 # save.image(file = "simulationscript_out.Rdata")
 
+########################
+# Nicola's ORIGINAL quick check with hosps
+########################
+
+# **use admission data once we get it
+hosp_data <- get_can_covid_tracker_data("bc") %>%
+  mutate(date=as.Date(date)) %>%
+  dplyr::select("date", "total_hospitalizations") %>%
+  filter(date <= stop_date & date >= intro_date) %>%
+  rename(hosp_census = total_hospitalizations) %>%
+  mutate(hosp_admit = as.numeric(hosp_census)/8) # approx. based on av stay in hosp
+
+l <- 14# lag
+ls_fit_hosp <- function(par, data){# super basic..
+  predict <- par[["IHR"]]*lag(incid$reportable, l)/parameters[["p"]]
+  predict <- predict[1:length(data)]
+  return(sum((predict-data)^2, na.rm=TRUE))
+}
+
+guess <- c(IHR=0.001)
+fit_BC_hosp <- optim(fn=ls_fit_hosp,  par=guess, lower=c(0),
+                     upper = c(1), method = "L-BFGS-B", data = hosp_data$hosp_admit)
+
+# get result
+IHR <- fit_BC_hosp$par[["IHR"]]
+predict <- data.frame(n=IHR*lag(incid$reportable, l)/parameters[["p"]],
+                      date = incid$date)
+
+ggplot(hosp_data, aes(x=date, y=hosp_admit))+
+  geom_point(col="grey")+
+  geom_line(data=predict, aes(x=date, y=n), col="blue")+
+  labs(x="", y="Predicted Hospital Admissions")+
+  theme_light()
 
