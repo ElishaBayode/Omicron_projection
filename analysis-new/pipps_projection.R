@@ -64,9 +64,9 @@ pie(as.numeric(x),
 params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.30,#1.11
                         "gamma"=1/4,
                         "sigma"=1, 
-                        "epsilon_m" = (1-0.4), # was (1-0.3) where 0.3 is ve 
+                        "epsilon_m" = (1-0.4), # was (1-0.45) in pipps-simn
                         "c_m" = rem_parameters["c_m"]*1,#BA.2's protection against itself higher than BA.1's?
-                        "c_mr" = rem_parameters["c_mr"]*2, # lowering this (wo other changes) slows it down. 
+                        "c_mr" = rem_parameters["c_mr"]*1, # lowering this (wo other changes) slows it down. 
                         "c_rm" = rem_parameters["c_rm"]*1,
                         "w_m" =  rem_parameters["w_m"]*1,
                         "b"=1/(0.4*365), # lower booster rate 
