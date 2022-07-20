@@ -86,7 +86,7 @@ out_samp$date = out_samp$time + old_intro_date -1
 out_samp = dplyr::filter(out_samp, date < intro_date)
 new_model <- swap_strains(out_old = out_samp, params_old = rem_parameters, 
                           params_newmutant = params_newmutant, 
-                          mut_prop = 0.6, res_to_s_prop =  0.6)
+                          mut_prop = 0.6, res_to_s_prop =  0.5)
 init_proj <- new_model$init_newm
 proj_parameters <- new_model$newm_parameters
 
@@ -144,7 +144,7 @@ infected/N #
 # -- Hospitalizations -------------
 source("~/Omicron_projection/analysis-new/hosp-data.R")
 hospdat <- get_hosp_data(intro_date, stop_date)
-IHR <- get_IHR()*1.1 # account for reporting change...
+# IHR <- get_IHR()*1.1 # account for reporting change...
 
 proj_out <- proj_out %>% 
   mutate(incid=proj_parameters[["sigma"]]*
@@ -159,6 +159,24 @@ ggplot(hospdat, aes(x=week_of, y=new/7))+ #weekly to daily
   geom_line(data=proj_out, aes(x=date, y=hosp), col="darkblue", size=1.5)+
   labs(x="Date", y="Predicted Hospital Admissions")+
   theme_light()
+
+
+# --- check against census numbers (/8) ---- # 
+hosp_data <- get_can_covid_tracker_data("bc") %>%
+  mutate(date=as.Date(date)) %>%
+  dplyr::select("date", "total_hospitalizations") %>%
+  filter(date <= stop_date & date >= intro_date) %>%
+  rename(hosp_census = total_hospitalizations) %>%
+  mutate(hosp_admit = as.numeric(hosp_census)/8) # approx. based on av stay in hosp
+
+
+ggplot(hosp_data, aes(x=date, y=hosp_admit))+
+  geom_point(col="grey")+
+  geom_line(data=proj_out, aes(x=date, y=hosp), col="blue")+
+  labs(x="", y="Model compared to adjusted public census")+
+  theme_light()
+
+
 
 
 # -- Split cases across HAs ------------
