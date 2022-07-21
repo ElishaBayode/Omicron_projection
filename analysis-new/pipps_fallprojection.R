@@ -1,9 +1,8 @@
 
 ####### Doing 'ba2' like projections for fall  - we project in March '22 under various scenarios and then shift the x-axis...
 
-# This script follows on directly from either pipps_simulation.r or pipps_projection.r
-#load("simulationscript_out.Rdata")
-# load("projectionscript_out.Rdata")
+# This script follows on directly from pipps_projection.r
+load("projectionscript_out.Rdata")
 
 
 # Adjust dates for projection
@@ -21,27 +20,33 @@ rem_parameters  <- proj_parameters # ...to keep parameters safe
 # 1. Worst case scenario: cc modified to explore what makes what worse.
 # insights -- only get a really high hosp peak if beta is higher. 
 # but the other parameters, unsurprisingly, make the eventual endemic level (jan ++ ) really bad
-params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.4,
+params_newmutant = list("beta_r" = rem_parameters["beta_r"]*0.9, # compensate for artificial boost
+                        "beta_m" = rem_parameters["beta_m"]*1.3,
                         "gamma"=1/4,
-                        "sigma"=3, 
-                     #    "epsilon_m" = (1-0.4), for ref this is what i did for ba2
-                        "epsilon_m" = (1-0.25), # Previous mutant epsilon was 0.7
-                        "c_m" = rem_parameters["c_m"]*1.3,
-                        "c_mr" = rem_parameters["c_mr"]*1.3,
+                        "sigma"=1, 
+                        #    "epsilon_m" = (1-0.4), for ref this is what i did for ba2
+                        "epsilon_m" = (1-0.3), # Previous mutant epsilon was 0.7
+                        "c_m" = rem_parameters["c_m"]*1,
+                        "c_mr" = rem_parameters["c_mr"]*1.2,
                         "c_rm" = rem_parameters["c_rm"]*1,
-                        "w_m" =  rem_parameters["w_m"]*1) 
+                        "w_m" =  rem_parameters["w_m"]*1,
+                        "beffr" = 0.7, 
+                        "beffm"=0.7) 
+
 IHR_factor <- 2 # multiplier for IHR (see below)
 res_swap = 0.7
 
 # 2. Intermediate case scenario
-params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.3,
-                        "epsilon_m" = 0.8, # Previous mutant epsilon was 0.7
-                        "c_m" = rem_parameters["c_m"]*1.3,
-                        "c_mr" = rem_parameters["c_mr"]*1.3,
+params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.2,
+                        "epsilon_m" = (1-0.35), # Previous mutant epsilon was 0.7
+                        "c_m" = rem_parameters["c_m"]*1,
+                        "c_mr" = rem_parameters["c_mr"]*1,
                         "c_rm" = rem_parameters["c_rm"]*1,
-                        "w_m" =  rem_parameters["w_m"]*1) 
-IHR_factor <- 2 # multiplier for IHR (see below)
-res_swap = 0.3
+                        "w_m" =  rem_parameters["w_m"]*1, 
+                        "beffr" = 0.70, 
+                        "beffm"=0.70) 
+IHR_factor <- 1 # multiplier for IHR (see below)
+res_swap = 0.4
 
 # 3. Best case scenario
 params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.1,

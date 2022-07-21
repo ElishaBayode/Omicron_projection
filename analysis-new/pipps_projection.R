@@ -56,7 +56,7 @@ with(as.list( rem_parameters), {
 #initialm data matching 
 x = last(out_samp)[,2:ncol(out_samp)]
 pie(as.numeric(x),  
-    labels = colnames(out_samp)[2:ncol(out_samp)], radius = 1.5)
+    labels = colnames(out_samp)[2:ncol(out_samp)], radius = 1.0)
 
 # Set the desired characteristics of the new mutant.
 # change booster rate etc as needed 
