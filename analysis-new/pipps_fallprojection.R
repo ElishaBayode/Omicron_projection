@@ -148,7 +148,7 @@ ggplot(filter(alldf, date<maxdate), aes(x=date, y = hosp, fill=Scenario))+
   theme(legend.position = "bottom") + xlab("")
 
 # Split projected cases across HAs ------------
-source("analysis-new/pipps_geographical.R")
+source("analysis-new/functions_splittingwaves.R")
 # 'which_wave_match' tells this function whether to make a 'delta-like' wave, a 'ba.1-like wave' and so on
 #                                                               - you can currently provide any wave 1:7 (7 = ba.2)
 project_HAs(total_out = fproj_out, which_wave_match = 6)
