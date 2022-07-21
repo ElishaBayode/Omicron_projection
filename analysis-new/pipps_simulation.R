@@ -237,7 +237,7 @@ ggplot(ba1tara, aes(x=date, y = BC))+geom_point(alpha=0.5)+
 ########################
 # Quick check with hosps
 ########################
-source("~/Omicron_projection/analysis-new/hosp-data.R")
+source("analysis-new/hosp-data.R")
 hospdat <- get_hosp_data(intro_date, stop_date)
 IHR <- get_IHR() # note - the old IHR from Nicola's fit was 0.0035 I think
 

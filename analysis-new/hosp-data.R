@@ -1,6 +1,6 @@
 
 get_hosp_data <- function(intro_date, stop_date){
-  hospdat <- readr::read_csv("~/Omicron_projection/data/all_hosps_byage1.csv") %>%
+  hospdat <- readr::read_csv("data/all_hosps_byage1.csv") %>%
     mutate(week_of = case_when(week >= 44 ~ ymd("2021-10-31")+7*(week-44),
         week < 44 ~ ymd("2022-01-02") + 7*(week-1))) %>%
     filter(week_of >= intro_date & week_of <= stop_date) %>%
@@ -10,9 +10,6 @@ get_hosp_data <- function(intro_date, stop_date){
 }
 
 get_IHR <- function(){
-  #############################
-  # Get IHR for 70+
-  #############################
   hospdat <- get_hosp_data(ymd("2021-11-30"),ymd("2022-03-10")) # should be a lag but prob doesn't matter
   tot_hosp <- sum(hospdat$new)
   ## Seroprev for BA1 

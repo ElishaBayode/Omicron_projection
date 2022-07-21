@@ -5,6 +5,7 @@
 load("projectionscript_out.Rdata")
 
 
+
 # Adjust dates for projection
 old_intro_date  = intro_date # Keep track of 'day 0'
 intro_date <-   ymd("2022-07-01")
@@ -49,15 +50,15 @@ IHR_factor <- 1 # multiplier for IHR (see below)
 res_swap = 0.4
 
 # 3. Best case scenario
-params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.1,
-                        "epsilon_m" = 0.8, # Previous mutant epsilon was 0.7
-                        "c_m" = rem_parameters["c_m"]*1.3,
-                        "c_mr" = rem_parameters["c_mr"]*1.3,
+params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.0,
+                        "epsilon_m" = 0.7, # Previous mutant epsilon was 0.7
+                        "c_m" = rem_parameters["c_m"]*1.0,
+                        "c_mr" = rem_parameters["c_mr"]*1.0,
                         "c_rm" = rem_parameters["c_rm"]*1,
                         "w_m" =  rem_parameters["w_m"]*1) 
                         # May want to consider: "beff" =  rem_parameters["beff"]*0.7) 
 IHR_factor <- 1 # multiplier for IHR (see below)
-res_swap = 0.3
+res_swap = 0.0
 
 
 
@@ -88,11 +89,11 @@ fproj_out <- fproj_out %>% mutate(Total=
 pivot_longer(fproj_out, c(Total,"BA4/5", "New variant X"), names_to = "Strain", values_to = "count") %>%
   ggplot(aes(x=date, y=count, colour=Strain)) + geom_line() + ylab("Incident cases") + xlab("Date") + theme_minimal()
  
-# Split projected cases across HAs ------------
-source("analysis-new/pipps_geographical.R")
+# Split projected cases across HAs ------------ NOTE: this assumes you're running a single wave
+source("analysis-new/functions_splittingwaves.R")
 # 'which_wave_match' tells this function whether to make a 'delta-like' wave, a 'ba.1-like wave' and so on 
 #                                                               - you can currently provide any wave 1:7 (7 = ba.2)
-project_HAs(total_out = fproj_out, which_wave_match = 5) 
+project_HAs(total_out = fproj_out, which_wave_match = 6) 
 
 
 # Plot of the projected  hospitalizations -------------

@@ -56,7 +56,7 @@ with(as.list( rem_parameters), {
 #initialm data matching 
 x = last(out_samp)[,2:ncol(out_samp)]
 pie(as.numeric(x),  
-    labels = colnames(out_samp)[2:ncol(out_samp)], radius = 1.0)
+labels = colnames(out_samp)[2:ncol(out_samp)], radius = 1.0)
 
 # Set the desired characteristics of the new mutant.
 # change booster rate etc as needed 
@@ -142,7 +142,7 @@ infected/N #
 
 
 # -- Hospitalizations -------------
-source("~/Omicron_projection/analysis-new/hosp-data.R")
+source("analysis-new/hosp-data.R")
 hospdat <- get_hosp_data(intro_date, stop_date)
 # IHR <- get_IHR()*1.1 # account for reporting change...
 
@@ -180,7 +180,7 @@ ggplot(hosp_data, aes(x=date, y=hosp_admit))+
 
 
 # -- Split cases across HAs ------------
-source("analysis-new/pipps_geographical.R")
+source("analysis-new/functions_splittingwaves.R")
 # 'which_wave_match' tells this function whether to make a 'delta-like' wave, a 'ba.1-like wave' and so on 
 #                                                               - you can currently provide any wave 1:7 (7 = ba.2)
 project_HAs(total_out = proj_out, which_wave_match = 6)
