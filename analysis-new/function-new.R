@@ -572,6 +572,7 @@ swap_strains <- function(out_old=out_old, params_old = params_old, params_newmut
   newm_parameters["w_r"] <- params_old["w_m"]
   newm_parameters["c_r"] <- params_old["c_m"]
   newm_parameters["c_rm"] <- params_old["c_mr"]
+  newm_parameters["beffr"] <- params_old["beffm"]
   newm_parameters[names(params_newmutant)] <- unlist(params_newmutant)
   
   return(list(init_newm = init_newm,newm_parameters = newm_parameters))

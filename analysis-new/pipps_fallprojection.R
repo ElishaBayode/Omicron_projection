@@ -67,7 +67,6 @@ params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.1,
                         "beffr" = 0.75,
                         "beffm"=0.75)
 
-                        # May want to consider: "beff" =  rem_parameters["beff"]*0.7)
 IHR_factor <- 1 # multiplier for IHR (see below)
 res_swap = 0.3
 projfilename = "bestcase-projection.csv"
@@ -119,6 +118,13 @@ bestdf = fproj_out %>% dplyr::select(date, Total) %>%
 readr::write_csv(fproj_out, file = projfilename)
 readr::write_csv(as.data.frame(new_model$init_newm), file = initfilename)
 readr::write_csv(as.data.frame(fproj_parameters), file = parfilename)
+
+
+# add plot showing BA2 so we can compare
+#incba2 = proj_out[3:nrow(proj_out),] %>% dplyr::select(date, incid) 
+#incbaX  = fproj_out[3:nrow(fproj_out),] %>% dplyr::select(date, Total) %>% rename(incid = Total)
+#ggplot(rbind(incba1, incba2, incbaX), aes(x=date, y=incid))+geom_line()+ 
+#  scale_x_date(date_breaks = "months", date_labels = "%b-%d")
 
 
 
