@@ -8,7 +8,7 @@
 # project_HAs(total_out = proj_out, which_wave_match = 6)
 
 # 
-project_HAs <- function(total_out, which_wave_match = 6){
+project_HAs <- function(total_out, which_wave_match = 6, facets = FALSE){
   # total_out = time series of cases you want to divide by HA
   # which_wave_match = which past covid wave in BC do you want to match the projections to (1:7), 7 = ba.2
   
@@ -58,7 +58,11 @@ project_HAs <- function(total_out, which_wave_match = 6){
   out_plot <- pivot_longer(total_out, c(Total,HAs), names_to = "HA", values_to = "count") %>%
     ggplot(aes(x=date, y=count, colour=HA)) + geom_line() + ylab("Incident cases") + xlab("Date") + theme_minimal() +  
     scale_colour_discrete(labels = c("Total", "Coastal", "Fraser", "Interior", "Island", "Northern"))
-  
+  if (facets) {
+    out_plot <- pivot_longer(total_out, c(Total,HAs), names_to = "HA", values_to = "count") %>%
+      ggplot(aes(x=date, y=count, colour=HA)) + geom_line() + facet_wrap(~HA, scales = "free") + ylab("Incident cases") + xlab("Date") + theme_minimal() +  
+      scale_colour_discrete(labels = c("Total", "Coastal", "Fraser", "Interior", "Island", "Northern"))
+  }
   return(list(df = total_out, plot = out_plot))
 }
 
@@ -75,7 +79,7 @@ project_HAs <- function(total_out, which_wave_match = 6){
 
 
 # 
-project_ages <- function(total_out, which_wave_match = 6){   # NOT COMPLETE!!!
+project_ages <- function(total_out, which_wave_match = 6, facets = FALSE){   # NOT COMPLETE!!!
   # total_out = time series of cases you want to divide by age group
   # which_wave_match = which past covid wave in BC do you want to match the projections to (1:7), 7 = ba.2
   
@@ -131,7 +135,11 @@ project_ages <- function(total_out, which_wave_match = 6){   # NOT COMPLETE!!!
   out_plot <- pivot_longer(total_out, c(Total,Ages), names_to = "Ages", values_to = "count") %>%
     ggplot(aes(x=date, y=count, colour=Ages)) + geom_line() + ylab("Incident cases") + xlab("Date") + theme_minimal() + labs(colour = "Age Group") +
     scale_colour_discrete(labels = c("Total", names(spline.ages)))
-  
+  if (facets) {
+    out_plot <- pivot_longer(total_out, c(Total,Ages), names_to = "Ages", values_to = "count") %>%
+      ggplot(aes(x=date, y=count, colour=Ages))+  geom_line() + facet_wrap(~Ages, scales = "free") + ylab("Incident cases") + xlab("Date") + theme_minimal() + labs(colour = "Age Group") +
+      scale_colour_discrete(labels = c("Total", names(spline.ages)))
+  }
   
   return(list(df = total_out, plot = out_plot))
 }

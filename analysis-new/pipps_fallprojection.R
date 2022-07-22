@@ -227,7 +227,8 @@ ggplot(filter(alldf, date<maxdate), aes(x=date, y = hosp, fill=Scenario))+
 source("analysis-new/functions_splittingwaves.R")
 # 'which_wave_match' tells these functions whether to make a 'delta-like' wave, a 'ba.1-like wave' and so on
 #                                                               - you can currently provide any wave 1:7 (7 = ba.2)
-worst.HAs <- project_HAs(total_out = worstdf[worstdf$date<=maxdate,], which_wave_match = 6)
+worst.HAs <- project_HAs(total_out = worstdf[worstdf$date<=maxdate,], 
+                         which_wave_match = 6, facets = TRUE)
 medium.HAs <-project_HAs(total_out = mediumdf[mediumdf$date<=maxdate,], which_wave_match = 6)
 best.HAs <-project_HAs(total_out = bestdf[bestdf$date<=maxdate,], which_wave_match = 6)
 worst.HAs$plot
@@ -237,16 +238,18 @@ readr::write_csv(worst.HAs$df, file = "worstcase_byHA.csv")
 readr::write_csv(medium.HAs$df, file = "mediumcase_byHA.csv")
 readr::write_csv(best.HAs$df, file = "bestcase_byHA.csv")
 
-worst.ages <-project_ages(total_out = worstdf[worstdf$date<=maxdate,], which_wave_match = 6)
-medium.ages <-project_ages(total_out = mediumdf[mediumdf$date<=maxdate,], which_wave_match = 6)
-best.ages <-project_ages(total_out = bestdf[bestdf$date<=maxdate,], which_wave_match = 6)
+worst.ages <-project_ages(total_out = worstdf[worstdf$date<=maxdate,], 
+                          which_wave_match = 6, facets = TRUE)
+medium.ages <-project_ages(total_out = mediumdf[mediumdf$date<=maxdate,], 
+                           which_wave_match = 6, facets = TRUE)
+best.ages <-project_ages(total_out = bestdf[bestdf$date<=maxdate,], 
+                         which_wave_match = 6, facets = TRUE)
 worst.ages$plot
 medium.ages$plot
 best.ages$plot
 readr::write_csv(worst.ages$df, file = "worstcase_byage.csv")
 readr::write_csv(medium.ages$df, file = "mediumcase_byage.csv")
 readr::write_csv(best.ages$df, file = "bestcase_byage.csv")
-
 
 
 
