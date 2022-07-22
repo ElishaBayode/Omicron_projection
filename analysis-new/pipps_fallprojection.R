@@ -240,9 +240,9 @@ readr::write_csv(best.HAs$df, file = "bestcase_byHA.csv")
 worst.ages <-project_ages(total_out = worstdf[worstdf$date<=maxdate,], which_wave_match = 6)
 medium.ages <-project_ages(total_out = mediumdf[mediumdf$date<=maxdate,], which_wave_match = 6)
 best.ages <-project_ages(total_out = bestdf[bestdf$date<=maxdate,], which_wave_match = 6)
-worst.HAs$plot
-medium.HAs$plot
-best.HAs$plot
+worst.ages$plot
+medium.ages$plot
+best.ages$plot
 readr::write_csv(worst.ages$df, file = "worstcase_byage.csv")
 readr::write_csv(medium.ages$df, file = "mediumcase_byage.csv")
 readr::write_csv(best.ages$df, file = "bestcase_byage.csv")
