@@ -15,10 +15,15 @@ times = as.numeric(intro_date - old_intro_date):(as.numeric(stop_date - old_intr
 
 
 rem_parameters  <- proj_parameters # ...to keep parameters safe
-# Set the desired characteristics of the new mutant. You can include any of the named elements of rem_parameters here -------------
+# Set the desired characteristics of the new mutant. You can include any of the named elements of rem_parameters 
 # Choose which scenario you want to run:
 
-# 1. Worst case scenario: cc modified to explore what makes what worse.
+# Which date to plot projections out until
+maxdate = ymd("2023-02-01")
+
+
+##########################################################
+#### 1. Worst case scenario:  ---------------------------
 # insights -- only get a really high hosp peak if beta is higher.
 # but the other parameters, unsurprisingly, make the eventual endemic level (jan ++ ) really bad
 params_newmutant = list("beta_r" = rem_parameters["beta_r"]*0.9, # compensate for artificial boost
@@ -37,11 +42,50 @@ params_newmutant = list("beta_r" = rem_parameters["beta_r"]*0.9, # compensate fo
 IHR_factor <- 2 # multiplier for IHR (see below)
 res_swap = 0.7
 projfilename = "worstcase-projection.csv"
-projfilename = "worstcase-projection.csv"
-projfilename = "worstcase-projection.csv"
+initfilename = "worstcase-init.csv"
+parfilename = "worstcase-par.csv"
+
+# Swap resident and mutant, then set up new mutant 
+new_model <- swap_strains(out_old = proj_out, params_old = rem_parameters,
+                          params_newmutant = params_newmutant, mut_prop = 0.1,
+                          res_to_s_prop =  res_swap)
+fproj_parameters <- new_model$newm_parameters
+
+# Make projections
+fproj_out <- as.data.frame(deSolve::ode(y=new_model$init_newm, time=times,func= sveirs,
+                                        parms=fproj_parameters))
+get_growth_rate(fproj_out, startoffset = 5, duration = 10)
+
+# Plot of the projected cases -------------
+fproj_out <- fproj_out %>% mutate(Total=
+                                    fproj_parameters[["sigma"]]*(fproj_out$Er + fproj_out$Erv + fproj_out$Erw +
+                                                                   fproj_out$Em + fproj_out$Emv + fproj_out$Emw),
+                                  "Established type"=
+                                    fproj_parameters[["sigma"]]*(fproj_out$Er + fproj_out$Erv + fproj_out$Erw),
+                                  "New variant X"=
+                                    fproj_parameters[["sigma"]]*(fproj_out$Em + fproj_out$Emv + fproj_out$Emw)) %>%
+  mutate(date=seq.Date(ymd("2022-10-01"),ymd("2022-10-01")+300, 1))
+
+pivot_longer(fproj_out, c(Total,"Established type", "New variant X"), names_to = "Strain", values_to = "count") %>%
+  ggplot(aes(x=date, y=count, colour=Strain)) + geom_line() + ylab("Incident cases") + xlab("Date") + theme_minimal()
+
+plot.worst = ggplot(filter(fproj_out, date < maxdate), aes(x=date, y=fproj_parameters["p"]*Total/50))+
+  geom_line(color="blue") +  ylab("Incidence (symptomatic infection per 100K)") + xlab("")
+plot.worst
+
+worstdf = fproj_out %>% dplyr::select(date, Total) %>%
+  mutate(sympinfect = fproj_parameters["p"]*Total,
+         Scenario = "worst case" )
+
+readr::write_csv(fproj_out, file = projfilename)
+readr::write_csv(as.data.frame(new_model$init_newm), file = initfilename)
+readr::write_csv(as.data.frame(fproj_parameters), file = parfilename)
 
 
-# 2. Intermediate case scenario
+
+
+##########################################################
+#### 2. Intermediate case scenario   ---------------------------
 params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.2,
                         "epsilon_m" = (1-0.3), # Previous mutant epsilon was 0.7
                         "c_m" = rem_parameters["c_m"]*1,
@@ -53,14 +97,55 @@ params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.2,
 IHR_factor <- 1 # multiplier for IHR (see below)
 res_swap = 0.55
 projfilename = "mediumcase-projection.csv"
-projfilename = "mediumcase-projection.csv"
-projfilename = "mediumcase-projection.csv"
+initfilename = "mediumcase-init.csv"
+parfilename = "mediumcase-par.csv"
 
 
-# 3. Best case scenario - limited immune evasion etc
+# Swap resident and mutant, then set up new mutant 
+new_model <- swap_strains(out_old = proj_out, params_old = rem_parameters,
+                          params_newmutant = params_newmutant, mut_prop = 0.1,
+                          res_to_s_prop =  res_swap)
+fproj_parameters <- new_model$newm_parameters
+
+# Make projections
+fproj_out <- as.data.frame(deSolve::ode(y=new_model$init_newm, time=times,func= sveirs,
+                                        parms=fproj_parameters))
+get_growth_rate(fproj_out, startoffset = 5, duration = 10)
+
+# Plot of the projected cases -------------
+fproj_out <- fproj_out %>% mutate(Total=
+                                    fproj_parameters[["sigma"]]*(fproj_out$Er + fproj_out$Erv + fproj_out$Erw +
+                                                                   fproj_out$Em + fproj_out$Emv + fproj_out$Emw),
+                                  "Established type"=
+                                    fproj_parameters[["sigma"]]*(fproj_out$Er + fproj_out$Erv + fproj_out$Erw),
+                                  "New variant X"=
+                                    fproj_parameters[["sigma"]]*(fproj_out$Em + fproj_out$Emv + fproj_out$Emw)) %>%
+  mutate(date=seq.Date(ymd("2022-10-01"),ymd("2022-10-01")+300, 1))
+
+pivot_longer(fproj_out, c(Total,"Established type", "New variant X"), names_to = "Strain", values_to = "count") %>%
+  ggplot(aes(x=date, y=count, colour=Strain)) + geom_line() + ylab("Incident cases") + xlab("Date") + theme_minimal()
+
+plot.medium = ggplot(filter(fproj_out, date < maxdate), aes(x=date, y=fproj_parameters["p"]*Total/50))+
+  geom_line(color="blue") +  ylab("Incidence (symptomatic infection per 100K)") + xlab("")
+plot.medium
+
+mediumdf = fproj_out %>% dplyr::select(date, Total) %>%
+  mutate(sympinfect = fproj_parameters["p"]*Total,
+         Scenario = "medium case" )
+
+readr::write_csv(fproj_out, file = projfilename)
+readr::write_csv(as.data.frame(new_model$init_newm), file = initfilename)
+readr::write_csv(as.data.frame(fproj_parameters), file = parfilename)
+
+
+
+
+
+##########################################################
+#### 3. Best case scenario  ---------------------------
 params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.1,
                         "epsilon_m" = (1-0.3), # Previous mutant epsilon was 0.7
-                        "c_m" = rem_parameters["c_m"]*1.1,
+                        "c_m" = rem_parameters["c_m"]*1.0,
                         "c_mr" = rem_parameters["c_mr"]*1.1,
                         "c_rm" = rem_parameters["c_rm"]*1,
                         "w_m" =  rem_parameters["w_m"]*1,
@@ -70,14 +155,10 @@ params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.1,
 IHR_factor <- 1 # multiplier for IHR (see below)
 res_swap = 0.3
 projfilename = "bestcase-projection.csv"
-projfilename = "bestcase-projection.csv"
-projfilename = "bestcase-projection.csv"
-
-
-
+initfilename = "bestcase-init.csv"
+parfilename = "bestcase-par.csv"
 
 # Swap resident and mutant, then set up new mutant -------------
-# This assumes that the new mutant 'arrives' with mut_prop% of current cases
 new_model <- swap_strains(out_old = proj_out, params_old = rem_parameters,
                           params_newmutant = params_newmutant, mut_prop = 0.1,
                           res_to_s_prop =  res_swap)
@@ -86,7 +167,6 @@ fproj_parameters <- new_model$newm_parameters
 # Make projections
 fproj_out <- as.data.frame(deSolve::ode(y=new_model$init_newm, time=times,func= sveirs,
                                        parms=fproj_parameters))
-
 get_growth_rate(fproj_out, startoffset = 5, duration = 10)
 
 # Plot of the projected cases -------------
@@ -102,15 +182,10 @@ fproj_out <- fproj_out %>% mutate(Total=
 pivot_longer(fproj_out, c(Total,"Established type", "New variant X"), names_to = "Strain", values_to = "count") %>%
   ggplot(aes(x=date, y=count, colour=Strain)) + geom_line() + ylab("Incident cases") + xlab("Date") + theme_minimal()
 
-maxdate = ymd("2023-02-01")
-
-# change name according to which scenario you run
 plot.best = ggplot(filter(fproj_out, date < maxdate), aes(x=date, y=fproj_parameters["p"]*Total/50))+
   geom_line(color="blue") +  ylab("Incidence (symptomatic infection per 100K)") + xlab("")
-
 plot.best
 
-# CHANGE THIS LINE DEPENDING ON WHAT SCENARIO YOU RUN !!
 bestdf = fproj_out %>% dplyr::select(date, Total) %>%
   mutate(sympinfect = fproj_parameters["p"]*Total,
          Scenario = "best case" )
@@ -120,17 +195,11 @@ readr::write_csv(as.data.frame(new_model$init_newm), file = initfilename)
 readr::write_csv(as.data.frame(fproj_parameters), file = parfilename)
 
 
-# add plot showing BA2 so we can compare
-#incba2 = proj_out[3:nrow(proj_out),] %>% dplyr::select(date, incid) 
-#incbaX  = fproj_out[3:nrow(fproj_out),] %>% dplyr::select(date, Total) %>% rename(incid = Total)
-#ggplot(rbind(incba1, incba2, incbaX), aes(x=date, y=incid))+geom_line()+ 
-#  scale_x_date(date_breaks = "months", date_labels = "%b-%d")
 
 
 
-
-
-# having run those , make one figure with all of them , for infections and hosps
+#### Make one figure with all scenarios, for infections and hosps
+# 
 
 alldf  = rbind(bestdf, mediumdf, worstdf)
 glimpse(alldf)
@@ -153,11 +222,35 @@ ggplot(filter(alldf, date<maxdate), aes(x=date, y = hosp, fill=Scenario))+
                   fill=Scenario),  alpha=0.5)+
   theme(legend.position = "bottom") + xlab("")
 
-# Split projected cases across HAs ------------
+
+# Split projected cases across age groups and HAs ------------
 source("analysis-new/functions_splittingwaves.R")
-# 'which_wave_match' tells this function whether to make a 'delta-like' wave, a 'ba.1-like wave' and so on
+# 'which_wave_match' tells these functions whether to make a 'delta-like' wave, a 'ba.1-like wave' and so on
 #                                                               - you can currently provide any wave 1:7 (7 = ba.2)
-project_HAs(total_out = fproj_out, which_wave_match = 6)
+worst.HAs <- project_HAs(total_out = worstdf[worstdf$date<=maxdate,], which_wave_match = 6)
+medium.HAs <-project_HAs(total_out = mediumdf[mediumdf$date<=maxdate,], which_wave_match = 6)
+best.HAs <-project_HAs(total_out = bestdf[bestdf$date<=maxdate,], which_wave_match = 6)
+worst.HAs$plot
+medium.HAs$plot
+best.HAs$plot
+readr::write_csv(worst.HAs$df, file = "worstcase_byHA.csv")
+readr::write_csv(medium.HAs$df, file = "mediumcase_byHA.csv")
+readr::write_csv(best.HAs$df, file = "bestcase_byHA.csv")
+
+worst.ages <-project_ages(total_out = worstdf[worstdf$date<=maxdate,], which_wave_match = 6)
+medium.ages <-project_ages(total_out = mediumdf[mediumdf$date<=maxdate,], which_wave_match = 6)
+best.ages <-project_ages(total_out = bestdf[bestdf$date<=maxdate,], which_wave_match = 6)
+worst.HAs$plot
+medium.HAs$plot
+best.HAs$plot
+readr::write_csv(worst.ages$df, file = "worstcase_byage.csv")
+readr::write_csv(medium.ages$df, file = "mediumcase_byage.csv")
+readr::write_csv(best.ages$df, file = "bestcase_byage.csv")
+
+
+
+
+
 
 
 # Plot of the projected  hospitalizations -------------
@@ -166,3 +259,10 @@ IHRx = IHR*IHR_factor # see slack w nicola
 fproj_out <- fproj_out %>% mutate(prev =Ir + Irv + Irw + Im + Imv +Imw) %>% mutate(hosp = Total*IHRx*(1e5/N))  # note per 100K hosp
 
 ggplot(fproj_out) + geom_line(aes( x=date, y=hosp), col="blue") + theme_minimal() + ylab("Hospitalizations, per 100k population") + xlab("Date")
+
+
+
+
+
+
+

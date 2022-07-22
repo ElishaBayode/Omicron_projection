@@ -31,11 +31,11 @@ project_HAs <- function(total_out, which_wave_match = 6){
 
   
   ##---- What proportion of cases where in each HA over time?
-  gdat <- gdat  %>% filter(HA!="All") %>% filter(HA!="Out of Canada") %>%
+  gdat %<>% filter(HA!="All") %>% filter(HA!="Out of Canada") %>%
     group_by(Date, HA) %>%
     summarise(n = sum( Cases_Reported_Smoothed)) %>%
     mutate(percentage = n / sum(n))
-  gdat <- gdat %>% group_by(Date) %>% mutate(allHA_total = sum(n))
+  gdat %<>% group_by(Date) %>% mutate(allHA_total = sum(n))
   # Filter geo data to desired wave only:
   gdat <- gdat %>% filter(Date>wave_cutoffs[which_wave_match] & Date<=wave_cutoffs[which_wave_match+1])
   
@@ -46,20 +46,20 @@ project_HAs <- function(total_out, which_wave_match = 6){
     
   
   ##---- Multiply HA proportions by total cases
-  total_out$Fraser <- total_out$Total*spline.HAs$Fraser$y
-  total_out$Coastal <- total_out$Total*spline.HAs$`Vancouver Coastal`$y
-  total_out$Island <- total_out$Total*spline.HAs$`Vancouver Island`$y
-  total_out$Interior <- total_out$Total*spline.HAs$Interior$y
-  total_out$Northern <- total_out$Total*spline.HAs$Northern$y
+  total_out$Total.Fraser <- total_out$Total*spline.HAs$Fraser$y
+  total_out$Total.Coastal <- total_out$Total*spline.HAs$`Vancouver Coastal`$y
+  total_out$Total.Island <- total_out$Total*spline.HAs$`Vancouver Island`$y
+  total_out$Total.Interior <- total_out$Total*spline.HAs$Interior$y
+  total_out$Total.Northern <- total_out$Total*spline.HAs$Northern$y
   
   
   ##---- Plot
-  HAs <- c("Coastal", "Fraser", "Interior", "Northern", "Island")
+  HAs <- c("Total.Coastal", "Total.Fraser", "Total.Interior", "Total.Northern", "Total.Island")
   out_plot <- pivot_longer(total_out, c(Total,HAs), names_to = "HA", values_to = "count") %>%
-    ggplot(aes(x=date, y=count, colour=HA)) + geom_line() + ylab("Incident cases") + xlab("Date") + theme_minimal()
-
+    ggplot(aes(x=date, y=count, colour=HA)) + geom_line() + ylab("Incident cases") + xlab("Date") + theme_minimal() +  
+    scale_colour_discrete(labels = c("Total", "Coastal", "Fraser", "Interior", "Island", "Northern"))
   
-  return(out_plot)
+  return(list(df = total_out, plot = out_plot))
 }
 
 
@@ -81,7 +81,7 @@ project_ages <- function(total_out, which_wave_match = 6){   # NOT COMPLETE!!!
   
   ##---- Load historical age based data, to get age proportions over time
   adat <- read_csv("data/BCCDC_COVID19_Dashboard_Case_Details.csv") %>%
-      count(Reported_Date, Age_Group) 
+      count(Reported_Date, Age_Group) %>% filter(Age_Group!="Unknown")
   ggplot(adat, aes(x=Reported_Date, y=n), group = Age_Group) +
       geom_line(aes(color=Age_Group)) #+ ylim(0, 750) + xlim(as.Date("2021-01-01"), as.Date("2021-05-29"))
   
@@ -100,34 +100,40 @@ project_ages <- function(total_out, which_wave_match = 6){   # NOT COMPLETE!!!
   
   
   ##---- What proportion of cases where in each age group over time?
-  adat <- adat %>%
-    group_by(Reported_Date, Age_Group) %>%
+  adat %<>% 
+    group_by(Reported_Date)  %>%
     mutate(percentage = n / sum(n))
-  gdat <- gdat %>% group_by(Date) %>% mutate(allHA_total = sum(n))
-  # Filter geo data to desired wave only:
-  gdat <- gdat %>% filter(Date>wave_cutoffs[which_wave_match] & Date<=wave_cutoffs[which_wave_match+1])
+ adat %<>% group_by(Reported_Date) %>% mutate(allage_total = sum(n))
+  # Filter age data to desired wave only:
+  adat <- adat %>% filter(Reported_Date>wave_cutoffs[which_wave_match] & Reported_Date<=wave_cutoffs[which_wave_match+1])
+
+  
+  ##---- Adjust length of proportions to match length of new wave, by fitting a spline for each age group and interpolating
+  split.dfs <- split(adat, adat$Age_Group)
+  spline.ages <- lapply(split.dfs, function (x) spline(x$ Reported_Date, x$percentage, n = nrow(total_out)))
   
   
-  ##---- Adjust length of proportions to match length of new wave, by fitting a spline for each HA and interpolating
-  split.dfs <- split(gdat, gdat$HA)
-  spline.HAs <- lapply(split.dfs, function (x) spline(x$Date, x$percentage, n = nrow(total_out)))
-  
-  
-  ##---- Multiply HA proportions by total cases
-  total_out$Fraser <- total_out$Total*spline.HAs$Fraser$y
-  total_out$Coastal <- total_out$Total*spline.HAs$`Vancouver Coastal`$y
-  total_out$Island <- total_out$Total*spline.HAs$`Vancouver Island`$y
-  total_out$Interior <- total_out$Total*spline.HAs$Interior$y
-  total_out$Northern <- total_out$Total*spline.HAs$Northern$y
+  ##---- Multiply age proportions by total cases
+  total_out$"Total.<10" <- total_out$Total*spline.ages$"<10"$y
+  total_out$"Total.10-19" <- total_out$Total*spline.ages$"10-19"$y
+  total_out$"Total.20-29" <- total_out$Total*spline.ages$"20-29"$y
+  total_out$"Total.30-39" <- total_out$Total*spline.ages$"30-39"$y
+  total_out$"Total.40-49" <- total_out$Total*spline.ages$"40-49"$y
+  total_out$"Total.50-59" <- total_out$Total*spline.ages$"50-59"$y
+  total_out$"Total.60-69" <- total_out$Total*spline.ages$"60-69"$y
+  total_out$"Total.70-79" <- total_out$Total*spline.ages$"70-79"$y
+  total_out$"Total.80-89" <- total_out$Total*spline.ages$"80-89"$y
+  total_out$"Total.90+" <- total_out$Total*spline.ages$"90+"$y
   
   
   ##---- Plot
-  HAs <- c("Coastal", "Fraser", "Interior", "Northern", "Island")
-  out_plot <- pivot_longer(total_out, c(Total,HAs), names_to = "HA", values_to = "count") %>%
-    ggplot(aes(x=date, y=count, colour=HA)) + geom_line() + ylab("Incident cases") + xlab("Date") + theme_minimal()
+  Ages <- paste0("Total.", names(spline.ages))
+  out_plot <- pivot_longer(total_out, c(Total,Ages), names_to = "Ages", values_to = "count") %>%
+    ggplot(aes(x=date, y=count, colour=Ages)) + geom_line() + ylab("Incident cases") + xlab("Date") + theme_minimal() + labs(colour = "Age Group") +
+    scale_colour_discrete(labels = c("Total", names(spline.ages)))
   
   
-  return(out_plot)
+  return(list(df = total_out, plot = out_plot))
 }
 
 
