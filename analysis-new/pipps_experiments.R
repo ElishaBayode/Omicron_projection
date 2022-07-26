@@ -89,13 +89,20 @@ fur_intv_date <- ymd("2024-12-09") #increase due to reopening  - turned off
 # waning immunity as in our default. hosps end up too high, cases too, but the shape is good.
 # i'd say not as good as the longer-immunity model . see save.image("experiment2-vredb.Rdata")
 
+# third experiment: nonlinear incidence. Throughout the pandemic we have noted that model forecasts exceed 
+# the numbers of cases that happen. Many times this was due to the introduction of public health measures,
+# but not with BA1. There, we might have over-estimated transmission by not accounting for exponentially 
+# rising introductions, but there could have been population structure and behaviour impacts. Here we model a 
+# prevalence "carrying capacity" where transmissoin reduces if prevalence becomes too high. This reflects 
+# saturation of contact groups, cancelled events, increased caution/ reduced contact and so on. 
+# PROBLEM: the fit is spitting out whatever parameters I put in, esp for the stringency and the K 
 
 parameters <-         c(sigma=1/1, # incubation period (days) 
                         gamma=1/4, #recovery rate 
                         nu =0.007, #vax rate: 0.7% per day 
                         mu=1/(82*365), # 1/life expectancy 
-                        w_m= 1/(0.62*365),# waning rate from R to S 
-                        w_r= 1/(0.62*365),
+                        w_m= 1/(1*365),# waning rate from R to S 
+                        w_r= 1/(1*365),
                         w_b= 1/(0.5*365), # waning rate from Rv to V 
                         ve=1, # I think this should be 1. it is not really efficacy  
                         beta_r=0.7, #transmission rate 
@@ -110,7 +117,7 @@ parameters <-         c(sigma=1/1, # incubation period (days)
                         beffr = 0.75, # booster efficacy, resident strain
                         beffm = 0.75, # booster efficacy, mutant strain. 
                         N=N_pop,
-                        stngcy= 0.4, #(*%(reduction)) strength of intervention (reduction in beta's)
+                        stngcy= 0.02, # see if I can fit K instead #(*%(reduction)) strength of intervention (reduction in beta's)
                         eff_t = as.numeric(eff_date - intro_date),
                         relx_level = 0.65,
                         fur_relx_level = 0,
@@ -118,15 +125,15 @@ parameters <-         c(sigma=1/1, # incubation period (days)
                         fur_rlx_t = as.numeric(fur_intv_date - intro_date),
                         p = ascprop2021, # ascertainment fraction from pre-Omicron seroprevalence estimates
                         theta = 0.1, #negative binomial dispersion
-                        vred=0.8, 
-                        vredb=0.5
-                        
+                     #   vred=0.8, # vred and vredb are for experiment 2, using sveirs.vred 
+                      #  vredb=0.5
+                        K=0.15 # unit: fraction of total population
 )
 init <- make_init(N=N_pop)   #generate initial states
 
 # NOTE HERE - REMOVE FOR ANOTHER EXPT 
-sveirs = sveirs.vred
-
+# sveirs = sveirs.vred
+sveirs = sveirs.nli
 
 
 ########## Run the model and compare the model to the data at least for IC checking
@@ -172,7 +179,7 @@ pen.size <- 0.1
 
 # Guess starting parameters and fit the model 
 
-guess <- c( beta_m=1, beta_r=0.6, theta=0.1, stngcy=0.4)  # NOTE removed fitting p 
+guess <- c( beta_m=1, beta_r=0.6, theta=0.1, K=0.2,  stngcy=0.2)  # NOTE removed fitting p 
 
 #guess <- c( beta_m=1, stngcy=0.4,beta_r=0.6, theta=0.1,beff=0.8) 
 
