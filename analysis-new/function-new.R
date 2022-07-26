@@ -144,6 +144,72 @@ sveirs.vred <- function(time, state, parameters) {
     return(list(c(dS,dEr,dEm,dIr,dIm,dRr,dRm,dV,dErv,dEmv,dIrv,dImv,dRrv,dRmv,dW,dErw,dEmw,dIrw,dImw,dRrw,dRmw)))
   })
 }
+
+# nonlinear incidence model 
+sveirs.nli <- function(time, state, parameters) {
+  with(as.list(c(state, parameters)), {
+    #c <- 1# effectiveness of NPIs, set as 1, change later to c(t)
+    c <- (1 - stngcy/(1+ exp(-1.25*(time-eff_t))))   #intervention 
+    rlx <- (1 + relx_level/(1+ exp(-1.25*(time-rlx_t)))) # relaxation 
+    further_rlx <- (1 + fur_relx_level/(1+ exp(-1.25*(time-fur_rlx_t))))
+    #split R, Rv and Rw to Rr & Rm, Rrv & Rmv, and  Rrw & Rmw
+    N <- S+Er+Em+Ir+Im + Rr + Rm+V+Erv+Emv+Irv+Imv+Rrv + Rmv+W+Erw+Emw+Irw+Imw+Rrw+Rmw #total population 
+    lambda_r <- c*rlx*further_rlx*beta_r*(Ir +Irv + Irw - (Ir +Irv + Irw)/(K*N))
+    lambda_m <- c*rlx*further_rlx*beta_m*(Im + Imv + Imw- (Im + Imv + Imw)/(K*N)) #force of infection mutant strain
+    
+    #introduced Rr and Rm for individuals recovering from resident and mutant strain, respectively   
+    dS <-  mu*N - (lambda_r+lambda_m)*S/N  + (w_r*Rr + w_m*Rm) -(mu + nu*ve)*S
+    
+    #included new parameters c_r and c_m protection from  variant that individuals just recovered from  
+    
+    
+    
+    dEr <- lambda_r*S/N +  lambda_r*(c_r*Rr + c_rm*Rm)/N - (sigma+mu)*Er 
+    dEm <- lambda_m*S/N +  lambda_m*(c_mr*Rr + c_m*Rm)/N - (sigma+mu)*Em
+    
+    dIr <- sigma*Er - (gamma + mu)*Ir
+    dIm <- sigma*Em - (gamma + mu)*Im
+    
+    #two new compartments to replace R
+    #included new parameters c_r and c_m protection from  variant that individuals just recovered from  
+    #two new states Rrv and Rmv to replace R
+    
+    dRr <-  gamma*Ir  -  (c_r*lambda_r + c_mr*lambda_m)*Rr/N - (mu + w_r)*Rr
+    dRm <-  gamma*Im  -  (c_rm*lambda_r + c_m*lambda_m)*Rm/N - (mu + w_m)*Rm
+    
+    
+    
+    dV <-  nu*ve*S + (w_r*Rrv + w_m*Rmv) + w_b*W - (epsilon_r*lambda_r + epsilon_m*lambda_m)*V/N - (mu + b*ve)*V 
+    
+    dErv <- epsilon_r*lambda_r*V/N + epsilon_r*lambda_r*(c_r*Rrv + c_rm*Rmv)/N - (sigma+mu)*Erv 
+    dEmv <- epsilon_m*lambda_m*V/N + epsilon_m*lambda_m*(c_mr*Rrv+c_m*Rmv)/N - (sigma+mu)*Emv 
+    
+    
+    dIrv <- sigma*Erv - (gamma + mu)*Irv
+    dImv <- sigma*Emv - (gamma + mu)*Imv
+    
+    dRrv <-  gamma*Irv - (c_r*epsilon_r*lambda_r + c_mr*epsilon_m*lambda_m)*Rrv/N - (mu + w_r + b*ve)*Rrv + w_b*Rrw
+    dRmv <-  gamma*+ Imv - (c_rm*epsilon_r*lambda_r + c_m*epsilon_m*lambda_m)*Rmv/N - (mu + w_m + b*ve)*Rmv + w_b*Rmw
+    
+    
+    dW <-   b*ve*V + (w_r*Rrw + w_m*Rmw) - ((1-beffr)*lambda_r + (1-beffm)*lambda_m)*W/N -(mu+ w_b)*W
+    
+    dErw <-(1-beffr)*lambda_r*W/N + (1-beffr)*lambda_r*(c_r*Rrw + c_rm*Rmw)/N - (sigma+mu)*Erw 
+    dEmw <- (1-beffm)*lambda_m*W/N + (1-beffm)*lambda_m*(c_mr*Rrw + c_m*Rmw)/N - (sigma+mu)*Emw 
+    
+    
+    dIrw <- sigma*Erw - (gamma + mu)*Irw
+    dImw <- sigma*Emw - (gamma + mu)*Imw
+    
+    
+    dRrw <-  b*ve*Rrv + gamma*(Irw) - ((1-beffr)*c_r*lambda_r + (1-beffm)*c_mr*lambda_m)*Rrw/N - (mu + w_r + w_b)*Rrw
+    dRmw <-  b*ve*Rmv + gamma*(Imw) - ((1-beffr)*c_rm*lambda_r + (1-beffm)*c_m*lambda_m)*Rmw/N - (mu + w_m + w_b)*Rmw
+    
+    
+    
+    return(list(c(dS,dEr,dEm,dIr,dIm,dRr,dRm,dV,dErv,dEmv,dIrv,dImv,dRrv,dRmv,dW,dErw,dEmw,dIrw,dImw,dRrw,dRmw)))
+  })
+}
 # this function takes in some intuitive parameters and attempts to create a starting
 # point for the ODE that sort of reflects them. 
 make_init = function( N=N_pop, vaxlevel = vaxlevel_in,
