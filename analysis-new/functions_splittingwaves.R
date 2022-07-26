@@ -36,7 +36,7 @@ project_HAs <- function(total_out, which_wave_match = 6, facets = FALSE){
   # 'complete' = fill in missing HA groups on each day with 0 cases
   gdat %<>% filter(HA!="All") %>% filter(HA!="Out of Canada") %>% filter(HSDA=="All") %>% complete(Date, HA, fill = list(Cases_Reported = 0, Cases_Reported_Smoothed = 0)) %>%
     group_by(Date, HA) %>%
-    summarise(n = sum( Cases_Reported_Smoothed)) %>%
+    summarise(n = sum( Cases_Reported)) %>%
     mutate(percentage = n / sum(n))
   gdat %<>% group_by(Date) %>% mutate(allHA_total = sum(n))
 
