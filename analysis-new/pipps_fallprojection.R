@@ -217,7 +217,7 @@ bestdf = bestdf %>% mutate(hosp = Total*IHR) # no increase
 alldf  = rbind(bestdf, mediumdf, worstdf)
 
 ggplot(filter(alldf, date<maxdate), aes(x=date, y = hosp, fill=Scenario))+
-  ylab("COVID admissions") +
+  ylab("COVID- all reported admissions") +
   geom_ribbon(aes(x=date, ymin = 0.75*hosp, ymax=1.25*hosp,
                   fill=Scenario),  alpha=0.5)+
   theme(legend.position = "bottom") + xlab("")
@@ -229,7 +229,8 @@ source("analysis-new/functions_splittingwaves.R")
 #                                                               - you can currently provide any wave 1:7 (7 = ba.2)
 worst.HAs <- project_HAs(total_out = worstdf[worstdf$date<=maxdate,], 
                          which_wave_match = 6, facets = TRUE)
-medium.HAs <-project_HAs(total_out = mediumdf[mediumdf$date<=maxdate,], which_wave_match = 6)
+medium.HAs <-project_HAs(total_out = mediumdf[mediumdf$date<=maxdate,],
+                         which_wave_match = 5, facets = TRUE)
 best.HAs <-project_HAs(total_out = bestdf[bestdf$date<=maxdate,], which_wave_match = 6)
 worst.HAs$plot
 medium.HAs$plot
@@ -239,11 +240,11 @@ readr::write_csv(medium.HAs$df, file = "mediumcase_byHA.csv")
 readr::write_csv(best.HAs$df, file = "bestcase_byHA.csv")
 
 worst.ages <-project_ages(total_out = worstdf[worstdf$date<=maxdate,], 
-                          which_wave_match = 6, facets = TRUE)
+                          which_wave_match = 5, facets = TRUE)
 medium.ages <-project_ages(total_out = mediumdf[mediumdf$date<=maxdate,], 
-                           which_wave_match = 6, facets = TRUE)
+                           which_wave_match = 5, facets = TRUE)
 best.ages <-project_ages(total_out = bestdf[bestdf$date<=maxdate,], 
-                         which_wave_match = 6, facets = TRUE)
+                         which_wave_match = 5, facets = TRUE)
 worst.ages$plot
 medium.ages$plot
 best.ages$plot

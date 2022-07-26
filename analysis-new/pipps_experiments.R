@@ -13,8 +13,8 @@ citf_bc = data.frame(date = c(ymd("2021-12-22"),ymd("2022-01-16"), ymd("2022-02-
                               ymd("2022-04-15"), ymd("2022-05-15")), 
                      cumulperc = c(5.83, 11.82, 25.52, 32.09, 35.01, 45.43)) 
 #ba2 wave in BC is mid-march to late may. see notes in pipps_projection
-sum(filter(dat, date< ymd("2021-12-22"))$cases)/N # number reported 
-ascprop2021 = (sum(filter(dat, date< ymd("2021-12-22"))$cases)/N )/ (0.08) # reported cases / approx serology
+sum(filter(dat_full, date< ymd("2021-12-22"))$cases)/N # number reported 
+ascprop2021 = (sum(filter(dat_full, date< ymd("2021-12-22"))$cases)/N )/ (0.08) # reported cases / approx serology
 #resize data to include Omicron wave only---stopping in March to
 #enable sensible comparison between model output and seroprevalence data
 
@@ -65,6 +65,31 @@ eff_date <-   ymd("2021-12-31")  # intervention date
 intv_date <-  ymd("2024-12-08") #  increase due to BA.2 - turned off
 fur_intv_date <- ymd("2024-12-09") #increase due to reopening  - turned off
 
+########################################
+# notes 
+########################################
+# first experiment - basically don't wane , don't reinfect w same variant; 
+# ba2: don't have immune escape, but allow increase in beta
+# method: set waning to 1 year (still 1/2 year for boosters). set cs to 0. 
+# result: ba2 wave looks good, needs 55% increase in transmissibility, 
+# still maybe slightly the wrong shape. hosp admissions look great, 
+# census looks great but lags behind admissions (14 day lag from cases to census, 6 to admissions)
+# but both look great 
+
+# second experiment: reduce the infectiousness of vax ppl
+# new ode func, sveirs.vred, with two new pars, vred and vredb (reduction in beta for vax and boosted)
+# bigger ba1 wave than we think we had; fiddling a little (w vredb and ve at 0.3 instead of 0.45) 
+# that results in a slow ba2 wave under teh same assns (good 1 to 2 cross immunity) 
+# would require an even higher increase in transmissibility for ba2. 
+# with higher ve in ba1, would likely be better 
+# hosps not as good in this reduced beta model - basically yes, this makes the overall 
+# transmissibility even lower, and so beta (baseline) has to be really high
+# to make a quick ba2 wave. 
+# HOWEVER - if vredb (booster effect) goes UP in the BA2 wave, it can look good, even with 
+# waning immunity as in our default. hosps end up too high, cases too, but the shape is good.
+# i'd say not as good as the longer-immunity model . see save.image("experiment2-vredb.Rdata")
+
+
 parameters <-         c(sigma=1/1, # incubation period (days) 
                         gamma=1/4, #recovery rate 
                         nu =0.007, #vax rate: 0.7% per day 
@@ -79,8 +104,8 @@ parameters <-         c(sigma=1/1, # incubation period (days)
                         c_r = 0.05, # KEEP AT 0.05 for now1- protection from resident variants when individuals  just recovered  from it (made-up (for now)) 
                         c_mr = 0.05, # CAN BE HIGHER than 0.05 1 -cross immunity of resident  from mutant 
                         c_rm = 0.05, #KEEP AT 0.05 for now1-cross immunity of mutant  from resident 
-                        epsilon_r = (1-0.83), # % this should be 1-ve against delta - fine at 0.8
-                        epsilon_m = (1-0.45), # % 1-ve omicron . ve omicron is at most 0.3 #DISCUSSED WITH JS
+                        epsilon_r = (1-0.8), # % this should be 1-ve against delta - fine at 0.8
+                        epsilon_m = (1-0.3), # % 1-ve omicron . ve omicron is at most 0.3 #DISCUSSED WITH JS
                         b= 0.015,#0.018, # booster rate DISCUSSED
                         beffr = 0.75, # booster efficacy, resident strain
                         beffm = 0.75, # booster efficacy, mutant strain. 
@@ -92,12 +117,15 @@ parameters <-         c(sigma=1/1, # incubation period (days)
                         rlx_t = as.numeric(intv_date - intro_date),
                         fur_rlx_t = as.numeric(fur_intv_date - intro_date),
                         p = ascprop2021, # ascertainment fraction from pre-Omicron seroprevalence estimates
-                        theta = 0.1 #negative binomial dispersion
+                        theta = 0.1, #negative binomial dispersion
+                        vred=0.8, 
+                        vredb=0.5
                         
 )
 init <- make_init(N=N_pop)   #generate initial states
 
-
+# NOTE HERE - REMOVE FOR ANOTHER EXPT 
+sveirs = sveirs.vred
 
 
 
@@ -133,7 +161,7 @@ ggplot(data =inctest, aes(x=date, y = inc_reported))+geom_line() +
 known_prop <- 0.5 # known the proportion of resident and new strain
 date_known_prop <- "2021-12-12" # what time was the proportion known? 
 # 2. growth advantage of mutant strain
-known_growth <- 0.2 # daily rise of omicron on dec 12 
+known_growth <- 0.18 # daily rise of omicron on dec 12 
 period_known_growth <- c("2021-12-05", "2021-12-15")
 penalties <- list(known_prop = known_prop, date_known_prop = date_known_prop, 
                   known_growth = known_growth, period_known_growth = period_known_growth)
@@ -150,18 +178,18 @@ guess <- c( beta_m=1, beta_r=0.6, theta=0.1, stngcy=0.4)  # NOTE removed fitting
 
 
 
-pen.fit_BC <- optim(fn=func_penloglik,  par=guess, lower=c(0,0,0.01, 0,0.01), 
+exp.fit_BC <- optim(fn=func_penloglik,  par=guess, lower=c(0,0,0.01, 0,0.01), 
                     upper = c(Inf,Inf,1,1,1), 
                     method = "L-BFGS-B", 
                     parameters = parameters, test_prop=test_prop, 
                     pen.size=pen.size, penalties = penalties, dat_omic=dat_omic, hessian=T)
-pen.fit_BC
+exp.fit_BC
 
 
 
 # check the fit 
-func_loglik(pen.fit_BC$par, test_prop, dat_omic,parameters) 
-parameters[names(guess)] <- pen.fit_BC$par
+func_loglik(exp.fit_BC$par, test_prop, dat_omic,parameters) 
+parameters[names(guess)] <- exp.fit_BC$par
 
 
 #check total cases and compare to seroprevalence data 
@@ -289,4 +317,152 @@ ggplot(hosp_data, aes(x=date, y=hosp_admit))+
   geom_line(data=predict, aes(x=date, y=n), col="blue")+
   labs(x="", y="Predicted Hospital Admissions")+
   theme_light()
+
+########################################################################
+##### now ba2 ####
+########################################################################
+
+dat_full = readRDS("data/BC-dat.rds")
+tot_ba2_estimate = 1.26*1.15*0.13 # percent of BC infected in ba2
+
+forecasts_days <- 1 
+old_intro_date  = intro_date # Keep track of 'day 0'
+intro_date <-   ymd("2022-02-27") # cc made this a little earlier. 
+stop_date <- last(dat_full$date)
+
+dat_rem <- dat_full %>% filter(date >= intro_date &  date <= stop_date)
+# align 'day' to correct date, in order to continue counting on same scale as _simulation.R
+dat_rem$day <- as.numeric(intro_date - old_intro_date):(as.numeric(stop_date - old_intro_date))
+
+# eff_date <-   ymd("2021-12-31")
+
+#dat_rem <- filter(dat_full, date >= intro_date) %>% select(c("day", "value", "date"))
+dat_full$day <- 1:nrow(dat_full)
+
+plot(dat_rem$date, dat_rem$value)
+
+#now using Jessica's function to switch variants 
+
+rem_parameters  <- parameters
+
+times = dat_rem$day
+
+# Set the desired characteristics of the new mutant.
+# change booster rate etc as needed 
+# You can include any of the named elements of rem_parameters here
+params_newmutant = list("beta_m" = rem_parameters["beta_m"]*1.55,#1.11
+                        "gamma"=1/4,
+                        "sigma"=1, 
+                        "epsilon_m" = (1-0.4), # was (1-0.45) in pipps-simn
+                        "c_m" = rem_parameters["c_m"]*1,#BA.2's protection against itself higher than BA.1's?
+                        "c_mr" = rem_parameters["c_mr"]*1, # lowering this (wo other changes) slows it down. 
+                        "c_rm" = rem_parameters["c_rm"]*1,
+                        "w_m" =  rem_parameters["w_m"]*1,
+                        "b"=1/(0.4*365), # lower booster rate 
+                        "w_b" = 1/(0.5*365), # set booster waning to around booster rate 
+                        "beffr" = 0.75, 
+                        "beffm"=0.75,
+                        "vredb"=0.75
+)
+
+
+
+# Swap resident and mutant, then set up new mutant. 
+# This assumes that the new mutant 'arrives' with mut_prop% of current cases
+out_samp$date = out_samp$time + old_intro_date -1 
+out_samp = dplyr::filter(out_samp, date < intro_date)
+new_model <- swap_strains(out_old = out_samp, params_old = rem_parameters, 
+                          params_newmutant = params_newmutant, 
+                          mut_prop = 0.6, res_to_s_prop =  0.3)
+init_proj <- new_model$init_newm
+proj_parameters <- new_model$newm_parameters
+
+# Make projections
+#forecasts_days <- nrow(dat_rem)
+times <- dat_rem$day # Keep the same time count going
+proj_out <- as.data.frame(deSolve::ode(y=init_proj, time=times,func= sveirs,
+                                       parms=proj_parameters)) 
+#check growth rate 
+get_growth_rate(output= proj_out, startoffset = 20, duration = 7)
+
+# check booster
+#vv = get_vax(proj_out)
+# ggplot(vv, aes(x=time, y=boosted/N))+geom_line()
+
+
+# Simple plot of the projection
+proj_out <- proj_out %>% mutate(Total=last(test_prop)*proj_parameters[["p"]]*
+                                  proj_parameters[["sigma"]]*(proj_out$Er + proj_out$Erv + proj_out$Erw + 
+                                                                proj_out$Em + proj_out$Emv + proj_out$Emw), 
+                                Resident=last(test_prop)*proj_parameters[["p"]]*
+                                  proj_parameters[["sigma"]]*(proj_out$Er + proj_out$Erv + proj_out$Erw), 
+                                Mutant=last(test_prop)*proj_parameters[["p"]]*
+                                  proj_parameters[["sigma"]]*(proj_out$Em + proj_out$Emv + proj_out$Emw)) %>% 
+  mutate(date=seq.Date(ymd(intro_date),ymd(intro_date )-1+length(times), 1)) 
+
+#pivot_longer(proj_out, c(Total, Resident, Mutant), names_to = "Strain", values_to = "count") %>%
+ggplot(proj_out) + geom_line(aes( x=date, y=Resident), col="blue") + 
+  geom_line(aes( x=date, y=Mutant), col="red") +  geom_line(aes( x=date, y=Total), col="green") + 
+  geom_point(aes(x=dat_rem$date, y=dat_rem$value)) # this is really only useful for peak time
+
+# and what do we know about ba2 in BC? 
+# ww: peak approx 1/2 the ba1 peak, late april, trough in 
+# mid-June
+# serology with fudge - about 13-18% of BC got BA2. 
+# hosp and ww: it is approx 1/2 the peak height of BA1 
+
+# add plot showing BA1 so we can compare
+incba1 = dplyr::filter(incdf, date < intro_date+2) %>% dplyr::select(date, inc_tot) 
+incba2 = proj_out[3:nrow(proj_out),] %>% dplyr::select(date, Total) %>% rename(inc_tot = Total) %>% 
+  mutate(inc_tot = inc_tot / last(test_prop))
+ggplot(rbind(incba1, incba2), aes(x=date, y=inc_tot))+geom_line()+ 
+  scale_x_date(date_breaks = "months", date_labels = "%b-%d")
+
+
+# 
+infected =get_total_infection(proj_out, from_date = ymd("2022-03-16"), 
+                              to_date = ymd("2022-05-15"), 
+                              parameters=proj_parameters)
+infected/N # 
+
+
+
+
+# -- Hospitalizations -------------
+source("analysis-new/hosp-data.R")
+hospdat <- get_hosp_data(intro_date, stop_date)
+# IHR <- get_IHR()*1.1 # account for reporting change...
+
+proj_out <- proj_out %>% 
+  mutate(incid=proj_parameters[["sigma"]]*
+           (Er + Erv + Erw + Em + Emv + Emw), 
+         prev = Ir + Irv + Irw + Im + Imv + Imw) %>% 
+  mutate(hosp = lag(incid,6)*IHR) %>%  
+  mutate(date=seq.Date(ymd(intro_date),ymd(intro_date )-1+length(times), 1)) 
+
+ggplot(hospdat, aes(x=week_of, y=new/7))+ #weekly to daily
+  geom_point(size=2.5)+
+  geom_point(col="grey")+
+  geom_line(data=proj_out, aes(x=date, y=hosp), col="darkblue", size=1.5)+
+  labs(x="Date", y="Predicted Hospital Admissions")+
+  theme_light()
+
+
+# --- check against census numbers (/8) ---- # 
+hosp_data <- get_can_covid_tracker_data("bc") %>%
+  mutate(date=as.Date(date)) %>%
+  dplyr::select("date", "total_hospitalizations") %>%
+  filter(date <= stop_date & date >= intro_date) %>%
+  rename(hosp_census = total_hospitalizations) %>%
+  mutate(hosp_admit = as.numeric(hosp_census)/8) # approx. based on av stay in hosp
+
+
+ggplot(hosp_data, aes(x=date, y=hosp_admit))+
+  geom_point(col="grey")+
+  geom_line(data=proj_out, aes(x=date, y=lag(hosp,8)), col="blue")+
+  labs(x="", y="Model compared to adjusted public census")+
+  theme_light()
+
+
+
 
