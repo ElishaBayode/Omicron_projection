@@ -28,16 +28,18 @@ project_HAs <- function(total_out, which_wave_match = 6, facets = FALSE){
   wave7 <- "2022-06-02"
   wave_cutoffs <- as.Date(c(wave0, wave1,wave2,wave3,   wave4,   wave5,wave6, wave7))
   #                                wuhan wuhan wuhan alpha/gamma delta  ba1   ba2
+  # Filter geo data to desired wave only:
+  gdat <- gdat %>% filter(Date>wave_cutoffs[which_wave_match] & Date<=wave_cutoffs[which_wave_match+1])
 
   
   ##---- What proportion of cases where in each HA over time?
-  gdat %<>% filter(HA!="All") %>% filter(HA!="Out of Canada") %>%
+  # 'complete' = fill in missing HA groups on each day with 0 cases
+  gdat %<>% filter(HA!="All") %>% filter(HA!="Out of Canada") %>% filter(HSDA=="All") %>% complete(Date, HA, fill = list(Cases_Reported = 0, Cases_Reported_Smoothed = 0)) %>%
     group_by(Date, HA) %>%
     summarise(n = sum( Cases_Reported_Smoothed)) %>%
     mutate(percentage = n / sum(n))
   gdat %<>% group_by(Date) %>% mutate(allHA_total = sum(n))
-  # Filter geo data to desired wave only:
-  gdat <- gdat %>% filter(Date>wave_cutoffs[which_wave_match] & Date<=wave_cutoffs[which_wave_match+1])
+
   
   
   ##---- Adjust length of proportions to match length of new wave, by fitting a spline for each HA and interpolating
@@ -79,7 +81,7 @@ project_HAs <- function(total_out, which_wave_match = 6, facets = FALSE){
 
 
 # 
-project_ages <- function(total_out, which_wave_match = 6, facets = FALSE){   # NOT COMPLETE!!!
+project_ages <- function(total_out, which_wave_match = 6, facets = FALSE){
   # total_out = time series of cases you want to divide by age group
   # which_wave_match = which past covid wave in BC do you want to match the projections to (1:7), 7 = ba.2
   
@@ -87,7 +89,7 @@ project_ages <- function(total_out, which_wave_match = 6, facets = FALSE){   # N
   adat <- read_csv("data/BCCDC_COVID19_Dashboard_Case_Details.csv") %>%
       count(Reported_Date, Age_Group) %>% filter(Age_Group!="Unknown")
   ggplot(adat, aes(x=Reported_Date, y=n), group = Age_Group) +
-      geom_line(aes(color=Age_Group)) #+ ylim(0, 750) + xlim(as.Date("2021-01-01"), as.Date("2021-05-29"))
+      geom_line(aes(color=Age_Group)) #+ ylim(0, 250) + xlim(as.Date("2021-07-01"), as.Date("2021-12-01"))
   
   
   ##---- Wave start/end cutoff dates
@@ -101,15 +103,18 @@ project_ages <- function(total_out, which_wave_match = 6, facets = FALSE){   # N
   wave7 <- "2022-06-02"
   wave_cutoffs <- as.Date(c(wave0, wave1,wave2,wave3,   wave4,   wave5,wave6, wave7))
   #                                wuhan wuhan wuhan alpha/gamma delta  ba1   ba2
+  # Filter age data to desired wave only:
+  adat <- adat %>% filter(Reported_Date>wave_cutoffs[which_wave_match] & Reported_Date<=wave_cutoffs[which_wave_match+1])
   
-  
+
   ##---- What proportion of cases where in each age group over time?
+  # First, fill in missing age groups on each day with 0 cases
+  adat <- complete(adat, Reported_Date, Age_Group, fill = list(n = 0))
   adat %<>% 
     group_by(Reported_Date)  %>%
     mutate(percentage = n / sum(n))
  adat %<>% group_by(Reported_Date) %>% mutate(allage_total = sum(n))
-  # Filter age data to desired wave only:
-  adat <- adat %>% filter(Reported_Date>wave_cutoffs[which_wave_match] & Reported_Date<=wave_cutoffs[which_wave_match+1])
+  
 
   
   ##---- Adjust length of proportions to match length of new wave, by fitting a spline for each age group and interpolating
