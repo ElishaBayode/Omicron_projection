@@ -210,10 +210,14 @@ ggplot(filter(alldf, date<maxdate), aes(x=date, y = sympinfect/50, fill=Scenario
   theme(legend.position = "bottom") + xlab("")
 
 # now make one with hospitalizations
-
-worstdf = worstdf %>% mutate(hosp = Total*IHR*2) # 2x increase
-mediumdf = mediumdf %>% mutate(hosp = Total*IHR) # no increase
-bestdf = bestdf %>% mutate(hosp = Total*IHR) # no increase
+# note - here i dropped the 6 day lag to admissoins, since the intro date is 
+# approximate anyway. 
+# but I *kept* the relative 8 day lag between admission and census. 
+# these lags are in the pipps_simulation file, where we compare to census-based approximate
+# admissions (14 day lag from incidence) and to data provided on actual admissions (6 day lag) 
+worstdf = worstdf %>% mutate(hosp = Total*IHR*2, census = lag(Total,8)*IHR*2*8) # 2x increase
+mediumdf = mediumdf %>% mutate(hosp = Total*IHR, census = lag(Total,8)*IHR*8) # no increase
+bestdf = bestdf %>% mutate(hosp = Total*IHR, census = lag(Total,8)*IHR*8) # no increase
 alldf  = rbind(bestdf, mediumdf, worstdf)
 
 ggplot(filter(alldf, date<maxdate), aes(x=date, y = hosp, fill=Scenario))+
@@ -222,17 +226,21 @@ ggplot(filter(alldf, date<maxdate), aes(x=date, y = hosp, fill=Scenario))+
                   fill=Scenario),  alpha=0.5)+
   theme(legend.position = "bottom") + xlab("")
 
+ggplot(filter(alldf, date<maxdate), aes(x=date, y = census, fill=Scenario))+
+  ylab("COVID- census hospitalizations") +
+  geom_ribbon(aes(x=date, ymin = 0.75*census, ymax=1.25*census,
+                  fill=Scenario),  alpha=0.5)+
+  theme(legend.position = "bottom") + xlab("")
 
 # Split projected cases across age groups and HAs ------------
 source("analysis-new/functions_splittingwaves.R")
 # 'which_wave_match' tells these functions whether to make a 'delta-like' wave, a 'ba.1-like wave' and so on
 #                                                               - you can currently provide any wave 1:7 (7 = ba.2)
 worst.HAs <- project_HAs(total_out = worstdf[worstdf$date<=maxdate,], 
-                         which_wave_match = 5, facets = TRUE)
+                         which_wave_match = 6, facets = TRUE)
 medium.HAs <-project_HAs(total_out = mediumdf[mediumdf$date<=maxdate,],
                          which_wave_match = 5, facets = TRUE)
-best.HAs <-project_HAs(total_out = bestdf[bestdf$date<=maxdate,], 
-                       which_wave_match = 5, facets = TRUE)
+best.HAs <-project_HAs(total_out = bestdf[bestdf$date<=maxdate,], which_wave_match = 6)
 worst.HAs$plot
 medium.HAs$plot
 best.HAs$plot

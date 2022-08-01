@@ -13,6 +13,8 @@ citf_bc = data.frame(date = c(ymd("2021-12-22"),ymd("2022-01-16"), ymd("2022-02-
                               ymd("2022-04-15"), ymd("2022-05-15")), 
                      cumulperc = c(5.83, 11.82, 25.52, 32.09, 35.01, 45.43)) 
 #ba2 wave in BC is mid-march to late may. see notes in pipps_projection
+# NOTE THIS NEEDS TO BE MODIFIED - use october probably, and 9% ? won't make a huge 
+# difference but ascprop2021 will go down i think from about 0.56 to about 1/2.45
 sum(filter(dat, date< ymd("2021-12-22"))$cases)/N # number reported 
 ascprop2021 = (sum(filter(dat, date< ymd("2021-12-22"))$cases)/N )/ (0.08) # reported cases / approx serology
 #resize data to include Omicron wave only---stopping in March to
