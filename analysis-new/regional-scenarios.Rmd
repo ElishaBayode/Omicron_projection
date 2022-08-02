@@ -1,0 +1,396 @@
+---
+title: "Regional Scenarios"
+author: ""
+date: "2022/07/28"
+output: html_document
+---
+
+```{r, Setup, message=FALSE, warning=FALSE,fig.width=12, fig.height=12}
+library(tidyverse)
+library(ggplot2)
+library(lubridate)
+library(reshape2)
+library(RColorBrewer)
+theme_set(theme_light(base_size = 18))
+
+# set up, colour palettes etc.
+age_lvls <- c("0-4","5-11","12-17","18-39","40-59","60-79","80+")
+ha_lvls <- c("Fraser", "Interior", "Vancouver Island", "Vancouver Coastal", "Northern")
+age_pal <- "YlOrRd"
+ha_pal <-c("Fraser"="#3B9AB2","Interior"="#78B7C5", "Vancouver Island"="#EBCC2A", "Vancouver Coastal"="#E1AF00", "Northern"="#F21A00")
+
+data_dir <- "../data/"
+
+```  
+## Vaccine Data
+
+Load in and look at vaccination data by age and HA (separately):
+  
+```{r,message=FALSE, warning=FALSE,fig.width=12, fig.height=12}
+# Vaccinations by HA
+vaxdat <- readr::read_csv(paste0(data_dir,"HA_cumulative_2022-07-07.csv")) %>%
+  mutate(date=mdy(date)) %>%
+  melt(id=c("date","age_group","region", "population")) %>%
+  dplyr::select(-c("age_group")) %>%
+  filter(!(grepl("total", variable)))  %>%
+  group_by(date=floor_date(date, "month"), region,variable) %>%
+  summarize(value=max(value)) 
+
+vaxdat$region <- factor(vaxdat$region, levels=ha_lvls)
+
+ggplot(vaxdat,aes(x=date, y=value, col=region))+
+  geom_line(size=2)+
+  facet_wrap(~variable)+
+  scale_color_manual(values=ha_pal)+
+  labs(x="", y="Vaccine Coverage", col="Health Authority")
+
+HApopdat <- readr::read_csv(paste0(data_dir,"HA_cumulative_2022-07-07.csv"))  %>%
+  group_by(region) %>%
+  summarize(population)
+HApopdat <- HApopdat[!duplicated(HApopdat),] # Note: not by age
+
+# Vaccinations by age
+vaxdat2 <- readr::read_csv(paste0(data_dir, "BC_cumulative_2022-07-07.csv")) %>%
+  mutate(age_group=case_when(age_group=="17-Dec"~"12-17", #miscoded 
+      age_group=="11-May"~"5-11",
+      TRUE ~ age_group)) %>%
+  mutate(date=mdy(date)) %>%
+  filter(age_group != "5+", age_group != "12+",age_group != "18+",
+    age_group != "50+",age_group != "All")  %>%
+  group_by(date=floor_date(date, "month"), age_group, dose_number) %>%
+  summarize(coverage=max(coverage))
+
+
+ggplot(vaxdat2, aes(x=date, y=coverage, col=age_group))+
+  geom_line(size=2)+
+  facet_wrap(~dose_number, labeller=label_both)+
+  scale_color_brewer(palette=age_pal)+
+  labs(x="", y="Vaccine Coverage", col="Age Group")
+
+```
+  
+## Case Data
+Load in and look at reported cases by age and HA (combined):
+  
+```{r,message=FALSE, warning=FALSE,fig.width=12, fig.height=12}
+  
+# Cases by age and HA (group by month)
+casedat <- readr::read_csv(paste0(data_dir, "BCCDC_COVID19_Dashboard_Case_Details.csv")) %>%
+  dplyr::select(date=Reported_Date,
+    age_group=Age_Group,
+    region=HA) %>%
+  mutate(date=ymd(date)) %>%
+  filter(region %in% ha_lvls) %>%
+  group_by(age_group, region, date) %>%
+  summarize(cases=n()) %>%
+  filter(age_group != "Unknown") %>%
+  group_by(date=floor_date(date, "month"), region, age_group) %>%
+  summarize(cases=sum(cases))
+
+casedat$region <- factor(casedat$region, levels=ha_lvls)
+
+ggplot(casedat,aes(x=date, y=cases, fill=age_group))+
+  geom_area()+
+  facet_wrap(~region, scales="free_y")+
+  scale_fill_brewer(palette=age_pal)+
+  labs(x="", y="Monthly Reported Cases")
+
+
+```
+
+## The fudging begins.
+
+We'll need to combine some age groups to get consistent data. Let's go with: 0-29 :( , 30-69, 70+.
+
+```{r,message=FALSE, fig.width=12, fig.height=12}
+
+
+vaxdat2 <- vaxdat2 %>%
+   mutate(age_group=case_when(
+    age_group %in% c("5-11","12-17", "18-29") ~ "0-29",
+    age_group == "70+" ~ "70+",
+    TRUE ~ "30-69")) %>%
+  group_by(age_group, date, dose_number) %>%
+  summarize(coverage=mean(coverage)) # average for now..should use demographics
+
+
+ggplot(vaxdat2, aes(x=date, y=coverage, col=age_group))+
+  geom_line(size=2)+
+  facet_wrap(~dose_number, labeller=label_both)+
+  scale_color_brewer(palette=age_pal)+
+  labs(x="", y="Vaccine Coverage", col="Age Group")
+
+
+
+casedat <- casedat %>%
+  mutate(age_group=case_when(
+    age_group %in% c("<10","10-19", "20-29") ~ "0-29",
+    age_group %in% c("70-79","80-89","90+") ~ "70+",
+    TRUE ~ "30-69")) %>%
+  group_by(age_group, date, region) %>%
+  summarize(cases=sum(cases))
+
+ggplot(casedat,aes(x=date, y=cases, fill=age_group))+
+  geom_area()+
+  facet_wrap(~region, scales="free_y")+
+  scale_fill_brewer(palette=age_pal)+
+  labs(x="", y="Monthly Reported Cases")
+
+
+```
+
+
+Get some age demographics. Assume same demographics for each HA...
+ 
+source: https://www12.statcan.gc.ca/census-recensement/2021/dp-pd/prof/details/page.cfm?Lang=E&SearchText=British%20Columbia&DGUIDlist=2021A000259&GENDERlist=1,2,3&STATISTIClist=1&HEADERlist=0
+```{r, message=FALSE, warning=FALSE, fig.width=12, fig.height=12}
+N <- 5000880
+BC_demo <- data.frame(
+  age_group=c("0-29", "30-69", "70+"),
+  p=c((716900+253690+294650+337090)/N,
+      (3267620-(253690+294650+337090)+319405)/N,
+      (1016365-319405)/N))
+HA_demo <- merge(BC_demo, HApopdat) %>%
+  mutate(population=p*population)
+```
+
+
+CC's clumsy ascertainment fractions, using the demographics from stats canada but with more current total population of BC, CITF serology data, BCCDC serology data and cases in daily rather than monthly groups.  
+
+```{r, message=FALSE} 
+casesbc <- readr::read_csv(paste0(data_dir, "BCCDC_COVID19_Dashboard_Case_Details.csv")) %>%
+  dplyr::select(date=Reported_Date,
+    age_group=Age_Group,
+    region=HA) %>%
+  mutate(date=ymd(date)) %>%
+  filter(region %in% ha_lvls) %>%
+  group_by(age_group, region, date) %>%
+  summarize(cases=n()) %>%
+  filter(age_group != "Unknown") %>%
+  group_by(date, region, age_group) %>%
+  summarize(cases=sum(cases)) %>%
+  mutate(age_group=case_when(
+    age_group %in% c("<10","10-19", "20-29") ~ "0-29",
+    age_group %in% c("70-79","80-89","90+") ~ "70+",
+    TRUE ~ "30-69")) %>%
+  group_by(age_group, date, region) %>%
+  summarize(cases=sum(cases))  %>% 
+  ungroup() %>% group_by(date, age_group) %>% 
+  summarise(cases = sum(cases))
+
+# pre-omicron
+preom = casesbc %>% filter(date< ymd("2021-10-01")) %>% group_by(age_group) %>% 
+  summarize(total = sum(cases)) %>% mutate(frac.reported = total/(BC_demo$p*5.07e6), frac.serology = c(0.1,0.09, 0.06)) %>% mutate(UAR = frac.serology/frac.reported,period="pre-omicron")
+
+# just after ba1
+ba1asc =  casesbc %>% filter(date< ymd("2022-03-30") & date >= ymd("2021-10-01")) %>% group_by(age_group) %>% 
+  summarize(total = sum(cases)) %>% mutate(frac.reported = total/(BC_demo$p*5.07e6), frac.serology = c(0.58,0.4, 0.14) - preom$frac.serology) %>% mutate(UAR = frac.serology/frac.reported,period="ba1")
+```
+
+Now we try to use CITF data for serology post-BA2. This is quite fudged because children and presumably the elderly don't donate blood, and CITF for March 2022 disagrees with BCCDC, with the BCCDC estimate at overall 43% of BC with infection, vs CITF at 32%. 
+
+We know that testing continued to change, because of the hospitalization and wastewater signals and the CITF serology numbers, so we can't just use reported cases. We could add a sanity check with reported cases in those over 70. 
+
+CITF gets BA2 taking BC from 32% to 45% March to May, reflecting an increase by 12% of the population. If this is underestimate by a factor of (43/32) (difference in March) then BC's adjusted May estimate would be 43+12(43/32)=59% (mid-May). We will have to invent how this was distributed across ages. In the CITF data the biggest increase was in those over 60, and somewhat smaller increases happened in the other groups. 
+
+
+```{r, message=FALSE} 
+ba2asc =  casesbc %>% filter(date< ymd("2022-05-15") & date >= ymd("2022-03-30")) %>% group_by(age_group) %>% 
+  summarize(total = sum(cases)) %>% mutate(frac.reported = total/(BC_demo$p*5.07e6), total.under.ba1 = total*ba1asc$UAR)
+sum(ba2asc$total.under.ba1)/N
+```
+
+If we assumed that the ascertainment stayed the same, only 2% of BC would have had BA2, but serology from CITF, wastewater, hospitalizations and cases in those over 70 suggest that the BA2 peak was about twice as high as the BA1 peak. I am therefore going to assume that the UAR in the over 70s remained nearly what it was under BA1 and choose the other two groups to match the serology. I set it so that 14% of BC got BA2. This is between the CITF 12% and what I would guess if I took that 12% and adjusted for the difference between BCCDC and CITF (a factor of 43/32, making it 16%). 
+
+```{r, message=FALSE} 
+ba2asc =  casesbc %>% filter(date< ymd("2022-05-15") & date >= ymd("2022-03-31")) %>% group_by(age_group) %>% 
+  summarize(total = sum(cases)) %>% mutate(frac.reported = total/(BC_demo$p*5.07e6), UAR=c(8,9,1.5)*ba1asc$UAR, period = "ba2") %>% mutate(frac.serology=UAR*total)
+ba2asc
+```
+
+Now we include these estimates of the UAR into the corrected cases. Before Dec 25, use pre-Omicron numbers. Use BA1 numbers until April 1, 2022, and BA2 numbers thereafter. 
+
+```{r, message=FALSE, fig.width=12, fig.height=12}
+casedat <- casedat %>%
+  mutate(corrCases=case_when(
+    date < ymd("2021-12-25") & age_group == "0-29" ~ cases*preom$UAR[1],
+    date < ymd("2021-12-25") & age_group == "30-69" ~ cases*preom$UAR[2],
+    date < ymd("2021-12-25") & age_group == "70+" ~ cases*preom$UAR[3],
+    date < ymd("2022-04-01") & date >= ymd("2021-12-25") & 
+      age_group == "0-29" ~ cases*ba1asc$UAR[1],
+    date < ymd("2022-04-01") & date >= ymd("2021-12-25") & 
+      age_group == "30-69" ~ cases*ba1asc$UAR[1],
+    date < ymd("2022-04-01")  & date >= ymd("2021-12-25")& 
+      age_group == "70+" ~ cases*ba1asc$UAR[1],
+    date >= ymd("2021-04-01") & age_group == "0-29" ~ cases*ba2asc$UAR[1],
+    date >= ymd("2021-04-01") & age_group == "30-69" ~ cases*ba2asc$UAR[2],
+    date >= ymd("2021-04-01") & age_group == "70+" ~ cases*ba2asc$UAR[3]))
+```
+
+
+
+
+
+```{r, message=FALSE, warning=FALSE, fig.width=12, fig.height=12}
+## add to case dat
+casedat <- casedat %>%
+  inner_join(HA_demo) %>%
+  mutate(perc_cases= corrCases/population)
+
+ggplot(casedat,aes(x=date, y=perc_cases, col=age_group))+
+  geom_line(size=1.5)+
+  facet_wrap(~region, scales="free_y")+
+  scale_colour_brewer(palette=age_pal)+
+  labs(x="", y="Monthly est infections as % of age group")  
+
+```
+
+OK, now estimate vaccination coverage by both age and HA. Assuming the provincial
+age trends hold across the province..
+  
+```{r, message=FALSE, warning=FALSE,fig.width=12, fig,height=12}
+
+vaxdat <- vaxdat %>%
+  mutate(dose_number=tidyr::extract_numeric(variable)) %>%
+  inner_join(vaxdat2) %>%
+  mutate(value=value/100, coverage=coverage/100) %>%
+  mutate(combined_coverage=coverage*value)
+
+ggplot(vaxdat, aes(x=date, y=combined_coverage, col=age_group))+
+  geom_line(size=2)+
+  facet_grid(region~dose_number, labeller=labeller(.cols=label_both))+
+  scale_color_brewer(palette=age_pal)+
+  labs(x="", y="Vaccine Coverage", col="Age Group")
+
+
+```
+# Building Immunity Profiles
+
+```{r, message=FALSE, fig.width=12, fig.height=12}
+# first get new vaccinations by age and HA
+vaxdat_diff <- vaxdat %>%
+  dplyr::select(date, region,age_group, variable, value=combined_coverage) %>%
+  group_by(variable,age_group,region) %>%
+  nest() %>%
+  mutate(value=map(data, function(x) {
+    data.frame(value=diff(x$value,1),
+      date=x$date[-1])})) %>%
+  unnest(value) %>%
+  dplyr::select(-c(data)) %>%
+  group_by(age_group,region) %>% 
+  tidyr::complete(variable, 
+      date=seq(min(vaxdat$date), max(vaxdat$date), by="month"),
+      fill=list(value=0)) %>% #add missing dose_4
+  filter(!(grepl("total", variable))) 
+
+
+vaxdat_diff$variable <- sub("_cumulative_coverage", "", vaxdat_diff$variable)
+
+ggplot(vaxdat_diff, aes(x=date, y=value, fill=variable))+
+  geom_col()+facet_grid(age_group~region)+
+  labs(x="", y="New vaccinations as % pop", fill="")+
+  theme(axis.text.x = element_text(angle =65,vjust=0.1))
+
+```
+Try to deal with overcounting. For each (n > 1)th dose, remove a (n-1)th dose that occured earlier in the data..
+
+```{r, message=FALSE, fig.width=12, fig.height=12}
+remove_early_doses <- function(dat){ 
+    ####################
+    newdat <- data.frame()
+    for (n in c(1,2,3)){
+      dat1 <- filter(dat, variable==paste0("dose_",n)) %>% arrange(date)
+      dat2 <- filter(dat, variable==paste0("dose_",n+1)) %>% arrange(date)
+      v1 <- dat1$value
+      s <- min(which(v1 > 0))
+      for (v2 in dat2$value){
+        if (v2 > 0) {
+          # start with oldest dose 1s to remove
+          v1[s] <- v1[s]-v2
+          # now bounce:
+          for (i in s:length(v1)){
+            if (v1[i] < 0) {
+              v1[i+1] <- v1[i+1] + v1[i]
+              v1[i] <- 0
+            }
+          }
+        }
+      }
+      dat1$value <- v1
+      # update
+      newdat <- rbind(newdat,dat1)
+    } 
+    newdat <- rbind(newdat, filter(dat, variable=="dose_4"))
+  return(newdat)
+  }
+
+
+```
+
+Add cases. Assume for this early time period that most infections were in the unvaccinated. Not sure how we will deal with this for later times though.
+
+```{r, message=FALSE, fig.width=12, fig.height=12}
+casedat <- casedat %>%
+  dplyr::select(age_group,date,region,value=perc_cases) %>%
+  mutate(variable="infections") 
+
+BA1_start_date <- ymd("2021-12-01")
+BA1_vax_dat <- vaxdat_diff %>%
+  filter(date <= BA1_start_date)%>%
+  group_by(age_group, region) %>%
+  nest() %>%
+  mutate(data=map(data, remove_early_doses))%>%
+  unnest(cols=c(data))
+
+immunity_dat_BA1 <- rbind(
+    filter(casedat, date <= BA1_start_date),
+    BA1_vax_dat)
+
+immunity_dat_BA1 %>%
+  filter(date >= ymd("2021-01-01")) %>%
+  ggplot(aes(x=date, y=value, fill=variable)) +
+  geom_col(position="dodge")+
+  facet_grid(age_group~region)+
+  labs(x="", y="% Population",fill="")+
+  theme(axis.text.x = element_text(angle=65,vjust=0.1))
+
+```
+# Regional immunity profiling model
+## start with pre-BA.1
+
+```{r, message=FALSE, warning=FALSE}
+
+w = 0.05 # waning fraction per month
+Vi_vax_0 = 0.9 # initial protection from vax
+Vi_pi_0 = 0.9 # initial protection from infection
+
+summ_immunity_BA1 <- immunity_dat_BA1 %>%
+  mutate(time = interval(date, ymd("2021-12-01")) %/% months(1)) %>% # changed to the actual date, not max(immunity_dat$date), since that is now
+  pivot_wider(names_from=variable, values_from=value) %>%
+  mutate(p_pi=infections, p_vax=dose_1+dose_2+dose_3+dose_4) # ignore 4th doses for now
+
+# sanity check 
+tmp = summ_immunity_BA1 %>% filter(age_group =="30-69", region == "Fraser") 
+sum(tmp$p_vax,na.rm = T)
+```
+ 
+ Sanity check fails. From the first plots we know that over 75% of FH was vaccined with at least 2 doses by then, and this should include anyone boosted, too. But i get only about 40%, which explains the low vis in the final output. 
+ 
+ 
+```{r, message=FALSE, warning=FALSE}
+
+summ_immunity_BA1 = summ_immunity_BA1 %>% mutate(Vi_vax=p_vax*Vi_vax_0*(1-w)^time,
+        Vi_pi=p_pi*Vi_pi_0*(1-w)^time) %>%
+  dplyr::select(c(region, age_group, Vi_vax, Vi_pi,dose_1, dose_2,dose_3)) %>%
+  group_by(region,age_group) %>%
+  summarize(Vi_pess= 1-(1-sum(Vi_vax, na.rm=TRUE))*(1-sum(Vi_pi, na.rm=TRUE)),
+    Vi_opt = min(1, sum(Vi_vax, na.rm=TRUE)+sum(Vi_pi, na.rm=TRUE)),
+    Vi = (Vi_pess+Vi_opt)/2)
+
+summ_immunity_BA1 %>%
+  knitr::kable()
+
+```
+
+
+
