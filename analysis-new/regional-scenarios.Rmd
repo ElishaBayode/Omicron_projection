@@ -222,9 +222,9 @@ casedat <- casedat %>%
       age_group == "30-69" ~ cases*ba1asc$UAR[1],
     date < ymd("2022-04-01")  & date >= ymd("2021-12-25")& 
       age_group == "70+" ~ cases*ba1asc$UAR[1],
-    date >= ymd("2021-04-01") & age_group == "0-29" ~ cases*ba2asc$UAR[1],
-    date >= ymd("2021-04-01") & age_group == "30-69" ~ cases*ba2asc$UAR[2],
-    date >= ymd("2021-04-01") & age_group == "70+" ~ cases*ba2asc$UAR[3]))
+    date >= ymd("2022-04-01") & age_group == "0-29" ~ cases*ba2asc$UAR[1],
+    date >= ymd("2022-04-01") & age_group == "30-69" ~ cases*ba2asc$UAR[2],
+    date >= ymd("2022-04-01") & age_group == "70+" ~ cases*ba2asc$UAR[3]))
 ```
 
 
@@ -361,8 +361,8 @@ immunity_dat_BA1 %>%
 ```{r, message=FALSE, warning=FALSE}
 
 w = 0.05 # waning fraction per month
-Vi_vax_0 = 0.9 # initial protection from vax
-Vi_pi_0 = 0.9 # initial protection from infection
+Vi_vax_0 = 0.8 # initial protection from vax
+Vi_pi_0 = 0.8 # initial protection from infection
 
 summ_immunity_BA1 <- immunity_dat_BA1 %>%
   mutate(time = interval(date, ymd("2021-12-01")) %/% months(1)) %>% # changed to the actual date, not max(immunity_dat$date), since that is now
