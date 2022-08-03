@@ -58,7 +58,7 @@ sveirs <- function(time, state, parameters) {
     dImv <- sigma*Emv - (gamma + mu)*Imv
     
     dRrv <-  gamma*Irv - (c_r*epsilon_r*lambda_r + c_mr*epsilon_m*lambda_m)*Rrv/N - (mu + w_r + b*ve)*Rrv + w_b*Rrw
-    dRmv <-  gamma*+ Imv - (c_rm*epsilon_r*lambda_r + c_m*epsilon_m*lambda_m)*Rmv/N - (mu + w_m + b*ve)*Rmv + w_b*Rmw
+    dRmv <-  gamma*Imv - (c_rm*epsilon_r*lambda_r + c_m*epsilon_m*lambda_m)*Rmv/N - (mu + w_m + b*ve)*Rmv + w_b*Rmw
     
     
     dW <-   b*ve*V + (w_r*Rrw + w_m*Rmw) - ((1-beffr)*lambda_r + (1-beffm)*lambda_m)*W/N -(mu+ w_b)*W
