@@ -128,16 +128,22 @@ casedat <- casedat %>%
 
 Get some age demographics. Assume same demographics for each HA...
  
-source: https://www12.statcan.gc.ca/census-recensement/2021/dp-pd/prof/details/page.cfm?Lang=E&SearchText=British%20Columbia&DGUIDlist=2021A000259&GENDERlist=1,2,3&STATISTIClist=1&HEADERlist=0
+source: https://bcstats.shinyapps.io/popApp/
 ```{r, message=FALSE, warning=FALSE, fig.width=12, fig.height=12}
 N <- 5000880
 BC_demo <- data.frame(
   age_group=c("0-29", "30-69", "70+"),
   p=c((716900+253690+294650+337090)/N,
       (3267620-(253690+294650+337090)+319405)/N,
-      (1016365-319405)/N))
-HA_demo <- merge(BC_demo, HApopdat) %>%
-  mutate(population=p*population)
+      (1016365-319405)/N)) # note: get rid of this now?
+
+HA_demo <- readr::read_csv(paste0(data_dir, "Population_Projections_HA.csv")) %>%
+  dplyr::select(region=`Health Authority`,
+    '0-29' = `0 to 29`, '30-69'=`30 to 69`,
+    '70+' = `70 to 90+`) %>%
+  melt(id="region") %>%
+  rename(age_group=variable, population=value)
+
 ```
 
 
