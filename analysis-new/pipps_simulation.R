@@ -180,7 +180,8 @@ get_growth_rate(out_samp, startoffset = 2, duration = 10)
 reportable = parameters[["p"]]*parameters[["sigma"]]*(out_samp$Er + out_samp$Erv + out_samp$Erw +
                                                         out_samp$Em + out_samp$Emv +
                                                         out_samp$Emw)
-incidence = test_prop*reportable #(length differs)
+# Fixed differing length by extending out test_prop into the forecasted days (1):
+incidence = c(test_prop, rep(last(test_prop), forecasts_days))*reportable 
 
 
 
@@ -260,7 +261,7 @@ ggplot(hospdat, aes(x=week_of, y=new/7))+#weekly to daily
   labs(x="Date", y="Predicted Hospital Admissions")+
   theme_light()
 
-# save.image(file = "simulationscript_out.Rdata")
+save.image(file = "simulationscript_out.Rdata")
 
 ########################
 # Nicola's ORIGINAL quick check with hosps

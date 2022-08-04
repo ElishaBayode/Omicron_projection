@@ -1,9 +1,8 @@
 
-####### Doing 'ba2' like projections for fall  - we project in March '22 under various scenarios and then shift the x-axis...
+####### Fall scenarios - we project in summer under various scenarios and then shift the x-axis to a hypothetical fall date
 
 # This script follows on directly from pipps_projection.r
 load("projectionscript_out.Rdata")
-
 
 
 # Adjust dates for projection
@@ -210,14 +209,15 @@ ggplot(filter(alldf, date<maxdate), aes(x=date, y = sympinfect/50, fill=Scenario
   theme(legend.position = "bottom") + xlab("")
 
 # now make one with hospitalizations
-# note - here i dropped the 6 day lag to admissoins, since the intro date is 
+# note - here i dropped the 6 day lag to admissions, since the intro date is 
 # approximate anyway. 
 # but I *kept* the relative 8 day lag between admission and census. 
 # these lags are in the pipps_simulation file, where we compare to census-based approximate
 # admissions (14 day lag from incidence) and to data provided on actual admissions (6 day lag) 
-worstdf = worstdf %>% mutate(hosp = Total*IHR*2, census = lag(Total,8)*IHR*2*8) # 2x increase
-mediumdf = mediumdf %>% mutate(hosp = Total*IHR, census = lag(Total,8)*IHR*8) # no increase
-bestdf = bestdf %>% mutate(hosp = Total*IHR, census = lag(Total,8)*IHR*8) # no increase
+# We use a 9 day average length of stay, as in the ba2 fits
+worstdf = worstdf %>% mutate(hosp = Total*IHR_BA2*2, census = lag(Total,8)*IHR_BA2*2*9) # 2x increase
+mediumdf = mediumdf %>% mutate(hosp = Total*IHR_BA2, census = lag(Total,8)*IHR_BA2*9) # no increase
+bestdf = bestdf %>% mutate(hosp = Total*IHR_BA2, census = lag(Total,8)*IHR_BA2*9) # no increase
 alldf  = rbind(bestdf, mediumdf, worstdf)
 
 ggplot(filter(alldf, date<maxdate), aes(x=date, y = hosp, fill=Scenario))+
@@ -232,15 +232,18 @@ ggplot(filter(alldf, date<maxdate), aes(x=date, y = census, fill=Scenario))+
                   fill=Scenario),  alpha=0.5)+
   theme(legend.position = "bottom") + xlab("")
 
+
+
 # Split projected cases across age groups and HAs ------------
 source("analysis-new/functions_splittingwaves.R")
 # 'which_wave_match' tells these functions whether to make a 'delta-like' wave, a 'ba.1-like wave' and so on
 #                                                               - you can currently provide any wave 1:7 (7 = ba.2)
 worst.HAs <- project_HAs(total_out = worstdf[worstdf$date<=maxdate,], 
-                         which_wave_match = 6, facets = TRUE)
+                         which_wave_match = 5, facets = TRUE)
 medium.HAs <-project_HAs(total_out = mediumdf[mediumdf$date<=maxdate,],
                          which_wave_match = 5, facets = TRUE)
-best.HAs <-project_HAs(total_out = bestdf[bestdf$date<=maxdate,], which_wave_match = 6)
+best.HAs <-project_HAs(total_out = bestdf[bestdf$date<=maxdate,], 
+                       which_wave_match = 5, facets = TRUE)
 worst.HAs$plot
 medium.HAs$plot
 best.HAs$plot
@@ -267,7 +270,7 @@ readr::write_csv(best.ages$df, file = "bestcase_byage.csv")
 
 
 # Plot of the projected  hospitalizations -------------
-IHRx = IHR*IHR_factor # see slack w nicola
+IHRx = IHR_BA2*IHR_factor # see slack w nicola
 
 fproj_out <- fproj_out %>% mutate(prev =Ir + Irv + Irw + Im + Imv +Imw) %>% mutate(hosp = Total*IHRx*(1e5/N))  # note per 100K hosp
 
