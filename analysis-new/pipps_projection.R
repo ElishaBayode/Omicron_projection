@@ -1,4 +1,4 @@
-#load("simulationscript_out.Rdata") - if you want to read in the saved output of simulation.R
+load("simulationscript_out.Rdata") # - if you want to read in the saved output of simulation.R
 
 #add dat to data for plotting 
 #here I match model output to the remaining data point (i.e. from March 31, 2022 onward)
@@ -12,7 +12,8 @@ dat_full = readRDS("data/BC-dat.rds")
 # f2 depends on efficacy of first infection, but probably a lot of people getting 
 # ba2 didn't get ba1. say f2 is about 1.15. 
 # then the total infections in the ba2 wave should be 
-tot_ba2_estimate = 1.26*1.15*0.13 # percent of BC infected in ba2
+tot_ba2_estimate = 1.26*1.15*0.13 # percent of BC infected in ba2 - 
+# interesting i'd put it at 14% now , not accounting for the reinfections 
 
 forecasts_days <- 1 
 old_intro_date  = intro_date # Keep track of 'day 0'
@@ -86,7 +87,8 @@ out_samp$date = out_samp$time + old_intro_date -1
 out_samp = dplyr::filter(out_samp, date < intro_date)
 new_model <- swap_strains(out_old = out_samp, params_old = rem_parameters, 
                           params_newmutant = params_newmutant, 
-                          mut_prop = 0.6, res_to_s_prop =  0.5)
+                          mut_prop = 0.4, res_to_s_prop =  0.9)
+# res to s may not matter much here? ... since so few people got delta (actually it does matter) 
 init_proj <- new_model$init_newm
 proj_parameters <- new_model$newm_parameters
 
@@ -150,7 +152,7 @@ proj_out <- proj_out %>%
   mutate(incid=proj_parameters[["sigma"]]*
            (Er + Erv + Erw + Em + Emv + Emw), 
          prev = Ir + Irv + Irw + Im + Imv + Imw) %>% 
-  mutate(hosp = lag(incid,6)*IHR) %>%  
+  mutate(hosp = lag(incid,0)*IHR*0.9) %>%  
   mutate(date=seq.Date(ymd(intro_date),ymd(intro_date )-1+length(times), 1)) 
 
 ggplot(hospdat, aes(x=week_of, y=new/7))+ #weekly to daily
@@ -161,7 +163,7 @@ ggplot(hospdat, aes(x=week_of, y=new/7))+ #weekly to daily
   theme_light()
 
 
-# --- check against census numbers (/8) ---- # 
+# --- check against census numbers (/8) ---- # # NOTE FIX LAG
 hosp_data <- get_can_covid_tracker_data("bc") %>%
   mutate(date=as.Date(date)) %>%
   dplyr::select("date", "total_hospitalizations") %>%

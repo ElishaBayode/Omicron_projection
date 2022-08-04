@@ -12,11 +12,13 @@ dat = readRDS("data/BC-dat.rds")
 citf_bc = data.frame(date = c(ymd("2021-12-22"),ymd("2022-01-16"), ymd("2022-02-14"), ymd("2022-03-16"), 
                               ymd("2022-04-15"), ymd("2022-05-15")), 
                      cumulperc = c(5.83, 11.82, 25.52, 32.09, 35.01, 45.43)) 
+N=5.07e6
 #ba2 wave in BC is mid-march to late may. see notes in pipps_projection
 # NOTE THIS NEEDS TO BE MODIFIED - use october probably, and 9% ? won't make a huge 
 # difference but ascprop2021 will go down i think from about 0.56 to about 1/2.45
-sum(filter(dat, date< ymd("2021-12-22"))$cases)/N # number reported 
-ascprop2021 = (sum(filter(dat, date< ymd("2021-12-22"))$cases)/N )/ (0.08) # reported cases / approx serology
+frac.report.end.sept = sum(filter(dat, date< ymd("2021-09-30"))$cases)/N # number reported by sept 30. Danuta: 9% infection sept/oct
+ascprop2021 =frac.report.end.sept/ (0.09)
+# reported cases / approx serology using Danuta's info
 #resize data to include Omicron wave only---stopping in March to
 #enable sensible comparison between model output and seroprevalence data
 
@@ -39,12 +41,14 @@ dat_omic$day <- 1:nrow(dat_omic)
 
 #test prop goes down to 0.33 during the Omicron wave 
 x=intro_date+1:nrow(dat_omic)
-tptest = 1 -0.9/(1+exp(-0.2*as.numeric((x - ymd("2021-12-20")))))
+tptest = 1 -0.85/(1+exp(-0.2*as.numeric((x - ymd("2021-12-20")))))
 # tptest = tptest - (0.97-0.67)/(1+exp(-0.2*as.numeric((x - ymd("2022-03-01")))))
 plot(x,tptest)
 test_prop= tptest
 plot(x,test_prop)
-
+# guessing end of test_prop: overall asc in BA1 was (60205+91196+16738) = 168139. 
+# estimated about 34% of the province gets ba1. 
+# ba1.frac = 168139/(0.34*N) should be the tail end of testprop* ascertainment fract
 
 ########## Parameters setup 
 #set values to generate initial conditions with make_init()
@@ -71,8 +75,8 @@ parameters <-         c(sigma=1/1, # incubation period (days)
                         gamma=1/4, #recovery rate 
                         nu =0.007, #vax rate: 0.7% per day 
                         mu=1/(82*365), # 1/life expectancy 
-                        w_m= 1/(0.62*365),# waning rate from R to S 
-                        w_r= 1/(0.62*365),
+                        w_m= 1/(0.72*365),# waning rate from R to S 
+                        w_r= 1/(0.72*365),
                         w_b= 1/(0.5*365), # waning rate from Rv to V 
                         ve=1, # I think this should be 1. it is not really efficacy  
                         beta_r=0.7, #transmission rate 
@@ -135,7 +139,7 @@ ggplot(data =inctest, aes(x=date, y = inc_reported))+geom_line() +
 known_prop <- 0.5 # known the proportion of resident and new strain
 date_known_prop <- "2021-12-12" # what time was the proportion known? 
 # 2. growth advantage of mutant strain
-known_growth <- 0.2 # daily rise of omicron on dec 12 
+known_growth <- 0.15 # daily rise of omicron on dec 12 
 period_known_growth <- c("2021-12-05", "2021-12-15")
 penalties <- list(known_prop = known_prop, date_known_prop = date_known_prop, 
                   known_growth = known_growth, period_known_growth = period_known_growth)
@@ -146,7 +150,7 @@ pen.size <- 0.1
 
 # Guess starting parameters and fit the model 
 
-guess <- c( beta_m=1, beta_r=0.6, theta=0.1, stngcy=0.4)  # NOTE removed fitting p 
+guess <- c( beta_m=1, beta_r=0.6, theta=0.1, stngcy=0.1)  # NOTE removed fitting p 
 
 #guess <- c( beta_m=1, stngcy=0.4,beta_r=0.6, theta=0.1,beff=0.8) 
 
