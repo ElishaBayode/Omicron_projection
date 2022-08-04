@@ -74,7 +74,7 @@ Load in and look at reported cases by age and HA (combined):
   
 ```{r,message=FALSE, warning=FALSE,fig.width=12, fig.height=12}
   
-# Cases by age and HA (group by month)
+# Cases by age and HA 
 casedat <- readr::read_csv(paste0(data_dir, "BCCDC_COVID19_Dashboard_Case_Details.csv")) %>%
   dplyr::select(date=Reported_Date,
     age_group=Age_Group,
@@ -83,9 +83,9 @@ casedat <- readr::read_csv(paste0(data_dir, "BCCDC_COVID19_Dashboard_Case_Detail
   filter(region %in% ha_lvls) %>%
   group_by(age_group, region, date) %>%
   summarize(cases=n()) %>%
-  filter(age_group != "Unknown") %>%
-  group_by(date=floor_date(date, "month"), region, age_group) %>%
-  summarize(cases=sum(cases))
+  filter(age_group != "Unknown")# %>%
+ # group_by(date=floor_date(date, "month"), region, age_group) %>%
+ # summarize(cases=sum(cases))
 
 casedat$region <- factor(casedat$region, levels=ha_lvls)
 
@@ -241,6 +241,12 @@ ggplot(casedat,
 
 # save
 readr::write_csv(casedat, paste0(output_dir, "BC_infections_by_age_and_ha.csv"))
+
+
+# now group cases by month for immunity profiles
+casedat <- casedat %>%
+  group_by(date=floor_date(date, "month"), variable, region, age_group) %>%
+  summarize(value=sum(value))
 ```
 
 OK, now estimate vaccination coverage by both age and HA. Assuming the provincial
