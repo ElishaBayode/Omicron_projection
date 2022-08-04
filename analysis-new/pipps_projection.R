@@ -17,7 +17,7 @@ tot_ba2_estimate = 1.26*1.15*0.13 # percent of BC infected in ba2 -
 
 forecasts_days <- 1 
 old_intro_date  = intro_date # Keep track of 'day 0'
-intro_date <-   ymd("2022-02-27") # cc made this a little earlier. 
+intro_date <-   ymd("2022-02-22") # cc made this a little earlier. 
 stop_date <- last(dat_full$date)
 
 dat_rem <- dat_full %>% filter(date >= intro_date &  date <= stop_date)
@@ -146,13 +146,14 @@ infected/N #
 # -- Hospitalizations -------------
 source("analysis-new/hosp-data.R")
 hospdat <- get_hosp_data(intro_date, stop_date)
-# IHR <- get_IHR()*1.1 # account for reporting change...
 
+# Update IHR for ba.2:
+IHR_BA2 <- IHR*0.9
 proj_out <- proj_out %>% 
   mutate(incid=proj_parameters[["sigma"]]*
            (Er + Erv + Erw + Em + Emv + Emw), 
          prev = Ir + Irv + Irw + Im + Imv + Imw) %>% 
-  mutate(hosp = lag(incid,0)*IHR*0.9) %>%  
+  mutate(hosp = lag(incid,6)*IHR_BA2) %>%  
   mutate(date=seq.Date(ymd(intro_date),ymd(intro_date )-1+length(times), 1)) 
 
 ggplot(hospdat, aes(x=week_of, y=new/7))+ #weekly to daily
@@ -163,30 +164,21 @@ ggplot(hospdat, aes(x=week_of, y=new/7))+ #weekly to daily
   theme_light()
 
 
-# --- check against census numbers (/8) ---- # # NOTE FIX LAG
+# --- check against census numbers (/8) ---- # Now includes average 9 day stay + 8 day lag to admissions
 hosp_data <- get_can_covid_tracker_data("bc") %>%
   mutate(date=as.Date(date)) %>%
   dplyr::select("date", "total_hospitalizations") %>%
   filter(date <= stop_date & date >= intro_date) %>%
   rename(hosp_census = total_hospitalizations) %>%
-  mutate(hosp_admit = as.numeric(hosp_census)/8) # approx. based on av stay in hosp
+  mutate(hosp_admit = as.numeric(hosp_census)/9) # approx. based on av stay in hosp
 
 
+proj_out$hosp_clag <- lag(proj_out$hosp, 8)
 ggplot(hosp_data, aes(x=date, y=hosp_admit))+
   geom_point(col="grey")+
-  geom_line(data=proj_out, aes(x=date, y=hosp), col="blue")+
+  geom_line(data=proj_out, aes(x=date, y=hosp_clag), col="blue")+
   labs(x="", y="Model compared to adjusted public census")+
   theme_light()
-
-
-
-
-# -- Split cases across HAs ------------
-source("analysis-new/functions_splittingwaves.R")
-# 'which_wave_match' tells this function whether to make a 'delta-like' wave, a 'ba.1-like wave' and so on 
-#                                                               - you can currently provide any wave 1:7 (7 = ba.2)
-project_HAs(total_out = proj_out, which_wave_match = 6)
-
 
 
 save.image(file = "projectionscript_out.Rdata")
