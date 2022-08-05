@@ -211,9 +211,9 @@ casedat <- casedat %>%
     date < ymd("2022-04-01") & date >= ymd("2021-12-25") & 
       age_group == "0-29" ~ cases*ba1asc$UAR[1],
     date < ymd("2022-04-01") & date >= ymd("2021-12-25") & 
-      age_group == "30-69" ~ cases*ba1asc$UAR[1],
+      age_group == "30-69" ~ cases*ba1asc$UAR[2],
     date < ymd("2022-04-01")  & date >= ymd("2021-12-25")& 
-      age_group == "70+" ~ cases*ba1asc$UAR[1],
+      age_group == "70+" ~ cases*ba1asc$UAR[3],
     date >= ymd("2022-04-01") & age_group == "0-29" ~ cases*ba2asc$UAR[1],
     date >= ymd("2022-04-01") & age_group == "30-69" ~ cases*ba2asc$UAR[2],
     date >= ymd("2022-04-01") & age_group == "70+" ~ cases*ba2asc$UAR[3]))
