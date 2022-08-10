@@ -1,0 +1,420 @@
+---
+title: "Regional Scenarios by HA (new age bands)"
+author: ""
+date: "2022/07/28"
+output: html_document
+---
+
+```{r, Setup, message=FALSE, warning=FALSE,fig.width=12, fig.height=12}
+library(tidyverse)
+library(ggplot2)
+library(lubridate)
+library(reshape2)
+library(RColorBrewer)
+theme_set(theme_light(base_size = 18))
+
+# set up, colour palettes etc.
+age_lvls <- c("0-4","5-17","18-29", "30-39", "40-49", "50-59", "60-69","70+")
+ha_lvls <- c("Fraser", "Interior", "Vancouver Island", "Vancouver Coastal", "Northern")
+age_pal <- "YlOrRd"
+ha_pal <-c("Fraser"="#3B9AB2","Interior"="#78B7C5", "Vancouver Island"="#EBCC2A", "Vancouver Coastal"="#E1AF00", "Northern"="#F21A00")
+
+data_dir <- "../data/"
+output_dir <- "./"  # generate: infections by age and HA, immunity profiles by age and HA and wave
+```  
+## Vaccine Data
+
+Load in and look at vaccination data by age and HA (separately):
+
+```{r,message=FALSE, warning=FALSE,fig.width=12, fig.height=12}
+# Vaccinations by HA
+vaxdat <- readr::read_csv(paste0(data_dir,"31 July HA_cumulative_coverage_TB.csv")) %>%
+  mutate(date=dmy(date)) %>%
+  melt(id=c("date","age_group","HA_NAME")) %>%
+  filter(!(grepl("total", variable))) %>%
+  dplyr::rename(region=HA_NAME)# %>%
+  #group_by(date=floor_date(date, "month"), region,variable) %>%
+  #summarize(value=max(value))
+
+vaxdat$region <- factor(vaxdat$region, levels=ha_lvls)
+vaxdat$age_group <- factor(vaxdat$age_group, levels=age_lvls)
+ggplot(vaxdat,aes(x=date, y=value, col=age_group))+
+  geom_line(size=2)+
+  facet_grid(region~variable)+
+  scale_color_brewer(palette=age_pal)+
+  labs(x="", y="Vaccine Coverage", col="Age")
+
+
+```
+
+## Case Data
+Load in and look at reported cases by age and HA (combined):
+
+```{r,message=FALSE, warning=FALSE,fig.width=12, fig.height=12}
+
+# Cases by age and HA
+casedat <- readr::read_csv(paste0(data_dir, "5 Aug 2022_ha.csv")) %>%
+  dplyr::select(date=week,
+    age_group=age_group,
+    region=ha_name,
+    cases=ncases_week_grouped) %>%
+  mutate(date=dmy(date))
+
+casedat[grepl("70", casedat$age_group),]$age_group <- "70+"
+# %>%
+ # group_by(date=floor_date(date, "month"), region, age_group) %>%
+ # summarize(cases=sum(cases))
+
+casedat$region <- factor(casedat$region, levels=ha_lvls)
+casedat$age_group <- factor(casedat$age_group, levels=age_lvls)
+
+ggplot(casedat,aes(x=date, y=cases, fill=age_group))+
+  geom_area()+
+  facet_wrap(~region, scales="free_y")+
+  scale_fill_brewer(palette=age_pal)+
+  labs(x="", y="Monthly Reported Cases", fill="Age")
+
+
+```
+
+
+Get some age demographics. Assume same demographics for each HA...
+
+source: https://bcstats.shinyapps.io/popApp/
+```{r, message=FALSE, warning=FALSE, fig.width=12, fig.height=12}
+N <- 5000880
+BC_demo <- data.frame(
+  age_group=c("0-29", "30-69", "70+"),
+  p=c((716900+253690+294650+337090)/N,
+      (3267620-(253690+294650+337090)+319405)/N,
+      (1016365-319405)/N)) # note: get rid of this now?
+
+HA_demo <- readr::read_csv(paste0(data_dir, "Population_Projections_HA_allages.csv")) %>%
+  dplyr::rename(region='Health Authority') %>%
+  mutate(
+    '0-4'=`0`+`1`+`2`+`3`+`4`,
+    '5-17'=`5`+`6`+`7`+`8`+`9`+`10`+`11`+`12`+`13`+`14`+`15`+`16`+`17`,
+    '18-29'=`18`+`19`+`20`+`21`+`22`+`23`+`24`+`25`+`26`+`27`+`28`+`29`,
+    '30-39'=`30`+`31`+`32`+`33`+`34`+`35`+`36`+`37`+`38`+`39`,
+    '40-49'=`40`+`41`+`42`+`43`+`44`+`45`+`46`+`47`+`48`+`49`,
+    '50-59'=`50`+`51`+`52`+`53`+`54`+`55`+`56`+`57`+`58`+`59`,
+    '60-69'=`60`+`61`+`62`+`63`+`64`+`65`+`66`+`67`+`68`+`69`,
+    '70+'=`70`+`71`+`72`+`73`+`74`+`75`+`76`+`78`+`79`+
+      `80`+`81`+`82`+`83`+`84`+`85`+`86`+`87`+`88`+`89`+`90+`) %>%
+  dplyr::select_if(grepl("-", names(.)) | grepl("region", names(.))) %>%
+  melt(id="region") %>%
+  rename(age_group=variable, population=value)
+
+```
+## Serology
+
+CC's clumsy ascertainment fractions, using the demographics from stats canada but with more current total population of BC, CITF serology data, BCCDC serology data and cases in daily rather than monthly groups.  
+
+```{r, message=FALSE}
+casesbc <- readr::read_csv(paste0(data_dir, "BCCDC_COVID19_Dashboard_Case_Details.csv")) %>%
+  dplyr::select(date=Reported_Date,
+    age_group=Age_Group,
+    region=HA) %>%
+  mutate(date=ymd(date)) %>%
+  filter(region %in% ha_lvls) %>%
+  group_by(age_group, region, date) %>%
+  summarize(cases=n()) %>%
+  filter(age_group != "Unknown") %>%
+  group_by(date, region, age_group) %>%
+  summarize(cases=sum(cases)) %>%
+  mutate(age_group=case_when(
+    age_group %in% c("<10","10-19", "20-29") ~ "0-29",
+    age_group %in% c("70-79","80-89","90+") ~ "70+",
+    TRUE ~ "30-69")) %>%
+  group_by(age_group, date, region) %>%
+  summarize(cases=sum(cases))  %>%
+  ungroup() %>% group_by(date, age_group) %>%
+  summarise(cases = sum(cases))
+
+# pre-omicron
+preom = casesbc %>% filter(date< ymd("2021-10-01")) %>% group_by(age_group) %>%
+  summarize(total = sum(cases)) %>% mutate(frac.reported = total/(BC_demo$p*5.07e6), frac.serology = c(0.1,0.09, 0.06)) %>% mutate(UAR = frac.serology/frac.reported,period="pre-omicron")
+
+# just after ba1
+ba1asc =  casesbc %>% filter(date< ymd("2022-03-30") & date >= ymd("2021-10-01")) %>% group_by(age_group) %>%
+  summarize(total = sum(cases)) %>% mutate(frac.reported = total/(BC_demo$p*5.07e6), frac.serology = c(0.58,0.4, 0.14) - preom$frac.serology) %>% mutate(UAR = frac.serology/frac.reported,period="ba1")
+```
+
+Now we try to use CITF data for serology post-BA2. This is quite fudged because children and presumably the elderly don't donate blood, and CITF for March 2022 disagrees with BCCDC, with the BCCDC estimate at overall 43% of BC with infection, vs CITF at 32%.
+
+We know that testing continued to change, because of the hospitalization and wastewater signals and the CITF serology numbers, so we can't just use reported cases. We could add a sanity check with reported cases in those over 70.
+
+CITF gets BA2 taking BC from 32% to 45% March to May, reflecting an increase by 12% of the population. If this is underestimate by a factor of (43/32) (difference in March) then BC's adjusted May estimate would be 43+12(43/32)=59% (mid-May). We will have to invent how this was distributed across ages. In the CITF data the biggest increase was in those over 60, and somewhat smaller increases happened in the other groups.
+
+
+```{r, message=FALSE}
+ba2asc =  casesbc %>% filter(date< ymd("2022-05-15") & date >= ymd("2022-03-30")) %>% group_by(age_group) %>%
+  summarize(total = sum(cases)) %>% mutate(frac.reported = total/(BC_demo$p*5.07e6), total.under.ba1 = total*ba1asc$UAR)
+sum(ba2asc$total.under.ba1)/N
+```
+
+If we assumed that the ascertainment stayed the same, only 2% of BC would have had BA2, but serology from CITF, wastewater, hospitalizations and cases in those over 70 suggest that the BA2 peak was about half as high as the BA1 peak. I am therefore going to assume that the UAR in the over 70s remained nearly what it was under BA1 and choose the other two groups to match the serology. I set it so that 14% of BC got BA2. This is between the CITF 12% and what I would guess if I took that 12% and adjusted for the difference between BCCDC and CITF (a factor of 43/32, making it 16%).
+
+```{r, message=FALSE}
+ba2asc =  casesbc %>% filter(date< ymd("2022-05-15") & date >= ymd("2022-03-31")) %>% group_by(age_group) %>%
+  summarize(total = sum(cases)) %>% mutate(frac.reported = total/(BC_demo$p*5.07e6), UAR=c(8,9,1.5)*ba1asc$UAR, period = "ba2") %>% mutate(frac.serology=UAR*total)
+ba2asc
+```
+
+Now we include these estimates of the UAR into the corrected cases. Before Dec 25, use pre-Omicron numbers. Use BA1 numbers until April 1, 2022, and BA2 numbers thereafter.
+
+```{r, message=FALSE, fig.width=12, fig.height=12}
+
+casedat <- casedat %>%
+  mutate(corrCases=case_when(
+    date < ymd("2021-12-25") & age_group %in% c("0-5", "5-17", "18-29") ~ cases*preom$UAR[1],
+    date < ymd("2021-12-25") & age_group  %in% c("30-39","40-49", "50-59", "60-69") ~ cases*preom$UAR[2],
+    date < ymd("2021-12-25") & age_group == "70+" ~ cases*preom$UAR[3],
+    date < ymd("2022-04-01") & date >= ymd("2021-12-25") & age_group %in% c("0-5", "5-17", "18-29") ~ cases*ba1asc$UAR[1],
+    date < ymd("2022-04-01") & date >= ymd("2021-12-25") & age_group  %in% c("30-39","40-49", "50-59", "60-69") ~ cases*ba1asc$UAR[2],
+    date < ymd("2022-04-01")  & date >= ymd("2021-12-25")& age_group == "70+" ~ cases*ba1asc$UAR[3],
+    date >= ymd("2022-04-01") & age_group %in% c("0-5", "5-17", "18-29")  ~ cases*ba2asc$UAR[1],
+    date >= ymd("2022-04-01") & age_group  %in% c("30-39","40-49", "50-59", "60-69") ~ cases*ba2asc$UAR[2],
+    date >= ymd("2022-04-01") & age_group == "70+" ~ cases*ba2asc$UAR[3]))
+```
+Look at the corrected cases by age and output a csv:
+
+```{r, message=FALSE, warning=FALSE, fig.width=12, fig.height=12}
+## add demos to case dat
+casedat <- casedat %>%
+  inner_join(HA_demo) %>%
+  mutate(perc_cases= corrCases/population)
+
+# reformat
+casedat <- casedat %>%
+  dplyr::select(age_group,date,region,value=perc_cases) %>%
+  mutate(variable="infections")
+
+ggplot(casedat,
+  aes(x=date, y=value, col=age_group,fill=age_group))+
+  geom_col(size=1.5)+
+  facet_wrap(~region)+
+  scale_colour_brewer(palette=age_pal)+
+  scale_fill_brewer(palette=age_pal)+
+  labs(x="", y="Estimated Infections (% pop)", fill="Age", col="Age")
+
+# save
+readr::write_csv(casedat, paste0(output_dir, "BC_infections_by_age_and_ha.csv"))
+
+
+# now group cases by month for immunity profiles
+casedat <- casedat %>%
+  group_by(date=floor_date(date, "month"), variable, region, age_group) %>%
+  summarize(value=sum(value))
+```
+
+# Building Immunity Profiles
+
+```{r, message=FALSE, fig.width=12, fig.height=12}
+# first get new vaccinations by age and HA
+vaxdat_diff <- vaxdat %>%
+  dplyr::select(date, region,age_group, variable, value=combined_coverage) %>%
+  group_by(variable,age_group,region) %>%
+  nest() %>%
+  mutate(value=map(data, function(x) {
+    data.frame(value=diff(x$value,1),
+      date=x$date[-1])})) %>%
+  unnest(value) %>%
+  dplyr::select(-c(data)) %>%
+  group_by(age_group,region) %>%
+  tidyr::complete(variable,
+      date=seq(min(vaxdat$date), max(vaxdat$date), by="month"),
+      fill=list(value=0)) %>% #add missing dose_4
+  filter(!(grepl("total", variable)))
+
+
+vaxdat_diff$variable <- sub("_cumulative_coverage", "", vaxdat_diff$variable)
+
+ggplot(vaxdat_diff, aes(x=date, y=value, fill=variable))+
+  geom_col()+facet_grid(age_group~region)+
+  labs(x="", y="New vaccinations as % pop", fill="")+
+  theme(axis.text.x = element_text(angle =65,vjust=0.1))
+
+```
+Try to deal with overcounting. For each (n > 1)th dose, remove a (n-1)th dose that occurred earlier in the data..
+
+```{r, message=FALSE, fig.width=12, fig.height=12}
+remove_early_doses <- function(dat){
+    ####################
+    newdat <- data.frame()
+    for (n in c(1,2,3)){
+      dat1 <- filter(dat, variable==paste0("dose_",n)) %>% arrange(date)
+      dat2 <- filter(dat, variable==paste0("dose_",n+1)) %>% arrange(date)
+      v1 <- dat1$value
+      s <- min(which(v1 > 0))
+      for (v2 in dat2$value){
+        if (v2 > 0) {
+          # start with oldest dose 1s to remove
+          v1[s] <- v1[s]-v2
+          # now bounce:
+          for (i in s:length(v1)){
+            if (v1[i] < 0) {
+              v1[i+1] <- v1[i+1] + v1[i]
+              v1[i] <- 0
+            }
+          }
+        }
+      }
+      dat1$value <- v1
+      # update
+      newdat <- rbind(newdat,dat1)
+    }
+    newdat <- rbind(newdat, filter(dat, variable=="dose_4"))
+  return(newdat)
+  }
+
+
+```
+
+## Regional immunity profiling model
+
+```{r}
+# Model defn
+# start date means start of wave (so look at all
+# date up to that point)
+immunity_model <- function(vax_dat,case_dat,start_date){
+  # Model variables
+  w = 0.05 # waning fraction per month
+  Vi_vax_0 = 0.8 # initial protection from vax
+  Vi_pi_0 = 0.8 # initial protection from infection
+
+  # first remove over-counted vax doses
+  # note: important to do this after setting start_date
+  vax_dat <- vax_dat %>%
+    filter(date <= start_date)%>%
+    group_by(age_group, region) %>%
+    nest() %>%
+    mutate(data=map(data, remove_early_doses))%>%
+    unnest(cols=c(data))
+
+  # combine case dat
+  immunity_dat <- rbind(
+    filter(case_dat, date <= start_date),
+    vax_dat)
+
+  # calculate profiles
+  res <- immunity_dat %>%
+    mutate(time = interval(date, start_date) %/% months(1)) %>%
+    pivot_wider(names_from=variable, values_from=value) %>%
+    mutate(p_pi=infections, p_vax=dose_1+dose_2+dose_3+dose_4) %>%
+    mutate(Vi_vax=p_vax*Vi_vax_0*(1-w)^time,
+          Vi_pi=p_pi*Vi_pi_0*(1-w)^time) %>%
+    dplyr::select(c(region, age_group, Vi_vax, Vi_pi)) %>%
+    group_by(region,age_group) %>%
+    summarize(Vi_pess= 1-(1-sum(Vi_vax, na.rm=TRUE))*(1-sum(Vi_pi, na.rm=TRUE)),
+      Vi_opt = min(1, sum(Vi_vax, na.rm=TRUE)+sum(Vi_pi, na.rm=TRUE)),
+      Vi = (Vi_pess+Vi_opt)/2)
+
+  return(res)
+}
+
+```
+## pre-BA.1 immunity
+
+```{r, message=FALSE, warning=FALSE}
+BA1_start_date <- ymd("2021-12-01")
+summ_immunity_BA1 <- immunity_model(vaxdat_diff,casedat, BA1_start_date)
+
+# save
+readr::write_csv(summ_immunity_BA1, paste0(output_dir, "BC_protection_BA1.csv"))
+
+# look at results
+summ_immunity_BA1 %>%
+  knitr::kable()
+
+```
+## pre-BA.2 immunity
+
+```{r, message=FALSE}
+BA2_start_date <- ymd("2022-03-01")
+summ_immunity_BA2 <- immunity_model(vaxdat_diff,casedat, BA2_start_date)
+
+# save
+readr::write_csv(summ_immunity_BA2, paste0(output_dir, "BC_protection_BA2.csv"))
+
+summ_immunity_BA2 %>%
+  knitr::kable()
+
+```
+## pre-BA.5 immunity
+
+```{r, message=FALSE}
+BA5_start_date <- ymd("2022-06-01")
+summ_immunity_BA5 <- immunity_model(vaxdat_diff,casedat, BA5_start_date)
+
+# save
+readr::write_csv(summ_immunity_BA5, paste0(output_dir, "BC_protection_BA5.csv"))
+
+summ_immunity_BA5 %>%
+  knitr::kable()
+
+
+```
+
+# Contact Matrix
+We use the Canadian contact matrix estimated in [Prem et al.](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1005697#sec014) from POLYMOD data.
+
+This matrix has entries $\mu_{a,i}$, the total number of contacts an age-$a$ individual makes with an age-$i$ individual per day.
+```{r, message=FALSE}
+# Load in contact matrix for canada
+contact_df <- readr::read_csv(paste0(data_dir, "MUestimates_all_locations_CAN.csv"))
+contact_mat <- as.matrix(contact_df)
+rownames(contact_mat) <- colnames(contact_mat)
+
+heatmap(contact_mat, Rowv=NA, Colv=NA)
+
+```
+
+In an age-structured SIR model, we would have for each age group $a$,
+$$\frac{dS_a}{dt} = -\beta S_a \sum_{i} \mu_{a,i} \frac{I_i}{N_i}.$$
+i.e, the contact rate from age group $i$ to age group $a$ is
+$$\frac{\mu_{a,i}}{N_i}.$$
+So for new age groups $a_1=i+j$, $a_2=k+l$, we take
+$$\mu_{a_1,a_2} = \frac{p_i \left(\mu_{i,k}+\mu_{i,l}\right)+p_j \left(\mu_{j,k}+\mu_{j,l}\right)}{p_i+p_j},$$
+where $p_i$ is $N_i/N$. So note in particular that we need demographic data for the original age bands.
+
+```{r}
+# load pop data in 5yr bands
+HA_demo_by_fives <- readr::read_csv(paste0(data_dir, "Population_Projections_5yr_bands.csv"))
+# put into same bands as contact matrix
+HA_demo_by_fives <- HA_demo_by_fives %>%
+  filter(Gender=="T") %>%
+  mutate(`0 to 4` = LT1+`1 to 4`, `75+` = `75 to 79` + `80 to 84` + `85 to 89` + `90+`) %>%
+  dplyr::select(-c(Region,Year, Gender, LT1, `1 to 4`,`75 to 79`,`80 to 84`,`85 to 89`,`90+`)) %>%
+  group_by(`Health Authority`) %>%
+  mutate(across(where(is.numeric), ~ .x/Total))%>%
+  dplyr::select(-c(Total)) %>% rename(region=`Health Authority`)
+
+HA_demo_by_fives <- HA_demo_by_fives[, c('region', rownames(contact_mat))] # reorder to match
+
+breaks <- c(0, 6, 14, 16) # combine grps 1-6, 7-14, and 14-16
+names <- c('0-29', '30-69', '70+')
+for (ha in ha_lvls) {
+    nrow = length(breaks)-1
+    new_contact_mat <- matrix(0.0, ncol=nrow, nrow=nrow)
+    pop_dat <- filter(HA_demo_by_fives, region == ha) %>% ungroup() %>% dplyr::select(-c(region))
+    for (r in 1:nrow) {
+        start_r <- breaks[r]+1
+        end_r <- breaks[r+1]
+        for (c in 1:nrow) {
+            ss <- 0.0
+            start_c <- breaks[c]+1
+            end_c <- breaks[c+1]
+            for (i in start_r:end_r){# look over original matrix
+              ss <- ss + pop_dat[[i]]*(sum(contact_mat[i,start_c:end_c]))
+            }
+            new_contact_mat[r,c] <- ss/sum(pop_dat[start_r:end_r])         
+        }
+      # save
+      fname <- paste0("contactmat_newages_", ha, ".csv")
+      rownames(new_contact_mat) <- colnames(new_contact_mat) <- names
+      write.csv(new_contact_mat, paste0(output_dir, fname))
+   }
+}
+
+```
