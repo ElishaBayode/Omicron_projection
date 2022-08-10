@@ -1,5 +1,5 @@
 ---
-title: "Regional Scenarios by HA (new age bands)"
+title: "Regional Scenarios by HSDA (new age bands)"
 author: ""
 date: "2022/07/28"
 output: html_document
@@ -15,9 +15,7 @@ theme_set(theme_light(base_size = 18))
 
 # set up, colour palettes etc.
 age_lvls <- c("0-4","5-17","18-29", "30-39", "40-49", "50-59", "60-69","70+")
-ha_lvls <- c("Fraser", "Interior", "Vancouver Island", "Vancouver Coastal", "Northern")
 age_pal <- "YlOrRd"
-ha_pal <-c("Fraser"="#3B9AB2","Interior"="#78B7C5", "Vancouver Island"="#EBCC2A", "Vancouver Coastal"="#E1AF00", "Northern"="#F21A00")
 
 data_dir <- "../data/"
 output_dir <- "./"  # generate: infections by age and HA, immunity profiles by age and HA and wave
@@ -28,17 +26,17 @@ Load in and look at vaccination data by age and HA (separately):
 
 ```{r,message=FALSE, warning=FALSE,fig.width=12, fig.height=12}
 # Vaccinations by HA
-vaxdat <- readr::read_csv(paste0(data_dir,"31 July HA_cumulative_coverage_TB.csv")) %>%
+vaxdat <- readr::read_csv(paste0(data_dir,"31 July HSDA_cumulative_coverage_TB.csv")) %>%
   mutate(date=dmy(date)) %>%
-  melt(id=c("date","age_group","HA_NAME")) %>%
+  melt(id=c("date","age_group","HSDA_NAME")) %>%
   filter(!(grepl("total", variable))) %>%
-  dplyr::rename(region=HA_NAME)# %>%
+  dplyr::rename(region=HSDA_NAME)# %>%
   #group_by(date=floor_date(date, "month"), region,variable) %>%
   #summarize(value=max(value))
 
-vaxdat$region <- factor(vaxdat$region, levels=ha_lvls)
 vaxdat$age_group <- factor(vaxdat$age_group, levels=age_lvls)
-ggplot(vaxdat,aes(x=date, y=value, col=age_group))+
+ggplot(filter(vaxdat,region %in% c("Fraser East", "Okanagan", "Northeast")),
+  aes(x=date, y=value, col=age_group))+
   geom_line(size=2)+
   facet_grid(region~variable)+
   scale_color_brewer(palette=age_pal)+
@@ -53,10 +51,10 @@ Load in and look at reported cases by age and HA (combined):
 ```{r,message=FALSE, warning=FALSE,fig.width=12, fig.height=12}
 
 # Cases by age and HA
-casedat <- readr::read_csv(paste0(data_dir, "5 Aug 2022_ha.csv")) %>%
+casedat <- readr::read_csv(paste0(data_dir, "5 Aug 2022_hsda.csv")) %>%
   dplyr::select(date=week,
     age_group=age_group,
-    region=ha_name,
+    region=hsda_name,
     cases=ncases_week_grouped) %>%
   mutate(date=dmy(date))
 
@@ -65,7 +63,6 @@ casedat[grepl("70", casedat$age_group),]$age_group <- "70+"
  # group_by(date=floor_date(date, "month"), region, age_group) %>%
  # summarize(cases=sum(cases))
 
-casedat$region <- factor(casedat$region, levels=ha_lvls)
 casedat$age_group <- factor(casedat$age_group, levels=age_lvls)
 
 ggplot(casedat,aes(x=date, y=cases, fill=age_group))+
@@ -89,8 +86,8 @@ BC_demo <- data.frame(
       (3267620-(253690+294650+337090)+319405)/N,
       (1016365-319405)/N)) # note: get rid of this now?
 
-HA_demo <- readr::read_csv(paste0(data_dir, "Population_Projections_HA_allages.csv")) %>%
-  dplyr::rename(region='Health Authority') %>%
+HA_demo <- readr::read_csv(paste0(data_dir, "Population_Projections_HSDA_allages.csv")) %>%
+  dplyr::rename(region='Health Service Delivery Area') %>%
   mutate(
     '0-4'=`0`+`1`+`2`+`3`+`4`,
     '5-17'=`5`+`6`+`7`+`8`+`9`+`10`+`11`+`12`+`13`+`14`+`15`+`16`+`17`,
@@ -101,7 +98,7 @@ HA_demo <- readr::read_csv(paste0(data_dir, "Population_Projections_HA_allages.c
     '60-69'=`60`+`61`+`62`+`63`+`64`+`65`+`66`+`67`+`68`+`69`,
     '70+'=`70`+`71`+`72`+`73`+`74`+`75`+`76`+`78`+`79`+
       `80`+`81`+`82`+`83`+`84`+`85`+`86`+`87`+`88`+`89`+`90+`) %>%
-  dplyr::select_if(grepl("-", names(.)) |grepl("-", names(+))| grepl("region", names(.))) %>%
+  dplyr::select_if(grepl("-", names(.)) | grepl("+", names(.)) | grepl("region", names(.))) %>%
   melt(id="region") %>%
   rename(age_group=variable, population=value)
 
@@ -116,7 +113,7 @@ casesbc <- readr::read_csv(paste0(data_dir, "BCCDC_COVID19_Dashboard_Case_Detail
     age_group=Age_Group,
     region=HA) %>%
   mutate(date=ymd(date)) %>%
-  filter(region %in% ha_lvls) %>%
+  #filter(region %in% ha_lvls) %>%
   group_by(age_group, region, date) %>%
   summarize(cases=n()) %>%
   filter(age_group != "Unknown") %>%
