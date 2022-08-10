@@ -196,7 +196,7 @@ ggplot(casedat,
   labs(x="", y="Estimated Infections (% pop)", fill="Age", col="Age")
 
 # save
-readr::write_csv(casedat, paste0(output_dir, "BC_infections_by_age_and_ha.csv"))
+readr::write_csv(casedat, paste0(output_dir, "BC_infections_by_age_and_hsda.csv"))
 
 
 # now group cases by month for immunity profiles
@@ -350,68 +350,5 @@ readr::write_csv(summ_immunity_BA5, paste0(output_dir, "BC_protection_BA5.csv"))
 summ_immunity_BA5 %>%
   knitr::kable()
 
-
-```
-
-# Contact Matrix
-We use the Canadian contact matrix estimated in [Prem et al.](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1005697#sec014) from POLYMOD data.
-
-This matrix has entries $\mu_{a,i}$, the total number of contacts an age-$a$ individual makes with an age-$i$ individual per day.
-```{r, message=FALSE}
-# Load in contact matrix for canada
-contact_df <- readr::read_csv(paste0(data_dir, "MUestimates_all_locations_CAN.csv"))
-contact_mat <- as.matrix(contact_df)
-rownames(contact_mat) <- colnames(contact_mat)
-
-heatmap(contact_mat, Rowv=NA, Colv=NA)
-
-```
-
-In an age-structured SIR model, we would have for each age group $a$,
-$$\frac{dS_a}{dt} = -\beta S_a \sum_{i} \mu_{a,i} \frac{I_i}{N_i}.$$
-i.e, the contact rate from age group $i$ to age group $a$ is
-$$\frac{\mu_{a,i}}{N_i}.$$
-So for new age groups $a_1=i+j$, $a_2=k+l$, we take
-$$\mu_{a_1,a_2} = \frac{p_i \left(\mu_{i,k}+\mu_{i,l}\right)+p_j \left(\mu_{j,k}+\mu_{j,l}\right)}{p_i+p_j},$$
-where $p_i$ is $N_i/N$. So note in particular that we need demographic data for the original age bands.
-
-```{r}
-# load pop data in 5yr bands
-HA_demo_by_fives <- readr::read_csv(paste0(data_dir, "Population_Projections_5yr_bands.csv"))
-# put into same bands as contact matrix
-HA_demo_by_fives <- HA_demo_by_fives %>%
-  filter(Gender=="T") %>%
-  mutate(`0 to 4` = LT1+`1 to 4`, `75+` = `75 to 79` + `80 to 84` + `85 to 89` + `90+`) %>%
-  dplyr::select(-c(Region,Year, Gender, LT1, `1 to 4`,`75 to 79`,`80 to 84`,`85 to 89`,`90+`)) %>%
-  group_by(`Health Authority`) %>%
-  mutate(across(where(is.numeric), ~ .x/Total))%>%
-  dplyr::select(-c(Total)) %>% rename(region=`Health Authority`)
-
-HA_demo_by_fives <- HA_demo_by_fives[, c('region', rownames(contact_mat))] # reorder to match
-
-breaks <- c(0, 6, 14, 16) # combine grps 1-6, 7-14, and 14-16
-names <- c('0-29', '30-69', '70+')
-for (ha in ha_lvls) {
-    nrow = length(breaks)-1
-    new_contact_mat <- matrix(0.0, ncol=nrow, nrow=nrow)
-    pop_dat <- filter(HA_demo_by_fives, region == ha) %>% ungroup() %>% dplyr::select(-c(region))
-    for (r in 1:nrow) {
-        start_r <- breaks[r]+1
-        end_r <- breaks[r+1]
-        for (c in 1:nrow) {
-            ss <- 0.0
-            start_c <- breaks[c]+1
-            end_c <- breaks[c+1]
-            for (i in start_r:end_r){# look over original matrix
-              ss <- ss + pop_dat[[i]]*(sum(contact_mat[i,start_c:end_c]))
-            }
-            new_contact_mat[r,c] <- ss/sum(pop_dat[start_r:end_r])         
-        }
-      # save
-      fname <- paste0("contactmat_newages_", ha, ".csv")
-      rownames(new_contact_mat) <- colnames(new_contact_mat) <- names
-      write.csv(new_contact_mat, paste0(output_dir, fname))
-   }
-}
 
 ```
