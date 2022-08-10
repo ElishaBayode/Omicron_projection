@@ -253,7 +253,7 @@ casedat <- casedat %>%
 Same kind of output, but for hospitalizations, for help validating the regional model: 
 
 ```{r}
-agehosp <- readr::read_csv("data/all_hosps_byage1.csv") %>%
+agehosp <- readr::read_csv(paste0(data_dir, "all_hosps_byage1.csv")) %>%
   mutate(week_of = case_when(week >= 44 ~ ymd("2021-10-31")+7*(week-44),
                              week < 44 ~ ymd("2022-01-02") + 7*(week-1))) %>%
   mutate(age_group=case_when(
@@ -267,7 +267,29 @@ agehosp <- readr::read_csv("data/all_hosps_byage1.csv") %>%
 readr::write_csv(agehosp, paste0(output_dir, "bc-admissions-by-age.csv"))
 ```
 
+And again, now with the data that has both HA and age in it (the previous block only has BC-level data in it : 
 
+```{r}
+hdat <- readr::read_csv(paste0(data_dir, "5 Aug 2022_ha.csv")) %>%
+  dplyr::select(date=week,
+                age_group=age_group,
+                region=ha_name,
+                hosp=nhosps_week_grouped) %>%
+  mutate(date=ymd(date)) %>% 
+  mutate(age_group=case_when(
+    age_group %in% c("5-17","18-29") ~ "0-29",
+    age_group %in% c(">=70") ~ "70+",
+    TRUE ~ "30-69")) %>% group_by(date, age_group, region) %>% summarize(hosp = sum(hosp))
+
+glimpse(hdat)
+ggplot(hdat,aes(x=date, y=hosp, fill=age_group))+
+  geom_area()+
+  facet_wrap(~region, scales="free_y")+
+  scale_fill_brewer(palette=age_pal)+
+  labs(x="", y="Weekly admissions", fill="Age")
+
+write_csv(hdat, file = paste0(output_dir,"admission-age-ha-3bands.csv"))
+```
 
 
 OK, now estimate vaccination coverage by both age and HA. Assuming the provincial
