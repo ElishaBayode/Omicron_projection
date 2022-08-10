@@ -249,6 +249,27 @@ casedat <- casedat %>%
   summarize(value=sum(value))
 ```
 
+
+Same kind of output, but for hospitalizations, for help validating the regional model: 
+
+```{r}
+agehosp <- readr::read_csv("data/all_hosps_byage1.csv") %>%
+  mutate(week_of = case_when(week >= 44 ~ ymd("2021-10-31")+7*(week-44),
+                             week < 44 ~ ymd("2022-01-02") + 7*(week-1))) %>%
+  mutate(age_group=case_when(
+    age_group %in% c("<10","10-19", "20-29") ~ "0-29",
+    age_group %in% c("70-79","80-89","90+") ~ "70+",
+    TRUE ~ "30-69")) %>%
+  group_by(age_group,week_of) %>%
+  summarize(admissions=sum(new))
+
+# save
+readr::write_csv(agehosp, paste0(output_dir, "bc-admissions-by-age.csv"))
+```
+
+
+
+
 OK, now estimate vaccination coverage by both age and HA. Assuming the provincial
 age trends hold across the province..
   
