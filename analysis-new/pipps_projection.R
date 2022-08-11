@@ -127,11 +127,11 @@ ggplot(proj_out) + geom_line(aes( x=date, y=Resident), col="blue") +
 # hosp and ww: it is approx 1/2 the peak height of BA1 
 
 # add plot showing BA1 so we can compare
-incba1 = dplyr::filter(incdf, date < intro_date+2) %>% dplyr::select(date, inc_tot) 
-incba2 = proj_out[3:nrow(proj_out),] %>% dplyr::select(date, Total) %>% rename(inc_tot = Total) %>% 
-  mutate(inc_tot = inc_tot / last(test_prop))
-ggplot(rbind(incba1, incba2), aes(x=date, y=inc_tot))+geom_line()+ 
-  scale_x_date(date_breaks = "months", date_labels = "%b-%d")
+#incba1 = dplyr::filter(incdf, date < intro_date+2) %>% dplyr::select(date, inc_tot) 
+#incba2 = proj_out[3:nrow(proj_out),] %>% dplyr::select(date, Total) %>% rename(inc_tot = Total) %>% 
+#  mutate(inc_tot = inc_tot / last(test_prop))
+#ggplot(rbind(incba1, incba2), aes(x=date, y=inc_tot))+geom_line()+ 
+#  scale_x_date(date_breaks = "months", date_labels = "%b-%d")
 
 
 # 

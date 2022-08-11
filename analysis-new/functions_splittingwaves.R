@@ -30,7 +30,6 @@ project_HAs <- function(total_out, which_wave_match = 6, facets = FALSE){
   #                                wuhan wuhan wuhan alpha/gamma delta  ba1   ba2
   # Filter geo data to desired wave only:
   gdat <- gdat %>% filter(Date>wave_cutoffs[which_wave_match] & Date<=wave_cutoffs[which_wave_match+1])
-
   
   ##---- What proportion of cases where in each HA over time?
   # 'complete' = fill in missing HA groups on each day with 0 cases

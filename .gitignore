@@ -4,3 +4,8 @@
 .Ruserdata
 data/all_hosps_byage*
 data/all_cases_byage1*
+data/HA_cumulative_2022-07-07*
+data/BC_cumulative_2022-07-07*
+data/5 Aug 2022_ha*
+analysis-new/bc-admissions-by-age*
+analysis-new/BC_infections_by_age_and_ha*
