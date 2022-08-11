@@ -163,6 +163,11 @@ ggplot(hospdat, aes(x=week_of, y=new/7))+ #weekly to daily
   labs(x="Date", y="Predicted Hospital Admissions")+
   theme_light()
 
+ggplot(proj_out, aes(x=date, y = hosp))+
+  labs(x="Date", y="Predicted Hospital Admissions")+
+  geom_ribbon(aes(x=date, ymin = 0.75*hosp, ymax=1.25*hosp),  alpha=0.5, fill="springgreen4") + theme_minimal() +
+  geom_point(data=hospdat, aes(x=week_of, y=new/7), size=2.5) +ggtitle("BA.2 hospital admissions")
+
 
 # --- check against census numbers (/8) ---- # Now includes average 9 day stay + 8 day lag to admissions
 hosp_data <- get_can_covid_tracker_data("bc") %>%

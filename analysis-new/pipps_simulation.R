@@ -261,6 +261,12 @@ ggplot(hospdat, aes(x=week_of, y=new/7))+#weekly to daily
   labs(x="Date", y="Predicted Hospital Admissions")+
   theme_light()
 
+
+ggplot(predict_hosps, aes(x=date, y = hosp))+
+  labs(x="Date", y="Predicted Hospital Admissions")+
+  geom_ribbon(aes(x=date, ymin = 0.75*hosp, ymax=1.25*hosp),  alpha=0.5, fill="springgreen4") + theme_minimal() +
+  geom_point(data=hospdat, aes(x=week_of, y=new/7), size=2.5) +ggtitle("BA.1 hospital admissions")
+
 save.image(file = "simulationscript_out.Rdata")
 
 ########################
