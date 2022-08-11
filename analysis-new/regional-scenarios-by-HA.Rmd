@@ -101,7 +101,7 @@ HA_demo <- readr::read_csv(paste0(data_dir, "Population_Projections_HA_allages.c
     '60-69'=`60`+`61`+`62`+`63`+`64`+`65`+`66`+`67`+`68`+`69`,
     '70+'=`70`+`71`+`72`+`73`+`74`+`75`+`76`+`78`+`79`+
       `80`+`81`+`82`+`83`+`84`+`85`+`86`+`87`+`88`+`89`+`90+`) %>%
-  dplyr::select_if(grepl("-", names(.)) |grepl("-", names(+))| grepl("region", names(.))) %>%
+  dplyr::select_if(grepl("-", names(.)) |grepl("+", names(.))| grepl("region", names(.))) %>%
   melt(id="region") %>%
   rename(age_group=variable, population=value)
 
@@ -228,8 +228,6 @@ vaxdat_diff <- vaxdat %>%
   filter(!(grepl("total", variable)))
 
 
-vaxdat_diff$variable <- sub("_cumulative_coverage", "", vaxdat_diff$variable)
-
 ggplot(vaxdat_diff, aes(x=date, y=value, fill=variable))+
   geom_col()+facet_grid(age_group~region)+
   labs(x="", y="New vaccinations as % pop", fill="")+
@@ -246,13 +244,14 @@ remove_early_doses <- function(dat){
       dat1 <- filter(dat, variable==paste0("dose_",n)) %>% arrange(date)
       dat2 <- filter(dat, variable==paste0("dose_",n+1)) %>% arrange(date)
       v1 <- dat1$value
-      s <- min(which(v1 > 0))
       for (v2 in dat2$value){
         if (v2 > 0) {
+          s <- min(which(v1 >0))
           # start with oldest dose 1s to remove
+          # note: there will always be more d1's than d2's
           v1[s] <- v1[s]-v2
-          # now bounce:
-          for (i in s:length(v1)){
+          # now bounce:          
+          for (i in s:(length(v1)-1)){
             if (v1[i] < 0) {
               v1[i+1] <- v1[i+1] + v1[i]
               v1[i] <- 0
@@ -285,6 +284,7 @@ immunity_model <- function(vax_dat,case_dat,start_date){
 
   # first remove over-counted vax doses
   # note: important to do this after setting start_date
+  
   vax_dat <- vax_dat %>%
     filter(date <= start_date)%>%
     group_by(age_group, region) %>%

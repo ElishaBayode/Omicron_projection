@@ -225,7 +225,6 @@ vaxdat_diff <- vaxdat %>%
   filter(!(grepl("total", variable)))
 
 
-vaxdat_diff$variable <- sub("_cumulative_coverage", "", vaxdat_diff$variable)
 
 ggplot(vaxdat_diff, aes(x=date, y=value, fill=variable))+
   geom_col()+facet_grid(age_group~region)+
@@ -243,13 +242,14 @@ remove_early_doses <- function(dat){
       dat1 <- filter(dat, variable==paste0("dose_",n)) %>% arrange(date)
       dat2 <- filter(dat, variable==paste0("dose_",n+1)) %>% arrange(date)
       v1 <- dat1$value
-      s <- min(which(v1 > 0))
+     
       for (v2 in dat2$value){
         if (v2 > 0) {
+          s <- min(which(v1 > 0))
           # start with oldest dose 1s to remove
           v1[s] <- v1[s]-v2
           # now bounce:
-          for (i in s:length(v1)){
+          for (i in s:(length(v1)-1)){
             if (v1[i] < 0) {
               v1[i+1] <- v1[i+1] + v1[i]
               v1[i] <- 0
