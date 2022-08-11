@@ -210,7 +210,7 @@ casedat <- casedat %>%
 ```{r, message=FALSE, fig.width=12, fig.height=12}
 # first get new vaccinations by age and HA
 vaxdat_diff <- vaxdat %>%
-  dplyr::select(date, region,age_group, variable, value=combined_coverage) %>%
+  dplyr::select(date, region,age_group, variable, value) %>%
   group_by(variable,age_group,region) %>%
   nest() %>%
   mutate(value=map(data, function(x) {
