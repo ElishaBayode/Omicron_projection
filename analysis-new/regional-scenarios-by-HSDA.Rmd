@@ -27,7 +27,7 @@ Load in and look at vaccination data by age and HA (separately):
 ```{r,message=FALSE, warning=FALSE,fig.width=12, fig.height=12}
 # Vaccinations by HA
 vaxdat <- readr::read_csv(paste0(data_dir,"31 July HSDA_cumulative_coverage_TB.csv")) %>%
-  mutate(date=dmy(date)) %>%
+  mutate(date=ymd(date)) %>%
   melt(id=c("date","age_group","HSDA_NAME")) %>%
   filter(!(grepl("total", variable))) %>%
   dplyr::rename(region=HSDA_NAME)# %>%
@@ -51,12 +51,12 @@ Load in and look at reported cases by age and HA (combined):
 ```{r,message=FALSE, warning=FALSE,fig.width=12, fig.height=12}
 
 # Cases by age and HA
-casedat <- readr::read_csv(paste0(data_dir, "5 Aug 2022_hsda.csv")) %>%
+casedat <- readr::read_csv(paste0(data_dir, "11 Aug 2022_hsda.csv")) %>%
   dplyr::select(date=week,
     age_group=age_group,
     region=hsda_name,
     cases=ncases_week_grouped) %>%
-  mutate(date=dmy(date))
+  mutate(date=ymd(date))
 
 casedat[grepl("70", casedat$age_group),]$age_group <- "70+"
 # %>%
@@ -88,7 +88,8 @@ BC_demo <- data.frame(
 
 HA_demo <- readr::read_csv(paste0(data_dir, "Population_Projections_HSDA_allages.csv")) %>%
   dplyr::rename(region='Health Service Delivery Area') %>%
-  mutate(
+   group_by(region) %>%
+   summarize(
     '0-4'=`0`+`1`+`2`+`3`+`4`,
     '5-17'=`5`+`6`+`7`+`8`+`9`+`10`+`11`+`12`+`13`+`14`+`15`+`16`+`17`,
     '18-29'=`18`+`19`+`20`+`21`+`22`+`23`+`24`+`25`+`26`+`27`+`28`+`29`,
@@ -98,7 +99,6 @@ HA_demo <- readr::read_csv(paste0(data_dir, "Population_Projections_HSDA_allages
     '60-69'=`60`+`61`+`62`+`63`+`64`+`65`+`66`+`67`+`68`+`69`,
     '70+'=`70`+`71`+`72`+`73`+`74`+`75`+`76`+`78`+`79`+
       `80`+`81`+`82`+`83`+`84`+`85`+`86`+`87`+`88`+`89`+`90+`) %>%
-  dplyr::select_if(grepl("-", names(.)) | grepl("+", names(.)) | grepl("region", names(.))) %>%
   melt(id="region") %>%
   rename(age_group=variable, population=value)
 
