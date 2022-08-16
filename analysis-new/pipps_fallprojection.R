@@ -426,11 +426,19 @@ O_medium.HAs <-project_HAs(total_out = O_mediumdf[O_mediumdf$date<=maxdate,],
                          which_wave_match = 5, facets = TRUE)
 O_best.HAs <-project_HAs(total_out = O_bestdf[O_bestdf$date<=maxdate,], 
                        which_wave_match = 5, facets = TRUE)
+
 NO_worst.HAs$plot + ggtitle("Worst case")
 NO_medium.HAs$plot + ggtitle("Medium case")
 O_worst.HAs$plot + ggtitle("Worst case")
 O_medium.HAs$plot + ggtitle("Medium case")
 O_best.HAs$plot + ggtitle("Best case")
+
+NO_worst.HAs$hosp_plot + ggtitle("Worst case")
+NO_medium.HAs$hosp_plot + ggtitle("Medium case")
+O_worst.HAs$hosp_plot + ggtitle("Worst case")
+O_medium.HAs$hosp_plot + ggtitle("Medium case")
+O_best.HAs$hosp_plot + ggtitle("Best case")
+
 readr::write_csv(NO_worst.HAs$df, file = "NO_worstcase_byHA.csv")
 readr::write_csv(NO_medium.HAs$df, file = "NO_mediumcase_byHA.csv")
 readr::write_csv(O_worst.HAs$df, file = "O_worstcase_byHA.csv")
@@ -453,6 +461,13 @@ NO_medium.ages$plot + ggtitle("Medium case")
 O_worst.ages$plot + ggtitle("Worst case")
 O_medium.ages$plot + ggtitle("Medium case")
 O_best.ages$plot + ggtitle("Best case")
+
+NO_worst.ages$hosp_plot + ggtitle("Worst case")
+NO_medium.ages$hosp_plot + ggtitle("Medium case")
+O_worst.ages$hosp_plot + ggtitle("Worst case")
+O_medium.ages$hosp_plot + ggtitle("Medium case")
+O_best.ages$hosp_plot + ggtitle("Best case")
+
 readr::write_csv(NO_worst.ages$df, file = "NO_worstcase_byage.csv")
 readr::write_csv(NO_medium.ages$df, file = "NO_mediumcase_byage.csv")
 readr::write_csv(O_worst.ages$df, file = "O_worstcase_byage.csv")
