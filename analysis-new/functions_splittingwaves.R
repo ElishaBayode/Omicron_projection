@@ -46,23 +46,24 @@ project_HAs <- function(total_out, which_wave_match = 6, facets = FALSE){
   spline.HAs <- lapply(split.dfs, function (x) spline(x$Date, x$percentage, n = nrow(total_out)))
     
   
-  ##---- Multiply HA proportions by total cases
-  total_out$Total.Fraser <- total_out$Total*spline.HAs$Fraser$y
-  total_out$Total.Coastal <- total_out$Total*spline.HAs$`Vancouver Coastal`$y
-  total_out$Total.Island <- total_out$Total*spline.HAs$`Vancouver Island`$y
-  total_out$Total.Interior <- total_out$Total*spline.HAs$Interior$y
-  total_out$Total.Northern <- total_out$Total*spline.HAs$Northern$y
+  ##---- Multiply HA proportions by sympinfect cases
+  total_out$sympinfect.Fraser <- total_out$sympinfect*spline.HAs$Fraser$y
+  total_out$sympinfect.Coastal <- total_out$sympinfect*spline.HAs$`Vancouver Coastal`$y
+  total_out$sympinfect.Island <- total_out$sympinfect*spline.HAs$`Vancouver Island`$y
+  total_out$sympinfect.Interior <- total_out$sympinfect*spline.HAs$Interior$y
+  total_out$sympinfect.Northern <- total_out$sympinfect*spline.HAs$Northern$y
   
   
   ##---- Plot
-  HAs <- c("Total.Coastal", "Total.Fraser", "Total.Interior", "Total.Northern", "Total.Island")
-  out_plot <- pivot_longer(total_out, c(Total,HAs), names_to = "HA", values_to = "count") %>%
-    ggplot(aes(x=date, y=count, colour=HA)) + geom_line() + ylab("Incident cases") + xlab("Date") + theme_minimal() +  
+  HAs <- c("sympinfect.Coastal", "sympinfect.Fraser", "sympinfect.Interior", "sympinfect.Northern", "sympinfect.Island")
+  out_plot <- pivot_longer(total_out, c(sympinfect,HAs), names_to = "HA", values_to = "count") %>%
+    ggplot(aes(x=date, y=count/50, colour=HA)) + geom_line() + ylab("Incidence (symptomatic infection per 100K)") + xlab("Date") + theme_minimal() +  
     scale_colour_discrete(labels = c("Total", "Coastal", "Fraser", "Interior", "Island", "Northern"))
   if (facets) {
-    out_plot <- pivot_longer(total_out, c(Total,HAs), names_to = "HA", values_to = "count") %>%
-      ggplot(aes(x=date, y=count, colour=HA)) + geom_line() + facet_wrap(~HA, scales = "free") + ylab("Incident cases") + xlab("Date") + theme_minimal() +  
-      scale_colour_discrete(labels = c("Total", "Coastal", "Fraser", "Interior", "Island", "Northern"))
+    out_plot <- pivot_longer(total_out, c(sympinfect,HAs), names_to = "HA", values_to = "count") %>%
+      ggplot(aes(x=date, y=count/50, colour=HA)) + geom_line() + facet_wrap(~HA, scales = "free") + ylab("Incidence (symptomatic infection per 100K)") + xlab("Date") + theme_minimal() +  
+      scale_colour_discrete(labels = c("Total", "Coastal", "Fraser", "Interior", "Island", "Northern")) + 
+      theme(strip.background = element_blank(),strip.text.x = element_blank())
   }
   return(list(df = total_out, plot = out_plot))
 }
@@ -122,28 +123,32 @@ project_ages <- function(total_out, which_wave_match = 6, facets = FALSE){
   
   
   ##---- Multiply age proportions by total cases
-  total_out$"Total.<10" <- total_out$Total*spline.ages$"<10"$y
-  total_out$"Total.10-19" <- total_out$Total*spline.ages$"10-19"$y
-  total_out$"Total.20-29" <- total_out$Total*spline.ages$"20-29"$y
-  total_out$"Total.30-39" <- total_out$Total*spline.ages$"30-39"$y
-  total_out$"Total.40-49" <- total_out$Total*spline.ages$"40-49"$y
-  total_out$"Total.50-59" <- total_out$Total*spline.ages$"50-59"$y
-  total_out$"Total.60-69" <- total_out$Total*spline.ages$"60-69"$y
-  total_out$"Total.70-79" <- total_out$Total*spline.ages$"70-79"$y
-  total_out$"Total.80-89" <- total_out$Total*spline.ages$"80-89"$y
-  total_out$"Total.90+" <- total_out$Total*spline.ages$"90+"$y
+  total_out$"sympinfect.<10" <- total_out$sympinfect*spline.ages$"<10"$y
+  total_out$"sympinfect.10-19" <- total_out$sympinfect*spline.ages$"10-19"$y
+  total_out$"sympinfect.20-29" <- total_out$sympinfect*spline.ages$"20-29"$y
+  total_out$"sympinfect.30-39" <- total_out$sympinfect*spline.ages$"30-39"$y
+  total_out$"sympinfect.40-49" <- total_out$sympinfect*spline.ages$"40-49"$y
+  total_out$"sympinfect.50-59" <- total_out$sympinfect*spline.ages$"50-59"$y
+  total_out$"sympinfect.60-69" <- total_out$sympinfect*spline.ages$"60-69"$y
+  total_out$"sympinfect.70-79" <- total_out$sympinfect*spline.ages$"70-79"$y
+  total_out$"sympinfect.80-89" <- total_out$sympinfect*spline.ages$"80-89"$y
+  total_out$"sympinfect.90+" <- total_out$sympinfect*spline.ages$"90+"$y
   
   
   ##---- Plot
-  Ages <- paste0("Total.", names(spline.ages))
-  out_plot <- pivot_longer(total_out, c(Total,Ages), names_to = "Ages", values_to = "count") %>%
-    ggplot(aes(x=date, y=count, colour=Ages)) + geom_line() + ylab("Incident cases") + xlab("Date") + theme_minimal() + labs(colour = "Age Group") +
+  Ages <- paste0("sympinfect.", names(spline.ages))
+  out_plot <- pivot_longer(total_out, c(sympinfect,Ages), names_to = "Ages", values_to = "count") %>%
+    ggplot(aes(x=date, y=count/50, colour=Ages)) + geom_line() + ylab("Incidence (symptomatic infection per 100K)") + xlab("Date") + 
+    theme_minimal() + labs(colour = "Age Group") +
     scale_colour_discrete(labels = c("Total", names(spline.ages)))
   if (facets) {
-    out_plot <- pivot_longer(total_out, c(Total,Ages), names_to = "Ages", values_to = "count") %>%
-      ggplot(aes(x=date, y=count, colour=Ages))+  geom_line() + facet_wrap(~Ages, scales = "free") + ylab("Incident cases") + xlab("Date") + theme_minimal() + labs(colour = "Age Group") +
-      scale_colour_discrete(labels = c("Total", names(spline.ages)))
+    out_plot <- pivot_longer(total_out, c(sympinfect,Ages), names_to = "Ages", values_to = "count") %>%
+      ggplot(aes(x=date, y=count/50, colour=Ages))+  geom_line() + facet_wrap(~Ages, scales = "free") + ylab("Incidence (symptomatic infection per 100K)") + xlab("Date") + theme_minimal() + 
+      labs(colour = "Age Group") +
+      scale_colour_discrete(labels = c("Total", names(spline.ages))) + 
+      theme(strip.background = element_blank(),strip.text.x = element_blank())
   }
+  
   
   return(list(df = total_out, plot = out_plot))
 }

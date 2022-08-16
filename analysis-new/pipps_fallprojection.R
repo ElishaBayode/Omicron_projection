@@ -387,31 +387,48 @@ ggplot(filter(alldf, date<maxdate), aes(x=date, y = census, fill=Scenario))+
 source("analysis-new/functions_splittingwaves.R")
 # 'which_wave_match' tells these functions whether to make a 'delta-like' wave, a 'ba.1-like wave' and so on
 #                                                               - you can currently provide any wave 1:7 (7 = ba.2)
-worst.HAs <- project_HAs(total_out = worstdf[worstdf$date<=maxdate,], 
+NO_worst.HAs <- project_HAs(total_out = NO_worstdf[NO_worstdf$date<=maxdate,], 
                          which_wave_match = 5, facets = TRUE)
-medium.HAs <-project_HAs(total_out = mediumdf[mediumdf$date<=maxdate,],
+NO_medium.HAs <-project_HAs(total_out = NO_mediumdf[NO_mediumdf$date<=maxdate,],
                          which_wave_match = 5, facets = TRUE)
-best.HAs <-project_HAs(total_out = bestdf[bestdf$date<=maxdate,], 
+O_worst.HAs <- project_HAs(total_out = O_worstdf[O_worstdf$date<=maxdate,], 
+                         which_wave_match = 5, facets = TRUE)
+O_medium.HAs <-project_HAs(total_out = O_mediumdf[O_mediumdf$date<=maxdate,],
+                         which_wave_match = 5, facets = TRUE)
+O_best.HAs <-project_HAs(total_out = O_bestdf[O_bestdf$date<=maxdate,], 
                        which_wave_match = 5, facets = TRUE)
-worst.HAs$plot
-medium.HAs$plot
-best.HAs$plot
-readr::write_csv(worst.HAs$df, file = "worstcase_byHA.csv")
-readr::write_csv(medium.HAs$df, file = "mediumcase_byHA.csv")
-readr::write_csv(best.HAs$df, file = "bestcase_byHA.csv")
+NO_worst.HAs$plot + ggtitle("Worst case")
+NO_medium.HAs$plot + ggtitle("Medium case")
+O_worst.HAs$plot + ggtitle("Worst case")
+O_medium.HAs$plot + ggtitle("Medium case")
+O_best.HAs$plot + ggtitle("Best case")
+readr::write_csv(NO_worst.HAs$df, file = "NO_worstcase_byHA.csv")
+readr::write_csv(NO_medium.HAs$df, file = "NO_mediumcase_byHA.csv")
+readr::write_csv(O_worst.HAs$df, file = "O_worstcase_byHA.csv")
+readr::write_csv(O_medium.HAs$df, file = "O_mediumcase_byHA.csv")
+readr::write_csv(O_best.HAs$df, file = "O_bestcase_byHA.csv")
 
-worst.ages <-project_ages(total_out = worstdf[worstdf$date<=maxdate,], 
-                          which_wave_match = 5, facets = TRUE)
-medium.ages <-project_ages(total_out = mediumdf[mediumdf$date<=maxdate,], 
+NO_worst.ages <- project_ages(total_out = NO_worstdf[NO_worstdf$date<=maxdate,], 
+                            which_wave_match = 5, facets = TRUE)
+NO_medium.ages <-project_ages(total_out = NO_mediumdf[NO_mediumdf$date<=maxdate,],
+                            which_wave_match = 5, facets = TRUE)
+O_worst.ages <- project_ages(total_out = O_worstdf[O_worstdf$date<=maxdate,], 
                            which_wave_match = 5, facets = TRUE)
-best.ages <-project_ages(total_out = bestdf[bestdf$date<=maxdate,], 
+O_medium.ages <-project_ages(total_out = O_mediumdf[O_mediumdf$date<=maxdate,],
+                           which_wave_match = 5, facets = TRUE)
+O_best.ages <-project_ages(total_out = O_bestdf[O_bestdf$date<=maxdate,], 
                          which_wave_match = 5, facets = TRUE)
-worst.ages$plot
-medium.ages$plot
-best.ages$plot
-readr::write_csv(worst.ages$df, file = "worstcase_byage.csv")
-readr::write_csv(medium.ages$df, file = "mediumcase_byage.csv")
-readr::write_csv(best.ages$df, file = "bestcase_byage.csv")
+
+NO_worst.ages$plot + ggtitle("Worst case")
+NO_medium.ages$plot + ggtitle("Medium case")
+O_worst.ages$plot + ggtitle("Worst case")
+O_medium.ages$plot + ggtitle("Medium case")
+O_best.ages$plot + ggtitle("Best case")
+readr::write_csv(NO_worst.ages$df, file = "NO_worstcase_byage.csv")
+readr::write_csv(NO_medium.ages$df, file = "NO_mediumcase_byage.csv")
+readr::write_csv(O_worst.ages$df, file = "O_worstcase_byage.csv")
+readr::write_csv(O_medium.ages$df, file = "O_mediumcase_byage.csv")
+readr::write_csv(O_best.ages$df, file = "O_bestcase_byage.csv")
 
 
 
