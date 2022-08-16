@@ -67,25 +67,8 @@ project_HAs <- function(total_out, which_wave_match = 6, facets = FALSE){
   }
   
   
-  ##---- Hosps plot
-  #  Multiply HA proportions by hosps
-  total_out$hosp.Fraser <- total_out$hosp*spline.HAs$Fraser$y
-  total_out$hosp.Coastal <- total_out$hosp*spline.HAs$`Vancouver Coastal`$y
-  total_out$hosp.Island <- total_out$hosp*spline.HAs$`Vancouver Island`$y
-  total_out$hosp.Interior <- total_out$hosp*spline.HAs$Interior$y
-  total_out$hosp.Northern <- total_out$hosp*spline.HAs$Northern$y
-  HAs <- c("hosp.Coastal", "hosp.Fraser", "hosp.Interior", "hosp.Northern", "hosp.Island")
-  hosp_plot <- pivot_longer(total_out, c(hosp,HAs), names_to = "HA", values_to = "count") %>%
-    ggplot(aes(x=date, y=count, colour=HA)) + geom_line() + ylab("COVID- all reported admissions") + xlab("Date") + theme_minimal() +  
-    scale_colour_discrete(labels = c("Total", "Coastal", "Fraser", "Interior", "Island", "Northern"))
-  if (facets) {
-    hosp_plot <- pivot_longer(total_out, c(hosp,HAs), names_to = "HA", values_to = "count") %>%
-      ggplot(aes(x=date, y=count, colour=HA)) + geom_line() + facet_wrap(~HA, scales = "free") + ylab("COVID- all reported admissions") + xlab("Date") + theme_minimal() +  
-      scale_colour_discrete(labels = c("Total", "Coastal", "Fraser", "Interior", "Island", "Northern")) + 
-      theme(strip.background = element_blank(),strip.text.x = element_blank())
-  }
   
-  return(list(df = total_out, plot = out_plot, hosp_plot = hosp_plot))
+  return(list(df = total_out, plot = out_plot))
 }
 
 
@@ -169,33 +152,9 @@ project_ages <- function(total_out, which_wave_match = 6, facets = FALSE){
       theme(strip.background = element_blank(),strip.text.x = element_blank())
   }
   
-  ##---- Plot
-  # Multiply age proportions by hosps
-  total_out$"hosp.<10" <- total_out$hosp*spline.ages$"<10"$y
-  total_out$"hosp.10-19" <- total_out$hosp*spline.ages$"10-19"$y
-  total_out$"hosp.20-29" <- total_out$hosp*spline.ages$"20-29"$y
-  total_out$"hosp.30-39" <- total_out$hosp*spline.ages$"30-39"$y
-  total_out$"hosp.40-49" <- total_out$hosp*spline.ages$"40-49"$y
-  total_out$"hosp.50-59" <- total_out$hosp*spline.ages$"50-59"$y
-  total_out$"hosp.60-69" <- total_out$hosp*spline.ages$"60-69"$y
-  total_out$"hosp.70-79" <- total_out$hosp*spline.ages$"70-79"$y
-  total_out$"hosp.80-89" <- total_out$hosp*spline.ages$"80-89"$y
-  total_out$"hosp.90+" <- total_out$hosp*spline.ages$"90+"$y
-  Ages <- paste0("hosp.", names(spline.ages))
-  hosp_plot <- pivot_longer(total_out, c(hosp,Ages), names_to = "Ages", values_to = "count") %>%
-    ggplot(aes(x=date, y=count, colour=Ages)) + geom_line() + ylab("COVID- all reported admissions") + xlab("Date") + 
-    theme_minimal() + labs(colour = "Age Group") +
-    scale_colour_discrete(labels = c("Total", names(spline.ages)))
-  if (facets) {
-    hosp_plot <- pivot_longer(total_out, c(hosp,Ages), names_to = "Ages", values_to = "count") %>%
-      ggplot(aes(x=date, y=count, colour=Ages))+  geom_line() + facet_wrap(~Ages, scales = "free") + 
-      ylab("COVID- all reported admissions") + xlab("Date") + theme_minimal() + 
-      labs(colour = "Age Group") +
-      scale_colour_discrete(labels = c("Total", names(spline.ages))) + 
-      theme(strip.background = element_blank(),strip.text.x = element_blank())
-  }
   
-  return(list(df = total_out, plot = out_plot, hosp_plot = hosp_plot))
+  
+  return(list(df = total_out, plot = out_plot))
 }
 
 
