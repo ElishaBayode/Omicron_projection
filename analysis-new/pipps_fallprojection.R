@@ -344,7 +344,36 @@ ggplot(filter(alldf, date<maxdate), aes(x=date, y = census, fill=Scenario))+
   xlab("")+  
   scale_x_continuous(breaks= c(as.Date("2022-10-01"),as.Date("2022-11-01"),as.Date("2022-12-01"),as.Date("2023-01-01"),as.Date("2023-02-01")), labels = c("Month 1","Month 2","Month 3","Month 4","Month 5"))
 
+# ---- new plot with annotation  ---- 
 
+# the worst case scenario hits unreasonable numbers at the start of month 2 (~1000 census)
+
+# strategy: use 2 dfs. 1 is like alldf but has no info for the worst case, 
+# where the blue exceeds a threshhold. 
+# the other (df2) has the blue exceeding but it's pale and grey
+# then there is an annot
+threshold = 1000
+datecrosses = NO_worstdf$date[ min(which(NO_worstdf$census > threshold))] 
+filtNO_worstdf = filter(NO_worstdf, date <= datecrosses)
+df1 = rbind(NO_mediumdf, filtNO_worstdf)
+df2 = filter(NO_worstdf, date > datecrosses-1) 
+
+ggplot(filter(df1, date<maxdate), aes(x=date, y = census, fill=Scenario))+
+  ylab("COVID- census hospitalizations") + geom_ribbon(aes(x=date, ymin = 0.75*census, ymax=1.25*census,
+                    fill=Scenario),  alpha=0.5) + theme_minimal() +
+  theme(legend.position = "bottom") + 
+  geom_ribbon(data = filter(df2, date< maxdate), 
+              inherit.aes = F,
+              aes(x=date, ymin = 0.75*census, ymax=pmin(4500, 1.25*census)), 
+              fill="grey", alpha=0.16) +
+  xlab("")+   annotate("text", x = as.Date("2022-11-15"), y = 2000, size = 6, 
+                       label = "Interventions prevent worst-case numbers", color="grey60")+
+  scale_x_continuous(breaks= c(as.Date("2022-10-01"),as.Date("2022-11-01"),as.Date("2022-12-01"),as.Date("2023-01-01"),as.Date("2023-02-01")), labels = c("Month 1","Month 2","Month 3","Month 4","Month 5"))
+
+  
+  
+
+# ----- end new plot with annotation ----
 
 
 # (ii) omicron scenarios
