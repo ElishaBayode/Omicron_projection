@@ -53,7 +53,8 @@ Load in and look at reported cases by age and HA (combined):
 ```{r,message=FALSE, warning=FALSE,fig.width=12, fig.height=12}
 
 # Cases by age and HA
-casedat <- readr::read_csv(paste0(data_dir, "11 Aug 2022_ha.csv")) %>%
+# casedat <- readr::read_csv(paste0(data_dir, "11 Aug 2022_ha.csv")) %>% # cc: i don't have this 
+casedat <- readr::read_csv(paste0(data_dir, "5 Aug 2022_ha.csv")) %>%
   dplyr::select(date=week,
     age_group=age_group,
     region=ha_name,
@@ -83,16 +84,11 @@ Get some age demographics. Assume same demographics for each HA...
 source: https://bcstats.shinyapps.io/popApp/
 ```{r, message=FALSE, warning=FALSE, fig.width=12, fig.height=12}
 N <- 5000880
-BC_demo <- data.frame(
-  age_group=c("0-29", "30-69", "70+"),
-  p=c((716900+253690+294650+337090)/N,
-      (3267620-(253690+294650+337090)+319405)/N,
-      (1016365-319405)/N)) # note: get rid of this now?
 
 HA_demo <- readr::read_csv(paste0(data_dir, "Population_Projections_HA_allages.csv")) %>%
   dplyr::rename(region='Health Authority') %>%
-  group_by(region) %>%
-  summarize(
+   group_by(region) %>%
+   summarize(
     '0-4'=`0`+`1`+`2`+`3`+`4`,
     '5-17'=`5`+`6`+`7`+`8`+`9`+`10`+`11`+`12`+`13`+`14`+`15`+`16`+`17`,
     '18-29'=`18`+`19`+`20`+`21`+`22`+`23`+`24`+`25`+`26`+`27`+`28`+`29`,
@@ -105,39 +101,66 @@ HA_demo <- readr::read_csv(paste0(data_dir, "Population_Projections_HA_allages.c
   melt(id="region") %>%
   rename(age_group=variable, population=value)
 
+BC_demo = HA_demo %>% group_by(age_group) %>% summarize(population = sum(population))
+# unfortunately i need BC_demo in age bands that i have cases for, pre-omicron.
+# casedat doesn't go pre-omi. 
+# so i need another version of this for BC entirely 
+
+BC_demo <- readr::read_csv(paste0(data_dir, "Population_Projections_HA_allages.csv")) %>%
+  dplyr::rename(region='Health Authority') %>%
+   group_by(region) %>%
+   summarize(
+    '<10'=`0`+`1`+`2`+`3`+`4`+`5`+`6`+`7`+`8`+`9`,
+    '10-19'=`10`+`11`+`12`+`13`+`14`+`15`+`16`+`17`+`18`+`19`,
+    '20-29'=`20`+`21`+`22`+`23`+`24`+`25`+`26`+`27`+`28`+`29`,
+    '30-39'=`30`+`31`+`32`+`33`+`34`+`35`+`36`+`37`+`38`+`39`,
+    '40-49'=`40`+`41`+`42`+`43`+`44`+`45`+`46`+`47`+`48`+`49`,
+    '50-59'=`50`+`51`+`52`+`53`+`54`+`55`+`56`+`57`+`58`+`59`,
+    '60-69'=`60`+`61`+`62`+`63`+`64`+`65`+`66`+`67`+`68`+`69`,
+    '70+'=`70`+`71`+`72`+`73`+`74`+`75`+`76`+`78`+`79`,
+    '80+'=`80`+`81`+`82`+`83`+`84`+`85`+`86`+`87`+`88`+`89`+`90+`) %>%
+  melt(id="region") %>%  rename(age_group=variable, population=value) %>% group_by(age_group) %>% summarize(population=sum(population) )
+
+
 ```
 ## Serology
 
 CC's clumsy ascertainment fractions, using the demographics from stats canada but with more current total population of BC, CITF serology data, BCCDC serology data and cases in daily rather than monthly groups.  
 
-```{r, message=FALSE}
-casesbc <- readr::read_csv(paste0(data_dir, "BCCDC_COVID19_Dashboard_Case_Details.csv")) %>%
-  dplyr::select(date=Reported_Date,
-    age_group=Age_Group,
-    region=HA) %>%
-  mutate(date=ymd(date)) %>%
-  filter(region %in% ha_lvls) %>%
-  group_by(age_group, region, date) %>%
-  summarize(cases=n()) %>%
-  filter(age_group != "Unknown") %>%
-  group_by(date, region, age_group) %>%
-  summarize(cases=sum(cases)) %>%
-  mutate(age_group=case_when(
-    age_group %in% c("<10","10-19", "20-29") ~ "0-29",
-    age_group %in% c("70-79","80-89","90+") ~ "70+",
-    TRUE ~ "30-69")) %>%
-  group_by(age_group, date, region) %>%
-  summarize(cases=sum(cases))  %>%
-  ungroup() %>% group_by(date, age_group) %>%
-  summarise(cases = sum(cases))
+I need fraction positive by serology after BA1, I guess, for the new age groups or something that roughly corresponds to the new age groups. Right? 
 
+```{r, message=FALSE}
+ casesbc <- readr::read_csv(paste0(data_dir, "BCCDC_COVID19_Dashboard_Case_Details.csv")) %>%
+   dplyr::select(date=Reported_Date,
+     age_group=Age_Group,
+     region=HA) %>%
+    mutate(age_group=case_when(
+     age_group %in% c("<10") ~ "<10",
+     age_group %in% c("10-19") ~ "10-19",
+     age_group %in% c("20-29") ~ "20-29",
+     age_group %in% c("30-39") ~ "30-39",
+     age_group %in% c("40-49") ~ "40-49",
+     age_group %in% c("50-59") ~ "50-59",
+     age_group %in% c("60-69") ~ "60-69",
+     age_group %in% c("70-79") ~ "70-79",
+     age_group %in% c("80-89", "90+") ~ "80+", 
+     TRUE ~ "Unknown"))  %>%
+   mutate(date=ymd(date)) %>%
+   filter(region %in% ha_lvls) %>%
+   group_by(age_group, date) %>%
+   summarize(cases=n()) %>%
+   filter(age_group != "Unknown") 
+```
+
+```{r}
 # pre-omicron
-preom = casesbc %>% filter(date< ymd("2021-10-01")) %>% group_by(age_group) %>%
-  summarize(total = sum(cases)) %>% mutate(frac.reported = total/(BC_demo$p*5.07e6), frac.serology = c(0.1,0.09, 0.06)) %>% mutate(UAR = frac.serology/frac.reported,period="pre-omicron")
+preom = casesbc %>% dplyr::filter(date< ymd("2021-10-01")) %>% group_by(age_group) %>%
+  summarize(total = sum(cases)) %>% mutate(frac.reported = total/(BC_demo$population), frac.serology = c(0.125, 0.11, 0.09, 0.11, 0.1, 0.09, 0.05, 0.08, 0.04)) %>% # fraction each age group infected according to serology . here the age groups are <10, ... , 80+ as in casesbc. later we split whatever UAR we get for < 10 to 0-4 and whatever, i guess 
+  mutate(UAR = frac.serology/frac.reported,period="pre-omicron")
 
 # just after ba1
 ba1asc =  casesbc %>% filter(date< ymd("2022-03-30") & date >= ymd("2021-10-01")) %>% group_by(age_group) %>%
-  summarize(total = sum(cases)) %>% mutate(frac.reported = total/(BC_demo$p*5.07e6), frac.serology = c(0.58,0.4, 0.14) - preom$frac.serology) %>% mutate(UAR = frac.serology/frac.reported,period="ba1")
+  summarize(total = sum(cases)) %>% mutate(frac.reported = total/(BC_demo$population), frac.serology = c(0.66,0.57, 0.51, 0.55, 0.45, 0.32,0.24, 0.13, 0.14) - preom$frac.serology) %>% mutate(UAR = frac.serology/frac.reported,period="ba1")
 ```
 
 Now we try to use CITF data for serology post-BA2. This is quite fudged because children and presumably the elderly don't donate blood, and CITF for March 2022 disagrees with BCCDC, with the BCCDC estimate at overall 43% of BC with infection, vs CITF at 32%.
@@ -149,34 +172,50 @@ CITF gets BA2 taking BC from 32% to 45% March to May, reflecting an increase by 
 
 ```{r, message=FALSE}
 ba2asc =  casesbc %>% filter(date< ymd("2022-05-15") & date >= ymd("2022-03-30")) %>% group_by(age_group) %>%
-  summarize(total = sum(cases)) %>% mutate(frac.reported = total/(BC_demo$p*5.07e6), total.under.ba1 = total*ba1asc$UAR)
+  summarize(total = sum(cases)) %>% mutate(frac.reported = total/(BC_demo$population), total.under.ba1 = total*ba1asc$UAR)
+
 sum(ba2asc$total.under.ba1)/N
-```
 
-If we assumed that the ascertainment stayed the same, only 2% of BC would have had BA2, but serology from CITF, wastewater, hospitalizations and cases in those over 70 suggest that the BA2 peak was about half as high as the BA1 peak. I am therefore going to assume that the UAR in the over 70s remained nearly what it was under BA1 and choose the other two groups to match the serology. I set it so that 14% of BC got BA2. This is between the CITF 12% and what I would guess if I took that 12% and adjusted for the difference between BCCDC and CITF (a factor of 43/32, making it 16%).
-
-```{r, message=FALSE}
-ba2asc =  casesbc %>% filter(date< ymd("2022-05-15") & date >= ymd("2022-03-31")) %>% group_by(age_group) %>%
-  summarize(total = sum(cases)) %>% mutate(frac.reported = total/(BC_demo$p*5.07e6), UAR=c(8,9,1.5)*ba1asc$UAR, period = "ba2") %>% mutate(frac.serology=UAR*total)
 ba2asc
 ```
 
-Now we include these estimates of the UAR into the corrected cases. Before Dec 25, use pre-Omicron numbers. Use BA1 numbers until April 1, 2022, and BA2 numbers thereafter.
+If we assumed that the ascertainment stayed the same, only 2% of BC would have had BA2, but serology from CITF, wastewater, hospitalizations and cases in those over 70 suggest that the BA2 peak was about half as high as the BA1 peak. I am therefore going to assume that the UAR in the over 70s remained nearly what it was under BA1 and choose the other groups to match the serology. I set it so that 14% of BC got BA2. This is between the CITF 12% and what I would guess if I took that 12% and adjusted for the difference between BCCDC and CITF (a factor of 43/32, making it 16%).
+
+```{r, message=FALSE}
+myfactor=9
+ba2asc =  casesbc %>% filter(date< ymd("2022-05-15") & date >= ymd("2022-03-31")) %>% group_by(age_group) %>%
+  summarize(total = sum(cases)) %>% mutate(frac.reported = total/(BC_demo$population), UAR=c(rep(myfactor,7),1.5, 1.5)*ba1asc$UAR, period = "ba2") %>% mutate(frac.serology=UAR*frac.reported)
+ba2asc
+sum(ba2asc$frac.serology*BC_demo$population)/sum(BC_demo$population)
+```
+
+Now we include these estimates of the UAR into the corrected cases. But now, we have to adjust for the different age bands. Before Dec 25, use pre-Omicron numbers. Use BA1 numbers until April 1, 2022, and BA2 numbers thereafter.
 
 ```{r, message=FALSE, fig.width=12, fig.height=12}
-
-casedat <- casedat %>%
-  mutate(corrCases=case_when(
-    date < ymd("2021-12-25") & age_group %in% c("0-5", "5-17", "18-29") ~ cases*preom$UAR[1],
-    date < ymd("2021-12-25") & age_group  %in% c("30-39","40-49", "50-59", "60-69") ~ cases*preom$UAR[2],
-    date < ymd("2021-12-25") & age_group == "70+" ~ cases*preom$UAR[3],
-    date < ymd("2022-04-01") & date >= ymd("2021-12-25") & age_group %in% c("0-5", "5-17", "18-29") ~ cases*ba1asc$UAR[1],
-    date < ymd("2022-04-01") & date >= ymd("2021-12-25") & age_group  %in% c("30-39","40-49", "50-59", "60-69") ~ cases*ba1asc$UAR[2],
-    date < ymd("2022-04-01")  & date >= ymd("2021-12-25")& age_group == "70+" ~ cases*ba1asc$UAR[3],
-    date >= ymd("2022-04-01") & age_group %in% c("0-5", "5-17", "18-29")  ~ cases*ba2asc$UAR[1],
-    date >= ymd("2022-04-01") & age_group  %in% c("30-39","40-49", "50-59", "60-69") ~ cases*ba2asc$UAR[2],
-    date >= ymd("2022-04-01") & age_group == "70+" ~ cases*ba2asc$UAR[3]))
+casedat <- casedat %>%  mutate(corrCases=case_when(
+    date < ymd("2021-12-25") & age_group %in% c("0-5", "5-17") ~ cases*(0.5*(preom$UAR[1]+preom$UAR[2])),
+    date < ymd("2021-12-25") & age_group  %in% c("18-29") ~ cases*preom$UAR[3],
+    date < ymd("2021-12-25") & age_group  %in% c("30-39") ~ cases*preom$UAR[4],
+    date < ymd("2021-12-25") & age_group  %in% c("40-49") ~ cases*preom$UAR[5],
+    date < ymd("2021-12-25") & age_group  %in% c("50-59") ~ cases*preom$UAR[6],
+    date < ymd("2021-12-25") & age_group  %in% c("60-69") ~ cases*preom$UAR[7],
+    date < ymd("2021-12-25") & age_group == "70+" ~ cases*(0.5*(preom$UAR[8]+preom$UAR[9])),
+    date < ymd("2021-04-01") & date >= ymd("2021-12-25") & age_group %in% c("0-5", "5-17") ~ cases*(0.5*(ba1asc$UAR[1]+ba1asc$UAR[2])),
+    date < ymd("2021-04-01") & date >= ymd("2021-12-25") & age_group  %in% c("18-29") ~ cases*ba1asc$UAR[3],
+    date < ymd("2021-04-01") & date >= ymd("2021-12-25") &age_group  %in% c("30-39") ~ cases*ba1asc$UAR[4],
+    date < ymd("2021-04-01") & date >= ymd("2021-12-25") &age_group  %in% c("40-49") ~ cases*ba1asc$UAR[5],
+    date < ymd("2021-04-01") & date >= ymd("2021-12-25") &age_group  %in% c("50-59") ~ cases*ba1asc$UAR[6],
+    date < ymd("2021-04-01") & date >= ymd("2021-12-25") & age_group  %in% c("60-69") ~ cases*ba1asc$UAR[7],
+    date < ymd("2021-04-01") & date >= ymd("2021-12-25") &age_group == "70+" ~ cases*(0.5*(ba1asc$UAR[8]+ba1asc$UAR[9])),
+    date >= ymd("2022-04-01") & age_group %in% c("0-5", "5-17") ~ cases*(0.5*(ba2asc$UAR[1]+ba2asc$UAR[2])),
+    date >= ymd("2022-04-01") & age_group  %in% c("18-29") ~ cases*ba2asc$UAR[3],
+    date >= ymd("2022-04-01") & age_group  %in% c("30-39") ~ cases*ba2asc$UAR[4],
+    date >= ymd("2022-04-01") & age_group  %in% c("40-49") ~ cases*ba2asc$UAR[5],
+    date>= ymd("2022-04-01") & age_group  %in% c("50-59") ~ cases*ba2asc$UAR[6],
+    date >= ymd("2022-04-01")& age_group  %in% c("60-69") ~ cases*ba2asc$UAR[7],
+    date >= ymd("2022-04-01")& age_group == "70+" ~ cases*(0.5*(ba2asc$UAR[8]+ba2asc$UAR[9]))))
 ```
+
 Look at the corrected cases by age and output a csv:
 
 ```{r, message=FALSE, warning=FALSE, fig.width=12, fig.height=12}
