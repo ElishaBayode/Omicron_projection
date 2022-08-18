@@ -74,7 +74,7 @@ plot.worst
 
 NO_worstdf = fproj_out %>% dplyr::select(date, Total) %>%
   mutate(sympinfect = fproj_parameters["p"]*Total,
-         Scenario = "Worst case")
+         Scenario = "Pessimistic")
 
 readr::write_csv(fproj_out, file = projfilename)
 readr::write_csv(as.data.frame(new_model$init_newm), file = initfilename)
@@ -130,7 +130,7 @@ plot.medium
 
 NO_mediumdf = fproj_out %>% dplyr::select(date, Total) %>%
   mutate(sympinfect = fproj_parameters["p"]*Total,
-         Scenario = "Medium case" )
+         Scenario = "Intermediate" )
 
 readr::write_csv(fproj_out, file = projfilename)
 readr::write_csv(as.data.frame(new_model$init_newm), file = initfilename)
@@ -187,7 +187,7 @@ plot.worst
 
 O_worstdf = fproj_out %>% dplyr::select(date, Total) %>%
   mutate(sympinfect = fproj_parameters["p"]*Total,
-         Scenario = "Worst case" )
+         Scenario = "Pessimistic" )
 
 readr::write_csv(fproj_out, file = projfilename)
 readr::write_csv(as.data.frame(new_model$init_newm), file = initfilename)
@@ -239,7 +239,7 @@ plot.medium
 
 O_mediumdf = fproj_out %>% dplyr::select(date, Total) %>%
   mutate(sympinfect = fproj_parameters["p"]*Total,
-         Scenario = "Medium case" )
+         Scenario = "Intermediate" )
 
 readr::write_csv(fproj_out, file = projfilename)
 readr::write_csv(as.data.frame(new_model$init_newm), file = initfilename)
@@ -291,7 +291,7 @@ plot.best
 
 O_bestdf = fproj_out %>% dplyr::select(date, Total) %>%
   mutate(sympinfect = fproj_parameters["p"]*Total,
-         Scenario = "Best case" )
+         Scenario = "Optimistic" )
 
 readr::write_csv(fproj_out, file = projfilename)
 readr::write_csv(as.data.frame(new_model$init_newm), file = initfilename)
@@ -344,7 +344,7 @@ ggplot(filter(alldf, date<maxdate), aes(x=date, y = census, fill=Scenario))+
   xlab("")+  
   scale_x_continuous(breaks= c(as.Date("2022-10-01"),as.Date("2022-11-01"),as.Date("2022-12-01"),as.Date("2023-01-01"),as.Date("2023-02-01")), labels = c("Month 1","Month 2","Month 3","Month 4","Month 5"))
 
-# ---- new plot with annotation  ---- 
+# ---- new plots with annotation  ---- 
 
 # the worst case scenario hits unreasonable numbers at the start of month 2 (~1000 census)
 
@@ -370,7 +370,20 @@ ggplot(filter(df1, date<maxdate), aes(x=date, y = census, fill=Scenario))+
                        label = "Interventions prevent worst-case numbers", color="grey60")+
   scale_x_continuous(breaks= c(as.Date("2022-10-01"),as.Date("2022-11-01"),as.Date("2022-12-01"),as.Date("2023-01-01"),as.Date("2023-02-01")), labels = c("Month 1","Month 2","Month 3","Month 4","Month 5"))
 
-  
+
+
+ggplot(filter(df1, date<maxdate), aes(x=date, y = hosp, fill=Scenario))+
+  ylab("COVID- all reported admissions") + geom_ribbon(aes(x=date, ymin = 0.75*hosp, ymax=1.25*hosp,
+                                                           fill=Scenario),  alpha=0.5) + theme_minimal() +
+  theme(legend.position = "bottom") + 
+  geom_ribbon(data = filter(df2, date< maxdate), 
+              inherit.aes = F,
+              aes(x=date, ymin = 0.75*hosp, ymax=pmin(500, 1.25*hosp)), 
+              fill="grey", alpha=0.16) +
+  xlab("")+   annotate("text", x = as.Date("2022-11-15"), y = 380, size = 6, 
+                       label = "Interventions prevent worst-case numbers", color="grey60")+
+  scale_x_continuous(breaks= c(as.Date("2022-10-01"),as.Date("2022-11-01"),as.Date("2022-12-01"),as.Date("2023-01-01"),as.Date("2023-02-01")), labels = c("Month 1","Month 2","Month 3","Month 4","Month 5"))
+
   
 
 # ----- end new plot with annotation ----
@@ -379,6 +392,7 @@ ggplot(filter(df1, date<maxdate), aes(x=date, y = census, fill=Scenario))+
 # (ii) omicron scenarios
 alldf  = rbind(O_bestdf, O_mediumdf, O_worstdf)
 glimpse(alldf)
+alldf$Scenario <- factor(alldf$Scenario, levels=c("Optimistic", "Intermediate", "Pessimistic"))
 ggplot(filter(alldf, date<maxdate), aes(x=date, y = sympinfect/50, fill=Scenario))+
    ylab("Incidence (symptomatic infection per 100K)") +
   geom_ribbon(aes(x=date, ymin = 0.85*sympinfect/50, ymax=1.25*sympinfect/50,
@@ -390,6 +404,7 @@ O_worstdf = O_worstdf %>% mutate(hosp = Total*IHR_BA2, census = lag(Total,8)*IHR
 O_mediumdf = O_mediumdf %>% mutate(hosp = Total*IHR_BA2, census = lag(Total,8)*IHR_BA2*9) # no increase
 O_bestdf = O_bestdf %>% mutate(hosp = Total*IHR_BA2, census = lag(Total,8)*IHR_BA2*9) # no increase
 alldf  = rbind(O_bestdf, O_mediumdf, O_worstdf)
+alldf$Scenario <- factor(alldf$Scenario, levels=c("Optimistic", "Intermediate", "Pessimistic"))
 
 ggplot(filter(alldf, date<maxdate), aes(x=date, y = hosp, fill=Scenario))+
   ylab("COVID- all reported admissions") +
@@ -427,11 +442,17 @@ O_medium.HAs <-project_HAs(total_out = O_mediumdf[O_mediumdf$date<=maxdate,],
 O_best.HAs <-project_HAs(total_out = O_bestdf[O_bestdf$date<=maxdate,], 
                        which_wave_match = 5, facets = TRUE)
 
-NO_worst.HAs$plot + ggtitle("Worst case")
-NO_medium.HAs$plot + ggtitle("Medium case")
-O_worst.HAs$plot + ggtitle("Worst case")
-O_medium.HAs$plot + ggtitle("Medium case")
-O_best.HAs$plot + ggtitle("Best case")
+NO_worst.HAs$plot + ggtitle("Pessimistic case")
+NO_medium.HAs$plot + ggtitle("Intermediate case")
+O_worst.HAs$plot + ggtitle("Pessimistic case")
+O_medium.HAs$plot + ggtitle("Intermediate case")
+O_best.HAs$plot + ggtitle("Optimistic case")
+
+NO_worst.HAs$hosp_plot + ggtitle("Pessimistic case")
+NO_medium.HAs$hosp_plot + ggtitle("Intermediate case")
+O_worst.HAs$hosp_plot + ggtitle("Pessimistic case")
+O_medium.HAs$hosp_plot + ggtitle("Intermediate case")
+O_best.HAs$hosp_plot + ggtitle("Optimistic case")
 
 readr::write_csv(NO_worst.HAs$df, file = "NO_worstcase_byHA.csv")
 readr::write_csv(NO_medium.HAs$df, file = "NO_mediumcase_byHA.csv")
@@ -450,11 +471,11 @@ O_medium.ages <-project_ages(total_out = O_mediumdf[O_mediumdf$date<=maxdate,],
 O_best.ages <-project_ages(total_out = O_bestdf[O_bestdf$date<=maxdate,], 
                          which_wave_match = 5, facets = TRUE)
 
-NO_worst.ages$plot + ggtitle("Worst case")
-NO_medium.ages$plot + ggtitle("Medium case")
-O_worst.ages$plot + ggtitle("Worst case")
-O_medium.ages$plot + ggtitle("Medium case")
-O_best.ages$plot + ggtitle("Best case")
+NO_worst.ages$plot + ggtitle("Pessimistic case")
+NO_medium.ages$plot + ggtitle("Intermediate case")
+O_worst.ages$plot + ggtitle("Pessimistic case")
+O_medium.ages$plot + ggtitle("Intermediate case")
+O_best.ages$plot + ggtitle("Optimistic case")
 
 readr::write_csv(NO_worst.ages$df, file = "NO_worstcase_byage.csv")
 readr::write_csv(NO_medium.ages$df, file = "NO_mediumcase_byage.csv")

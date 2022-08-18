@@ -68,18 +68,36 @@ project_HAs <- function(total_out, which_wave_match = 6, facets = FALSE){
   
   
   
-  return(list(df = total_out, plot = out_plot))
+  ##---- Hosps plot
+  #  Multiply HA proportions by hosps
+  total_out$hosp.Fraser <- total_out$hosp*spline.HAs$Fraser$y
+  total_out$hosp.Coastal <- total_out$hosp*spline.HAs$`Vancouver Coastal`$y
+  total_out$hosp.Island <- total_out$hosp*spline.HAs$`Vancouver Island`$y
+  total_out$hosp.Interior <- total_out$hosp*spline.HAs$Interior$y
+  total_out$hosp.Northern <- total_out$hosp*spline.HAs$Northern$y
+  HAs <- c("hosp.Coastal", "hosp.Fraser", "hosp.Interior", "hosp.Northern", "hosp.Island")
+  hosp_plot <- pivot_longer(total_out, c(hosp,HAs), names_to = "HA", values_to = "count") %>%
+    ggplot(aes(x=date, y=count, colour=HA)) + geom_line() + ylab("COVID- all reported admissions") + xlab("Date") + theme_minimal() +  
+    scale_colour_discrete(labels = c("Total", "Coastal", "Fraser", "Interior", "Island", "Northern"))
+  if (facets) {
+    hosp_plot <- pivot_longer(total_out, c(hosp,HAs), names_to = "HA", values_to = "count") %>%
+      ggplot(aes(x=date, y=count, colour=HA)) + geom_line() + facet_wrap(~HA, scales = "free") + ylab("COVID- all reported admissions") + xlab("Date") + theme_minimal() +  
+      scale_colour_discrete(labels = c("Total", "Coastal", "Fraser", "Interior", "Island", "Northern")) + 
+      theme(strip.background = element_blank(),strip.text.x = element_blank())
+  }
+  
+  return(list(df = total_out, plot = out_plot, hosp_plot = hosp_plot))
 }
 
-
-
-# Checking 
-
-#testing <- total_out[27:31]
-#testing <- testing %>% rowwise() %>% mutate(m = sum(c(Fraser, Coastal, Island, Interior, Northern)))
-#testing$m - total_out$Total
-# Ok, the sum of the HAs almost exactly matches the overall total, I think this is close enough
-
+# # Code to generate HA hosps split with grey area above reasonable maximum:
+# temp <- pivot_longer(total_out, c(hosp,HAs), names_to = "HA", values_to = "count")
+# 
+# temp %>% filter(date< datecrosses) %>%
+#   ggplot(aes(x=date, y=count, colour=HA)) + geom_line() + facet_wrap(~HA, scales = "free") + 
+#   geom_line(data = filter(temp, date>=(datecrosses-1)), colour = "gray") + 
+#   ylab("COVID- all reported admissions") + xlab("Date") + theme_minimal() +  
+#   scale_colour_discrete(labels = c("Total", "Coastal", "Fraser", "Interior", "Island", "Northern")) + 
+#   theme(strip.background = element_blank(),strip.text.x = element_blank()) + ggtitle("Pessimistic case")
 
 
 
@@ -156,6 +174,17 @@ project_ages <- function(total_out, which_wave_match = 6, facets = FALSE){
   
   return(list(df = total_out, plot = out_plot))
 }
+
+
+# Code to generate age cases split with grey area above reasonable maximum:
+temp <- pivot_longer(total_out, c(sympinfect,Ages), names_to = "Ages", values_to = "count")
+
+temp %>% filter(date< datecrosses) %>%
+  ggplot(aes(x=date, y=count/50, colour=Ages)) + geom_line() + facet_wrap(~Ages, scales = "free") + 
+  geom_line(data = filter(temp, date>=(datecrosses-1)), colour = "gray") + 
+  ylab("Incidence (symptomatic infection per 100K)") + xlab("Date") + theme_minimal() +  
+  scale_colour_discrete(labels = c("Total", names(spline.ages))) + 
+  theme(strip.background = element_blank(),strip.text.x = element_blank()) + ggtitle("Pessimistic case")
 
 
 

@@ -13,6 +13,7 @@ library(data.table)
 library(cowplot)
 library(MASS)
 set.seed(3242)
+require(RColorBrewer)
 ##########
 
 sveirs <- function(time, state, parameters) {
