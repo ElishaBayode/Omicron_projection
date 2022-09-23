@@ -261,6 +261,36 @@ make_init = function( N=N_pop, vaxlevel = vaxlevel_in,
 }
 # ---- show the simulation in the simplest plot, with the data 
 
+# ---- tweak an initial condition to set up for a new place (hack) 
+tweak_init <- function( oldstate, myfactor) { 
+  newstate = as.list(oldstate)
+  oldstate=as.list(oldstate)
+  # will have to do this in the unvax (S), V and W classes
+  newstate$Em = myfactor*oldstate$Em
+  newstate$Im = myfactor*oldstate$Im
+  newstate$Er = myfactor*oldstate$Er
+  newstate$Ir = myfactor*oldstate$Ir
+  # keep S+Em +... Ir the same from old to new. 
+  # this means Snew + (E++ new) = Sold + (E++ old)
+  # Snew + f (E++ old) = Sold + (E++ old)
+  # Snew = Sold + (1-f ) (E++old) 
+  newstate$S = oldstate$S + (1-myfactor)*(oldstate$Em + oldstate$Im +
+                                            oldstate$Er + oldstate$Ir)
+  
+  newstate$Emv = myfactor*oldstate$Emv
+  newstate$Imv = myfactor*oldstate$Imv
+  newstate$Erv = myfactor*oldstate$Erv
+  newstate$Irv = myfactor*oldstate$Irv
+  newstate$V = oldstate$V + (1-myfactor)*(oldstate$Emv + oldstate$Imv +
+                                            oldstate$Erv + oldstate$Irv)
+  newstate$Emw = myfactor*oldstate$Emw
+  newstate$Imw = myfactor*oldstate$Imw
+  newstate$Erw = myfactor*oldstate$Erw
+  newstate$Irw = myfactor*oldstate$Irw
+  newstate$W = oldstate$W + (1-myfactor)*(oldstate$Emw + oldstate$Imw +
+                                            oldstate$Erw + oldstate$Irw)
+  return(unlist(newstate) )
+}
 
 
 
