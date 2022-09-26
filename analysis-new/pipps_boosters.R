@@ -208,7 +208,9 @@ alldf = rbind(baseline.df, moreboost.df, lessboost.df)
 ggplot(filter(alldf, date <= maxdate), aes(x=date, y=Total, fill=Scenario))+
   geom_ribbon(aes(x=date, ymin = 0.75*(38/5)*(100000/38e6)*Total, ymax=1.25*(38/5)*(100000/38e6)*Total), 
                alpha=0.45)+  scale_fill_brewer(palette="Set1")+ xlab("")+
-  ylab("Daily new infections per 100K") + theme_minimal()
+  ylab("Daily new infections per 100K") + 
+  annotate("text", x = ymd("2022-10-13"), y = 900, 
+     label = "Illustrative projections only", alpha=0.3, size =6)+theme_minimal()
 ggsave("boost-scenarios-infections.pdf") 
 
 # total hosps in Canada based on an 8 day stay and the IHR from public data, above
@@ -218,8 +220,11 @@ ggplot(filter(alldf, date <= maxdate), aes(x=date, y=Total, fill=Scenario))+
               alpha=0.45)+  scale_fill_brewer(palette="Set1")+ xlab("")+
   ylab("Total hospitalizations") + 
   geom_point(data=filter(hosp, Date > min(fproj_out$date-250)), 
-             aes(x=Date,y=COVID_HOSP),inherit.aes = F)+xlab("") + theme_minimal()
-theme_minimal()
+             aes(x=Date,y=COVID_HOSP),inherit.aes = F)+xlab("") +   
+  annotate("text", x = ymd("2022-05-20"), y = 13000, 
+           label = "Illustrative projections only", alpha=0.3, size =6)+
+ theme_minimal()
+
 ggsave("boost-scenarios-hosp.pdf") 
 
 
